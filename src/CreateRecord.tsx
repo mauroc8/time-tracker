@@ -1,3 +1,6 @@
+import React from 'react'
+import ReactDOM from 'react-dom'
+
 import * as Update from "./Update"
 import * as Maybe from './Maybe'
 import * as Task from "./Task"
@@ -6,6 +9,7 @@ import * as Utils from './Utils'
 import * as Result from './Result'
 import * as Record from './Record'
 import * as Input from './Input'
+import * as Button from './Button'
 
 
 export type CreateRecord = {
@@ -23,6 +27,14 @@ export function empty(description: string): CreateRecord {
         taskInput: ""
     }
 }
+
+export function start(date: Date): { input: string, date: Date } {
+    return {
+        input: Utils.dateToString(date),
+        date
+    }
+}
+
 
 export function withTask(taskInput: string, taskId: Maybe.Maybe<Task.Id>, createRecord: CreateRecord): CreateRecord {
     return { ...createRecord, taskId, taskInput }
@@ -136,6 +148,7 @@ export function view(
                 ),
             }
         )}
+        {/** Drop down menu */}
         <div style={{ position: "relative" }}>
             {View.inputWithLabel(
                 "create-record-task",
@@ -154,6 +167,7 @@ export function view(
                     ),
                 },
             )}
+            {/** 
             <div style={{ position: "absolute", top: "100%" }}>
                 {Task.search(createRecord.taskInput, tasks)
                     .map((task, i) =>
@@ -165,6 +179,7 @@ export function view(
                     )
                 }
             </div>
+            */}
         </div>
         <div>{task.map(task => task.name).withDefault("")}</div>
         {createRecord.start.map(start => <>
@@ -177,9 +192,9 @@ export function view(
                     onBlur,
                 },
             )}
-            <div><button onClick={_ => dispatch(Update.clickedStopButton())}>Stop</button></div>
+            <div><button onClick={_ => dispatch(Update.clickedButton(Button.stop()))}>Stop</button></div>
         </>)
-            .withDefault(<button onClick={_ => dispatch(Update.clickedPlayButton())}>Play</button>)
+            .withDefault(<button onClick={_ => dispatch(Update.clickedButton(Button.play()))}>Play</button>)
         }
     </form>
 }
@@ -199,15 +214,30 @@ function castStart(json: any): Maybe.Maybe<{ input: string, date: Date }> {
 export function cast(json: any): Maybe.Maybe<CreateRecord> {
     if (typeof json === "object"
         && typeof json.description === "string"
-        && Maybe.cast(json.start, castStart).toBool()
-        && Maybe.cast(json.taskId, Task.castId).toBool()
         && typeof json.taskInput === "string"
     )
-        return Maybe.just<CreateRecord>({
-            description: json.description,
-            start: json.start as Maybe.Maybe<{ input: string, date: Date }>,
-            taskId: json.taskId as Maybe.Maybe<Task.Id>,
-            taskInput: json.taskInput
-        })
+        return Maybe.map2(
+            Maybe.cast(json.start, castStart),
+            Maybe.cast(json.taskId, Task.castId),
+            (start, taskId) => ({
+                description: json.description,
+                start: start,
+                taskId: taskId,
+                taskInput: json.taskInput
+            })
+        )
     return Maybe.nothing()
+}
+
+export function fromRecord(record: Record.Record, tasks: Array<Task.Task>): CreateRecord {
+    return {
+        description: record.description,
+        start: Maybe.nothing(),
+        taskId: Maybe.just(record.taskId),
+        taskInput: Maybe.fromUndefined(
+            tasks.find(task => Task.matchesId(record.taskId, task))
+        )
+            .map(task => task.name)
+            .withDefault("")
+    }   
 }

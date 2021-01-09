@@ -1,4 +1,4 @@
-import * as React from 'react'
+import React from 'react'
 import ReactDOM from 'react-dom'
 
 /** About this code
@@ -20,9 +20,9 @@ import * as Task from './Task'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
 
-import * as View from './View'
-import * as Update from './Update'
 import * as State from './State'
+import * as Update from './Update'
+import * as View from './View'
 
 
 const App: React.FunctionComponent = () => {

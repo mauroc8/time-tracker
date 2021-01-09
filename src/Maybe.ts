@@ -1,9 +1,9 @@
 export interface Maybe<A> {
+    tag: "just" | "nothing"
     withDefault: (value: A) => A
     map: <B>(func: (a: A) => B) => Maybe<B>
     andThen: <B>(func: (a: A) => Maybe<B>) => Maybe<B>
     orElse: (other: Maybe<A>) => Maybe<A>
-    toBool: () => boolean
 }
 
 export function just<A>(value: A): Maybe<A> {
@@ -36,8 +36,8 @@ export function fromUndefined<A>(a: A | undefined): Maybe<A> {
         return just(a)
 }
 
-export class Just<A> implements Maybe<A> {
-    tag: string = "just"
+class Just<A> implements Maybe<A> {
+    public tag: "just" = "just"
     value: A
 
     constructor(value: A) {
@@ -65,8 +65,8 @@ export class Just<A> implements Maybe<A> {
     }
 }
 
-export class Nothing<A> implements Maybe<A> {
-    tag: string = "nothing"
+class Nothing<A> implements Maybe<A> {
+    public tag: "nothing" = "nothing"
 
     constructor() { }
 

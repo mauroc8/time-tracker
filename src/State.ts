@@ -1,10 +1,10 @@
-import * as Record from './Record'
-import * as CreateRecord from './CreateRecord'
-import * as Task from './Task'
-import * as Utils from './Utils'
 import * as Maybe from './Maybe'
+import * as Utils from './Utils'
+import * as Task from './Task'
+import * as CreateRecord from './CreateRecord'
+import * as Record from './Record'
 import * as DropDownMenu from './DropDownMenu'
-import * as Result from './Result'
+import * as Effect from './Effect'
 
 // STATE ---
 
@@ -25,7 +25,12 @@ const backendTask = Task.task(
     Utils.rgba(0.1, 0.2, 0.3, 1.0),
 )
 
-export const initialState: State = {
+export function initialState(): State {
+    return Effect.getFromLocalStorage().perform()
+        .withDefault(initialState_)
+}
+
+const initialState_: State = {
     createRecord: CreateRecord.empty(""),
     records: [
         Record.record(

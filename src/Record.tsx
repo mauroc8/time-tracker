@@ -1,4 +1,5 @@
-import * as React from 'react'
+import React from 'react'
+import ReactDOM from 'react-dom'
 
 import * as Maybe from './Maybe'
 import * as Utils from './Utils'
@@ -8,6 +9,7 @@ import * as View from './View'
 import * as CreateRecord from './CreateRecord'
 import * as Result from './Result'
 import * as Input from './Input'
+import * as Button from './Button'
 
 export type Id = {
     tag: "recordId",
@@ -139,9 +141,19 @@ export function view(record: Record, tasks: Array<Task.Task>, dispatch: Update.D
                 onBlur: _ => dispatch(Update.gotRecordBlur(record.id)),
             }
         ),
-        <div>
+        <>
             {Utils.timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate))}
-        </div>
+        </>,
+        <button
+            onClick={(_) => dispatch(Update.clickedButton(Button.deleteRecord(record.id)))}
+        >
+            Delete
+        </button>,
+        <button
+            onClick={(_) => dispatch(Update.clickedButton(Button.resumeRecord(record.id)))}
+        >
+            Resume
+        </button>,
     ]
 }
 
@@ -153,12 +165,16 @@ export function mapWithId(records: Array<Record>, id: Id, fn: (record: Record) =
     )
 }
 
+export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
+    return records.filter(record => !matchesId(id, record))
+}
+
 export function castId(json: any): Maybe.Maybe<Id> {
     if (typeof json === "object"
         && json.tag === "recordId"
         && typeof json.id === "number"
     )
-        return Maybe.just(recordId(json.id))
+        return Maybe.just(recordId(new Date(json.id)))
     return Maybe.nothing()
 }
 

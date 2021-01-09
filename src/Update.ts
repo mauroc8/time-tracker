@@ -6,6 +6,7 @@ import * as Task from './Task'
 import * as Utils from './Utils'
 import * as Input from './Input'
 import * as Effect from './Effect'
+import * as Button from './Button'
 
 
 
@@ -16,7 +17,7 @@ export type Event =
     | { tag: "RecordBlur", id: Record.Id }
     | { tag: "CreateRecordBlur" }
     | { tag: "onInput", input: Input.Input, value: string }
-    | { tag: "ButtonClick", buttonName: Button }
+    | { tag: "ButtonClick", button: Button.Button }
     | { tag: "submitCreateRecord", preventDefault: () => void }
 
 export function onInput(input: Input.Input, value: string): Event {
@@ -26,22 +27,10 @@ export function onInput(input: Input.Input, value: string): Event {
     }
 }
 
-type Button =
-    | "stop"
-    | "play"
-
-
-export function clickedStopButton(): Event {
+export function clickedButton(button: Button.Button): Event {
     return {
         tag: "ButtonClick",
-        buttonName: "stop",
-    }
-}
-
-export function clickedPlayButton(): Event {
-    return {
-        tag: "ButtonClick",
-        buttonName: "play",
+        button
     }
 }
 
@@ -74,75 +63,128 @@ export type Dispatch = (event: Event) => void
  * 
  */
 export function update(state: State.State, event: Event): State.State {
+    const [newState, effect] = update_(state, event);
+
+    // Always saveToLocalStorage
+    Effect.saveToLocalStorage(newState).perform()
+
+    effect.perform()
+
+    return newState
+}
+
+function update_(state: State.State, event: Event): [State.State, Effect.Effect<void>] {
     switch (event.tag) {
         case "onInput":
-            return updateInput(event.input, event.value, state)
+            return [
+                updateInput(event.input, event.value, state),
+                Effect.none()
+            ]
 
         case "CreateRecordBlur":
-            const newState = {
-                ...state,
-                createRecord: CreateRecord.normalizeInputs(state.tasks, state.createRecord)
-            }
-
-            Effect.saveToLocalStorage(newState).perform()
-
-            return newState
+            return [
+                {
+                    ...state,
+                    createRecord: CreateRecord.normalizeInputs(state.tasks, state.createRecord)
+                },
+                Effect.none()
+            ]
 
         case "RecordBlur":
-            const newState_ = {
-                ...state,
-                records: Record.mapWithId(
-                    state.records,
-                    event.id,
-                    record => Record.normalizeInputs(state.tasks, record),
-                )
-            }
-
-            Effect.saveToLocalStorage(newState_).perform()
-
-            return newState_
+            return [
+                {
+                    ...state,
+                    records: Record.mapWithId(
+                        state.records,
+                        event.id,
+                        record => Record.normalizeInputs(state.tasks, record),
+                    )
+                },
+                Effect.none()
+            ]
 
         case "ButtonClick":
-            switch (event.buttonName) {
-                case "play":
-                    const now = new Date()
+            const button = event.button
 
-                    return {
-                        ...state,
-                        createRecord: {
-                            ...state.createRecord,
-                            start: Maybe.just({
-                                input: Utils.dateToString(now),
-                                date: now
-                            })
-                        }
-                    }
+            switch (button.tag) {
+                case "play":
+                    return [
+                        {
+                            ...state,
+                            createRecord: {
+                                ...state.createRecord,
+                                start: Maybe.just(CreateRecord.start(new Date()))
+                            }
+                        },
+                        Effect.none()
+                    ]
 
                 case "stop":
-                    return CreateRecord.toRecord(state.tasks, new Date(), state.createRecord)
-                        .match(
-                            record =>
-                                addRecord(
-                                    record,
-                                    {
-                                        ...state,
-                                        createRecord: CreateRecord.empty(""),
-                                        createRecordError: Maybe.nothing(),
-                                    }
-                                ),
-                            validationError => ({
-                                ...state,
-                                createRecordError: Maybe.just(validationError)
-                            })
-                        )
+                    return [
+                        CreateRecord.toRecord(state.tasks, new Date(), state.createRecord)
+                            .match(
+                                record =>
+                                    addRecord(
+                                        record,
+                                        {
+                                            ...state,
+                                            createRecord: CreateRecord.empty(""),
+                                            createRecordError: Maybe.nothing(),
+                                        }
+                                    ),
+                                validationError => ({
+                                    ...state,
+                                    createRecordError: Maybe.just(validationError)
+                                })
+                            ),
+                        Effect.none()
+                    ]
 
+                case "deleteRecord":
+                    return [
+                        {
+                            ...state,
+                            records: Record.deleteWithId(state.records, button.recordId),
+                        },
+                        Effect.none()
+                    ]
+
+                case "resumeRecord":
+                    return [
+                        {
+                            ...state,
+                            createRecord:
+                                // Find record
+                                Maybe.fromUndefined(
+                                    state.records.find(record => Record.matchesId(button.recordId, record))
+                                )
+                                    // Copy its description and task to createRecord
+                                    .map(record =>
+                                        CreateRecord.fromRecord(record, state.tasks)
+                                    )
+                                    // Start it immediately if it's not running already
+                                    .map(createRecord => {
+                                        if (createRecord.start.tag === "nothing") {
+                                            return {
+                                                ...createRecord,
+                                                start: Maybe.just(CreateRecord.start(new Date()))
+                                            }
+                                        }
+                                        return createRecord
+                                    })
+                                    // Don't do nothing if we didn't find the record
+                                    .withDefault(state.createRecord)
+                        },
+                        Effect.none()
+                    ]
             }
             break
 
         case "submitCreateRecord":
-            event.preventDefault()
-
-            return state
+            return [
+                state,
+                Effect.preventDefault(event.preventDefault)
+            ]
     }
 }
 

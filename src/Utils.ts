@@ -107,7 +107,23 @@ export function dateFromString(date: Date, input: string): Maybe.Maybe<Date> {
 }
 
 export function dateDifference(a: Date, b: Date): number {
-    return a.getTime() - b.getTime()
+    const a_ = new Date(
+        a.getFullYear(),
+        a.getMonth(),
+        a.getDay(),
+        a.getHours(),
+        a.getMinutes()
+    )
+
+    const b_ = new Date(
+        b.getFullYear(),
+        b.getMonth(),
+        b.getDay(),
+        b.getHours(),
+        b.getMinutes()
+    )
+
+    return a_.getTime() - b_.getTime()
 }
 
 export function timeDifferenceToString(difference: number): string {
