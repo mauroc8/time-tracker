@@ -6,110 +6,36 @@ import ReactDOM from 'react-dom'
  * I'm using React only as a "virtual dom" library. I'm not creating components, nor
  * using any of React's features. (I find them unnecessary for this project.)
  * 
- * I'm using The Elm Architecture, which is essentially the same idea as React/Redux.
+ * For convenience, I use `useState` once to hook into the v-dom update.
+ * 
+ * I'm using The Elm Architecture, which is essentially the same idea as React/Redux,
+ * made simpler by avoiding local state altogether.
  */
 
+import * as Maybe from './Maybe'
+import * as Utils from './Utils'
+import * as Style from './Style'
 
+import * as Task from './Task'
+import * as CreateRecord from './CreateRecord'
+import * as Record from './Record'
 
-// STATE ---
-
-/** The whole state of the time tracker.
- * 
-*/
-type State = {
-    records: Array<Record>,
-    tasks: Array<Task>,
-}
-
-/** The initial state.
- * 
- */
-const initialState: State = {
-    records: [
-        {
-            description: "My first task",
-            start: new Date(),
-            end: new Date(),
-            task: { tag: "task-id", id: "task-0" }
-        }
-    ],
-    tasks: [],
-}
+import * as View from './View'
+import * as Update from './Update'
+import * as State from './State'
 
 
 const App: React.FunctionComponent = () => {
-    const [state, setState] = React.useState<State>(initialState)
+    const [state, setState] = React.useState(State.initialState)
 
-    function dispatch(event: Event): void {
-        setState(update(state, event))
-    }
+    const dispatch = React.useCallback((event: Update.Event) => {
+        setState(state => Update.update(state, event))
+    }, [])
 
-    return <>
-        {createRecord(state.tasks, dispatch)}
-        {state.records.map(record => showRecord(record, state.tasks, dispatch))}
-    </>
+    return View.view(state, dispatch)
 }
 
 ReactDOM.render(
     <App />,
     document.getElementById('root')
 )
-
-
-
-// UPDATE ---
-
-
-/** Event is what's typically called an "action" in Redux
- * 
-*/
-type Event =
-    { tag: "none" }
-
-/** The type of the dispatch function
- * 
- */
-type Dispatch = (event: Event) => void
-
-/** The main update functions. Decides how to modify state when an event comes in.
- * 
- */
-function update(state: State, event: Event): State {
-    return state
-}
-
-
-
-// RECORD ---
-
-
-type Record = {
-    description: string,
-    start: Date,
-    end: Date,
-    task: TaskId,
-}
-
-function showRecord(record: Record, tasks: Array<Task>, dispatch: Dispatch): JSX.Element {
-    return <>Show record</>
-}
-
-function createRecord(tasks: Array<Task>, dispatch: Dispatch): JSX.Element {
-    return <>Create record</>
-}
-
-
-
-// TASK ---
-
-
-type Task = {
-    id: TaskId,
-    name: string,
-    color: string,
-}
-
-type TaskId = {
-    tag: "task-id",
-    id: string,
-}
