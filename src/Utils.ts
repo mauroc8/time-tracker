@@ -40,13 +40,22 @@ export function withAlpha(rgba: Rgba, a: number): Rgba {
     return { ...rgba, a }
 }
 
-/** Ternary operator is ugly */
-export function if_<A>(condition: boolean, ifBranch: () => A, elseBranch: () => A): A {
-    if (condition)
-        return ifBranch()
-    else
-        return elseBranch()
+export function castRgba(json: any): Maybe.Maybe<Rgba> {
+    if (typeof json === "object"
+        && typeof json.r === "number"
+        && typeof json.g === "number"
+        && typeof json.b === "number"
+        && typeof json.a === "number"
+    )
+        return Maybe.just({
+            r: json.r,
+            g: json.g,
+            b: json.b,
+            a: json.a
+        })
+    return Maybe.nothing()
 }
+
 
 function pad(number: number): string {
     return number < 10 ? `0${number}` : String(number)

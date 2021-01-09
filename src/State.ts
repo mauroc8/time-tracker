@@ -4,6 +4,7 @@ import * as Task from './Task'
 import * as Utils from './Utils'
 import * as Maybe from './Maybe'
 import * as DropDownMenu from './DropDownMenu'
+import * as Result from './Result'
 
 // STATE ---
 
@@ -45,4 +46,27 @@ export const initialState: State = {
     ],
     createRecordError: Maybe.nothing(),
     dropDownMenu: DropDownMenu.closed(),
+}
+
+export function cast(json: any): Maybe.Maybe<State> {
+    if (typeof json === "object"
+        && json.records instanceof Array
+        && json.tasks instanceof Array
+
+    ) {
+        return Maybe.map3(
+            CreateRecord.cast(json.createRecord),
+            Maybe.combine((json.records as Array<any>).map((record: any) => Record.cast(record))),
+            Maybe.combine((json.tasks as Array<any>).map((task: any) => Task.cast(task))),
+            (createRecord, records, tasks) => ({
+                createRecord,
+                records,
+                tasks,
+                createRecordError: Maybe.nothing(),
+                dropDownMenu: DropDownMenu.closed(),
+            })
+        )
+    } else {
+        return Maybe.nothing()
+    }
 }

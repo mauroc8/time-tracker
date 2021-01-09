@@ -183,3 +183,31 @@ export function view(
         }
     </form>
 }
+
+function castStart(json: any): Maybe.Maybe<{ input: string, date: Date }> {
+    if (typeof json === "object"
+        && typeof json.input === "string"
+        && typeof json.date === "string"
+    )
+        return Maybe.just<{ input: string, date: Date }>({
+            input: json.input,
+            date: new Date(json.date)
+        })
+    return Maybe.nothing()
+}
+
+export function cast(json: any): Maybe.Maybe<CreateRecord> {
+    if (typeof json === "object"
+        && typeof json.description === "string"
+        && Maybe.cast(json.start, castStart).toBool()
+        && Maybe.cast(json.taskId, Task.castId).toBool()
+        && typeof json.taskInput === "string"
+    )
+        return Maybe.just<CreateRecord>({
+            description: json.description,
+            start: json.start as Maybe.Maybe<{ input: string, date: Date }>,
+            taskId: json.taskId as Maybe.Maybe<Task.Id>,
+            taskInput: json.taskInput
+        })
+    return Maybe.nothing()
+}

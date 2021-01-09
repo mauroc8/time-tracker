@@ -10,12 +10,12 @@ import * as Result from './Result'
 import * as Input from './Input'
 
 export type Id = {
-    tag: "RecordId",
+    tag: "recordId",
     id: number,
 }
 
 export function recordId(now: Date): Id {
-    return { tag: "RecordId", id: now.getMilliseconds() }
+    return { tag: "recordId", id: now.getMilliseconds() }
 }
 
 // RECORD ---
@@ -151,4 +151,38 @@ export function mapWithId(records: Array<Record>, id: Id, fn: (record: Record) =
             ? fn(record)
             : record
     )
+}
+
+export function castId(json: any): Maybe.Maybe<Id> {
+    if (typeof json === "object"
+        && json.tag === "recordId"
+        && typeof json.id === "number"
+    )
+        return Maybe.just(recordId(json.id))
+    return Maybe.nothing()
+}
+
+export function cast(json: any): Maybe.Maybe<Record> {
+    if (typeof json === "object"
+        && typeof json.description === "string"
+        && typeof json.startInput === "string"
+        && typeof json.startDate === "string"
+        && typeof json.endInput === "string"
+        && typeof json.endDate === "string"
+        && typeof json.taskInput === "string"
+    )
+        return Maybe.map2(
+            castId(json.id),
+            Task.castId(json.taskId),
+            (id, taskId) => ({
+                id, taskId,
+                description: json.description,
+                startInput: json.startInput,
+                endInput: json.endInput,
+                startDate: new Date(json.startDate),
+                endDate: new Date(json.endDate),
+                taskInput: json.taskInput
+            })
+        )
+    return Maybe.nothing()
 }

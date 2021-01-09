@@ -29,10 +29,9 @@ export function distance(a: string, b: string): number {
     return lev(table(a.length, b.length), a, b)
 }
 
-/** This is the function that matches with the definition at:  */
-
-// https://en.wikipedia.org/wiki/Levenshtein_distance#Definition
-
+/** This is the function that matches with the definition at:
+ * https://en.wikipedia.org/wiki/Levenshtein_distance#Definition
+ */
 function lev(table: Table, a: string, b: string,): number {
     const [a_, b_] = [a.length, b.length]
 
@@ -54,19 +53,18 @@ function lev(table: Table, a: string, b: string,): number {
 
 /** This is the function that memoizes de results in the table
  * to avoid calculating the same result over and over.
+ * Mutates the table.
  */
 function lev_(table: Table, a: string, b: string,): number {
-    const a_ = a.length
-    const b_ = b.length
+    const distance = get(table, a.length, b.length)
 
-    const memoized = get(table, a_, b_)
+    if (distance !== undefined) {
+        return distance
+    } else {
+        const distance_ = lev(table, a, b)
 
-    if (memoized !== undefined)
-        return memoized
+        set(table, a.length, b.length, distance_)
 
-    const distance = lev(table, a, b)
-
-    set(table, a_, b_, distance)
-
-    return distance
+        return distance_
+    }
 }

@@ -48,3 +48,28 @@ export function search(query: string, tasks: Array<Task>): Array<Task> {
         .slice(0, 5)
         .map(([task, _]) => task)
 }
+
+export function cast(json: any): Maybe.Maybe<Task> {
+    if (typeof json === "object"
+        && typeof json.name === "string"
+    )
+        return Maybe.map2(
+            castId(json.id),
+            Utils.castRgba(json.color),
+            (id, color) => ({
+                id: id,
+                name: json.name,
+                color: color
+            })
+        )
+    return Maybe.nothing()
+}
+
+export function castId(json: any): Maybe.Maybe<Id> {
+    if (typeof json === "object"
+        && json.tag === "task-id"
+        && typeof json.id === "number"
+    )
+        return Maybe.just(taskId(json.id))
+    return Maybe.nothing()
+}

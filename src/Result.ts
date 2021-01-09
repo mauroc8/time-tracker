@@ -36,6 +36,16 @@ export function error<A, E>(err: E): Result<A, E> {
     }
 }
 
+export function map2<A, B, C, E>(
+    resultA: Result<A, E>,
+    resultB: Result<B, E>,
+    fn: (a: A, b: B) => C
+): Result<C, E> {
+    return resultA.andThen(a =>
+        resultB.map(b => fn(a, b))
+    )
+}
+
 export function andMap<A, B, E>(
     wrappedFunction: Result<(a: A) => B, E>,
     wrappedValue: Result<A, E>,

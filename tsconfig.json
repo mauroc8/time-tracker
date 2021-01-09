@@ -9,6 +9,8 @@
     "noImplicitThis": true,
     "alwaysStrict": true,
     "esModuleInterop": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "lib": [

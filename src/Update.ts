@@ -5,6 +5,7 @@ import * as CreateRecord from './CreateRecord'
 import * as Task from './Task'
 import * as Utils from './Utils'
 import * as Input from './Input'
+import * as Effect from './Effect'
 
 
 
@@ -78,13 +79,17 @@ export function update(state: State.State, event: Event): State.State {
             return updateInput(event.input, event.value, state)
 
         case "CreateRecordBlur":
-            return {
+            const newState = {
                 ...state,
                 createRecord: CreateRecord.normalizeInputs(state.tasks, state.createRecord)
             }
 
+            Effect.saveToLocalStorage(newState).perform()
+
+            return newState
+
         case "RecordBlur":
-            return {
+            const newState_ = {
                 ...state,
                 records: Record.mapWithId(
                     state.records,
@@ -92,6 +97,10 @@ export function update(state: State.State, event: Event): State.State {
                     record => Record.normalizeInputs(state.tasks, record),
                 )
             }
+
+            Effect.saveToLocalStorage(newState_).perform()
+
+            return newState_
 
         case "ButtonClick":
             switch (event.buttonName) {
