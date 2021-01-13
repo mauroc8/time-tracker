@@ -10,6 +10,7 @@ import * as Result from './Result'
 import * as Record from './Record'
 import * as Input from './Input'
 import * as Button from './Button'
+import * as AutoCompleteMenu from './AutoCompleteMenu'
 
 
 export type CreateRecord = {
@@ -107,16 +108,16 @@ export function toRecord(
     )
 }
 
-export function view(
+export function view(args : {
     createRecord: CreateRecord,
+    records: Array<Record.Record>,
     tasks: Array<Task.Task>,
-    error: Maybe.Maybe<Error>,
+    createRecordError: Maybe.Maybe<Error>,
+    autoCompleteMenu: AutoCompleteMenu.AutoCompleteMenu,
     dispatch: Update.Dispatch,
-    props: React.InputHTMLAttributes<HTMLFormElement>
-): JSX.Element {
-    const task = createRecord.taskId.andThen(taskId =>
-        Maybe.fromUndefined(tasks.find(task => Task.matchesId(taskId, task)))
-    )
+    props: React.InputHTMLAttributes<HTMLDivElement>,
+}): JSX.Element {
+    const task = args.createRecord.taskId.andThen(taskId => Task.find(taskId, args.tasks))
 
     const errorProps = {
         style: {
@@ -124,79 +125,56 @@ export function view(
         }
     }
 
-    const onInput = (inputName: Input.CreateRecordInputName) =>
-        (event: React.FormEvent<HTMLInputElement>) =>
-            dispatch(Update.onInput(Input.createRecord(inputName), event.currentTarget.value))
-    
-    const onBlur = (_: React.FocusEvent<HTMLInputElement>) => dispatch(Update.gotCreateRecordBlur())
-
-    return <form onSubmit={event => dispatch(Update.submittedCreateRecord(event.preventDefault.bind(event))) } {...props}>
-        {View.inputWithLabel(
-            "create-record-description",
-            "Description",
-            {
-                value: createRecord.description,
-                onInput: onInput("description"),
-                onBlur,
-                ...(error
-                    .map(errors =>
-                        errors.emptyDescription
-                            ? errorProps
-                            : {}
-                    )
-                    .withDefault({})
-                ),
-            }
-        )}
-        {/** Drop down menu */}
-        <div style={{ position: "relative" }}>
-            {View.inputWithLabel(
-                "create-record-task",
-                "Task",
-                {
-                    onInput: onInput("task"),
-                    value: createRecord.taskInput,
-                    onBlur,
-                    ...(error
-                        .map(errors =>
-                            errors.emptyTask
-                                ? errorProps
-                                : {}
-                        )
-                        .withDefault({})
-                    ),
-                },
-            )}
-            {/** 
-            <div style={{ position: "absolute", top: "100%" }}>
-                {Task.search(createRecord.taskInput, tasks)
-                    .map((task, i) =>
-                        <div
-                            key={task.name}
-                        >
-                            {task.name}
-                        </div>
-                    )
-                }
-            </div>
-            */}
-        </div>
-        <div>{task.map(task => task.name).withDefault("")}</div>
-        {createRecord.start.map(start => <>
+    return <div {...args.props}>
+        {AutoCompleteMenu.inputWithLabel({
+            input: Input.createRecord("description"),
+            createRecord: args.createRecord,
+            records: args.records,
+            tasks: args.tasks,
+            label: "Description",
+            value: args.createRecord.description,
+            onChange: (input, value) => args.dispatch(Update.onInput(input, value)),    
+            onFocus: (input) => args.dispatch(Update.onFocus(input)),
+            onBlur: (input) => args.dispatch(Update.onBlur(input)),
+            onKeyDown: (input, key) => args.dispatch(Update.onKeyDown(input, key)),
+            onAutoCompleteItemClick: (input, index) => args.dispatch(Update.onAutoCompleteItemClick(input, index)),
+            autoCompleteMenu: args.autoCompleteMenu,
+            inputProps: args.createRecordError
+                .map(error => error.emptyDescription ? errorProps : {})
+                .withDefault({})
+        })}
+        {AutoCompleteMenu.inputWithLabel({
+            input: Input.createRecord("task"),
+            createRecord: args.createRecord,
+            records: args.records,
+            tasks: args.tasks,
+            label: "Task",
+            value: args.createRecord.taskInput,
+            onChange: (input, value) => args.dispatch(Update.onInput(input, value)),    
+            onFocus: (input) => args.dispatch(Update.onFocus(input)),
+            onBlur: (input) => args.dispatch(Update.onBlur(input)),
+            onKeyDown: (input, key) => args.dispatch(Update.onKeyDown(input, key)),
+            onAutoCompleteItemClick: (input, index) => args.dispatch(Update.onAutoCompleteItemClick(input, index)),
+            autoCompleteMenu: args.autoCompleteMenu,
+            inputProps: args.createRecordError
+                .map(error => error.emptyTask ? errorProps : {})
+                .withDefault({})
+        })}
+        {args.createRecord.start.map(start => <>
             {View.inputWithLabel(
                 "create-record-start-time",
                 "Start time",
                 {
                     value: start.input,
-                    onInput: onInput("startTime"),
-                    onBlur,
+                    onInput: event => Update.onInput(Input.createRecord("startTime"), event.currentTarget.value),
+                    onBlur: event => Update.onBlur(Input.createRecord("startTime")),
                 },
             )}
-            <div><button onClick={_ => dispatch(Update.clickedButton(Button.stop()))}>Stop</button></div>
+            <div><button onClick={_ => args.dispatch(Update.clickedButton(Button.stop()))}>Stop</button></div>
         </>)
-            .withDefault(<button onClick={_ => dispatch(Update.clickedButton(Button.play()))}>Play</button>)
+            .withDefault(<button onClick={_ => args.dispatch(Update.clickedButton(Button.play()))}>Play</button>)
         }
-    </form>
+    </div>
 }
 
 function castStart(json: any): Maybe.Maybe<{ input: string, date: Date }> {

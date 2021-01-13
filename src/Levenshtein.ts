@@ -22,7 +22,7 @@ function set(table: Table, a: number, b: number, value: number): void {
 
 
 function tail(a: string): string {
-    return a.substr(1)
+    return a.substring(1)
 }
 
 export function distance(a: string, b: string): number {
@@ -42,7 +42,7 @@ function lev(table: Table, a: string, b: string,): number {
         return b_
 
     if (a[0] === b[0])
-        return lev_(table, tail(a), tail(a))
+        return lev_(table, tail(a), tail(b))
 
     return 1 + Math.min(
         lev_(table, tail(a), b),
@@ -51,7 +51,7 @@ function lev(table: Table, a: string, b: string,): number {
     )
 }
 
-/** This is the function that memoizes de results in the table
+/** This is the function that memoizes the results in the table
  * to avoid calculating the same result over and over.
  * Mutates the table.
  */

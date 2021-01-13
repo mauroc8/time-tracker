@@ -8,6 +8,7 @@ import * as Record from './Record'
 import * as Style from './Style'
 import * as Utils from './Utils'
 import * as Task from './Task'
+import * as AutoCompleteMenu from './AutoCompleteMenu'
 
 export function inputWithLabel(
     id: string,
@@ -36,22 +37,18 @@ export function inputWithInvisibleLabel(
 }
 
 export function view(state: State.State, dispatch: Update.Dispatch): JSX.Element {
-    console.log({ ...state })
-
     return <>
         {bodyStyles()}
-        {CreateRecord.view(
-            state.createRecord,
-            state.tasks,
-            state.createRecordError,
+        {CreateRecord.view({
+            createRecord: state.createRecord,
+            records: state.records,
+            tasks: state.tasks,
+            createRecordError: state.createRecordError,
+            autoCompleteMenu: state.autoCompleteMenu,
             dispatch,
-            {
-                style: Style.spacing(20)
-            }
-        )}
-        {viewRecordTable(state.records, state.tasks, dispatch)
-            
-        }
+            props: { style: Style.spacing(20) },
+        })}
+        {viewRecordTable(state.records, state.tasks, dispatch)}
     </>
 }
 

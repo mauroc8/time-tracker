@@ -6,8 +6,7 @@ import * as Utils from './Utils'
 import * as Task from './Task'
 import * as Update from './Update'
 import * as View from './View'
-import * as CreateRecord from './CreateRecord'
-import * as Result from './Result'
+import * as Levenshtein from './Levenshtein'
 import * as Input from './Input'
 import * as Button from './Button'
 
@@ -18,6 +17,10 @@ export type Id = {
 
 export function recordId(now: Date): Id {
     return { tag: "recordId", id: now.getMilliseconds() }
+}
+
+export function idEq(a: Id, b: Id): boolean {
+    return a.id === b.id
 }
 
 // RECORD ---
@@ -55,7 +58,7 @@ export function record(
 
 
 export function matchesId(id: Id, record: Record): boolean {
-    return id.id === record.id.id
+    return idEq(id, record.id)
 }
 
 export function withDescription(description: string, record: Record): Record {
@@ -201,4 +204,21 @@ export function cast(json: any): Maybe.Maybe<Record> {
             })
         )
     return Maybe.nothing()
+}
+
+export function search(query: string, records: Array<Record>): Array<Record> {
+    return records.map<[Record, number]>(record =>
+        [record, Levenshtein.distance(query.toLowerCase(), record.description.toLowerCase())]
+    )
+        .sort((a: [Record, number], b: [Record, number]) => {
+            const [recordA, distanceA] = a
+            const [recordB, distanceB] = b
+
+            return distanceA - distanceB
+        })
+        .map(([record, _]) => record)
+}
+
+export function filterUsingTask(taskId: Task.Id, records: Array<Record>): Array<Record> {
+    return records.filter(record => Task.idEq(taskId, record.taskId))
 }

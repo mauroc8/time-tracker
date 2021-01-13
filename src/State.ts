@@ -3,7 +3,7 @@ import * as Utils from './Utils'
 import * as Task from './Task'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
-import * as DropDownMenu from './DropDownMenu'
+import * as AutoCompleteMenu from './AutoCompleteMenu'
 import * as Effect from './Effect'
 
 // STATE ---
@@ -16,7 +16,7 @@ export type State = {
     records: Array<Record.Record>,
     tasks: Array<Task.Task>,
     createRecordError: Maybe.Maybe<CreateRecord.Error>,
-    dropDownMenu: DropDownMenu.DropDownMenu
+    autoCompleteMenu: AutoCompleteMenu.AutoCompleteMenu
 }
 
 const backendTask = Task.task(
@@ -50,7 +50,7 @@ const initialState_: State = {
         )
     ],
     createRecordError: Maybe.nothing(),
-    dropDownMenu: DropDownMenu.closed(),
+    autoCompleteMenu: AutoCompleteMenu.closed(),
 }
 
 export function cast(json: any): Maybe.Maybe<State> {
@@ -68,7 +68,7 @@ export function cast(json: any): Maybe.Maybe<State> {
                 records,
                 tasks,
                 createRecordError: Maybe.nothing(),
-                dropDownMenu: DropDownMenu.closed(),
+                autoCompleteMenu: AutoCompleteMenu.closed(),
             })
         )
     } else {

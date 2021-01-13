@@ -142,3 +142,6 @@ export function timeDifferenceToString(difference: number): string {
     )
 }
 
+export function upperCaseFirst(string: string): string {
+    return string[0].toUpperCase() + string.substring(1)
+}

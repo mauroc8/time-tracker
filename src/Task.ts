@@ -24,20 +24,23 @@ export function taskId(id: number): Id {
     return { tag: "task-id", id }
 }
 
+export function idEq(a: Id, b: Id): boolean {
+    return a.id === b.id
+}
+
 export function matchesId(id: Id, task: Task): boolean {
-    return id.id === task.id.id
+    return idEq(id, task.id)
+}
+
+export function find(id: Id, tasks: Array<Task>): Maybe.Maybe<Task> {
+    return Maybe.fromUndefined(
+        tasks.find(task => matchesId(id, task))
+    )
 }
 
 export function search(query: string, tasks: Array<Task>): Array<Task> {
-    return tasks.reduce<Array<[Task, number]>>(
-        (tasks, task) => {
-            const distance = Levenshtein.distance(query.toLowerCase(), task.name.toLowerCase())
-
-            tasks.push([task, distance])
-
-            return tasks
-        },
-        []
+    return tasks.map<[Task, number]>(task =>
+        [task, Levenshtein.distance(query.toLowerCase(), task.name.toLowerCase())]
     )
         .sort((a: [Task, number], b: [Task, number]) => {
             const [taskA, distanceA] = a

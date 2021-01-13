@@ -7,6 +7,7 @@ import * as Utils from './Utils'
 import * as Input from './Input'
 import * as Effect from './Effect'
 import * as Button from './Button'
+import * as AutoCompleteMenu from './AutoCompleteMenu'
 
 
 
@@ -17,8 +18,11 @@ export type Event =
     | { tag: "RecordBlur", id: Record.Id }
     | { tag: "CreateRecordBlur" }
     | { tag: "onInput", input: Input.Input, value: string }
+    | { tag: "onFocus", input: Input.Input }
+    | { tag: "onBlur", input: Input.Input }
+    | { tag: "onKeyDown", input: Input.Input, key: AutoCompleteMenu.Key }
     | { tag: "ButtonClick", button: Button.Button }
-    | { tag: "submitCreateRecord", preventDefault: () => void }
+    | { tag: "onAutoCompleteItemClick", input: Input.Input, index: number }
 
 export function onInput(input: Input.Input, value: string): Event {
     return {
@@ -27,15 +31,32 @@ export function onInput(input: Input.Input, value: string): Event {
     }
 }
 
+export function onFocus(input: Input.Input): Event {
+    return {
+        tag: "onFocus",
+        input
+    }
+}
+
+export function onBlur(input: Input.Input): Event {
+    return {
+        tag: "onBlur",
+        input
+    }
+}
+
+export function onKeyDown(input: Input.Input, key: AutoCompleteMenu.Key): Event {
+    return {
+        tag: "onKeyDown",
+        input, key,
+    }
+}
+
 export function clickedButton(button: Button.Button): Event {
     return {
         tag: "ButtonClick",
         button
     }
-}
-
-export function submittedCreateRecord(preventDefault: () => void): Event {
-    return { tag: "submitCreateRecord", preventDefault }
 }
 
 export function gotRecordBlur(id: Record.Id): Event {
@@ -47,6 +68,10 @@ export function gotRecordBlur(id: Record.Id): Event {
 
 export function gotCreateRecordBlur(): Event {
     return { tag: "CreateRecordBlur" }
+}
+
+export function onAutoCompleteItemClick(input: Input.Input, index: number): Event {
+    return { tag: "onAutoCompleteItemClick", input, index }
 }
 
 /** The type of the dispatch function
@@ -65,6 +90,8 @@ export type Dispatch = (event: Event) => void
 export function update(state: State.State, event: Event): State.State {
     const [newState, effect] = update_(state, event);
 
+    console.log(event, newState)
+
     // Always saveToLocalStorage
     Effect.saveToLocalStorage(newState).perform()
 
@@ -78,6 +105,54 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
         case "onInput":
             return [
                 updateInput(event.input, event.value, state),
+                Effect.none()
+            ]
+
+        case "onFocus":
+            return [
+                {
+                    ...state,
+                    autoCompleteMenu: AutoCompleteMenu.open(event.input)
+                },
+                Effect.none()
+            ]
+
+        case "onBlur":
+            return [
+                {
+                    ...state,
+                    autoCompleteMenu: AutoCompleteMenu.closed()
+                },
+                Effect.none()
+            ]
+
+        case "onKeyDown":
+            var state_ = state
+
+            // If we press enter, alter the selected input's value.
+            if (event.key === "Enter" && state.autoCompleteMenu.tag === "OpenDropDownMenu") {
+                state_ = Maybe.fromUndefined(
+                    AutoCompleteMenu.getItems(
+                        event.input,
+                        state.createRecord,
+                        state.records,
+                        state.tasks
+                    )[state.autoCompleteMenu.index]
+                )
+                    .map(inputValue => updateInput(event.input, inputValue, state))
+                    .withDefault(state)
+            }
+
+            return [
+                {
+                    ...state_,
+                    autoCompleteMenu: AutoCompleteMenu.afterKeyDown(
+                        event.input,
+                        event.key,
+                        AutoCompleteMenu.getItems(event.input, state.createRecord, state.records, state.tasks).length,
+                        state.autoCompleteMenu
+                    )
+                },
                 Effect.none()
             ]
 
@@ -180,14 +255,22 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
             }
             break
 
-        case "submitCreateRecord":
+        case "onAutoCompleteItemClick":
             return [
-                state,
-                Effect.preventDefault(event.preventDefault)
+                Maybe.fromUndefined(
+                    AutoCompleteMenu.getItems(
+                        event.input,
+                        state.createRecord,
+                        state.records,
+                        state.tasks
+                    )[event.index]
+                )
+                    .map(inputValue => updateInput(event.input, inputValue, state))
+                    .withDefault(state),
+                Effect.none()
             ]
     }
 }
-
 
 function addRecord(record: Record.Record, state: State.State): State.State {
     return {
