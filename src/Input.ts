@@ -15,7 +15,7 @@ export function createRecord(name: CreateRecordInputName): Input {
     return { tag: "createRecord", name }
 }
 
-export function eq(a: Input, b: Input): boolean {
+export function equals(a: Input, b: Input): boolean {
     if (a.tag === "createRecord" && b.tag === "createRecord") {
         return a.name === b.name
     }

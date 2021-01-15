@@ -145,3 +145,19 @@ export function timeDifferenceToString(difference: number): string {
 export function upperCaseFirst(string: string): string {
     return string[0].toUpperCase() + string.substring(1)
 }
+
+export function assertNever(never: never): void {
+
+}
+
+export function deepEquality(a: any, b: any): boolean {
+    if (a instanceof Array && b instanceof Array) {
+        return a.every((x, i) => deepEquality(x, b[i]))
+    }
+
+    if (typeof a === "object" && typeof b === "object") {
+        return Object.entries(a).every(([k, v]) => deepEquality(v, b[k]))
+    }
+
+    return a === b
+}

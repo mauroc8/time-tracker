@@ -39,17 +39,20 @@ export function find(id: Id, tasks: Array<Task>): Maybe.Maybe<Task> {
 }
 
 export function search(query: string, tasks: Array<Task>): Array<Task> {
-    return tasks.map<[Task, number]>(task =>
-        [task, Levenshtein.distance(query.toLowerCase(), task.name.toLowerCase())]
-    )
-        .sort((a: [Task, number], b: [Task, number]) => {
-            const [taskA, distanceA] = a
-            const [taskB, distanceB] = b
+    if (query === "")
+        return []
+    else
+        return tasks.map<[Task, number]>(task =>
+            [task, Levenshtein.distance(query.toLowerCase(), task.name.toLowerCase())]
+        )
+            .sort((a: [Task, number], b: [Task, number]) => {
+                const [taskA, distanceA] = a
+                const [taskB, distanceB] = b
 
-            return distanceA - distanceB
-        })
-        .slice(0, 5)
-        .map(([task, _]) => task)
+                return distanceA - distanceB
+            })
+            .slice(0, 5)
+            .map(([task, _]) => task)
 }
 
 export function cast(json: any): Maybe.Maybe<Task> {

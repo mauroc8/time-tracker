@@ -1,53 +1,38 @@
 import * as Utils from './Utils'
 
-export type Html<Evt> = {
-    tag: string,
-    attributes: Array<Attribute<Evt>>,
-    children: Array<Html<Evt>>
-}
+export type Html<Evt> =
+    | { nodeType: "node", tagName: string, attributes: Array<Attribute<Evt>>, children: Array<Html<Evt>> }
+    | { nodeType: "text", text: string }
 
 export function node<Evt>(
-    tag: string,
+    tagName: string,
     attributes: Array<Attribute<Evt>>,
     children: Array<Html<Evt>>
 ): Html<Evt> {
-    return { tag, attributes, children }
+    return { nodeType: "node", tagName, attributes, children }
 }
 
-export function _insertAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: Evt) => void, element: any): void {
-    switch (attribute.tag) {
-        case "attribute":
-            element.setAttribute(attribute.name, attribute.value)
-            return
+export function text<Evt>(text: string): Html<Evt> {
+    return { nodeType: "text", text }
+}
 
-        case "property":
-            element[attribute.name] = attribute.value
-            return
+export function toElement<Evt>(html: Html<Evt>, dispatch: (evt: Evt) => void): Element | Text {
+    switch (html.nodeType) {
+        case "node":
+            const element = document.createElement(html.tagName)
 
-        case "eventHandler":
-            element[`on${Utils.upperCaseFirst(attribute.eventName)}`] = (event: any) =>
-                dispatch(attribute.handler(event))
+            for (let attribute of html.attributes)
+                toDomAttribute(attribute, dispatch, element)
 
-            return
+            for (let child of html.children)
+                element.appendChild(toElement(child, dispatch))
 
-        case "style":
-            element.style[attribute.property] = attribute.value
-            return
+            return element
+
+        case "text":
+            return document.createTextNode(html.text)
     }
 }
-
-export function toElement<Evt>(html: Html<Evt>, document: Document, dispatch: (evt: Evt) => void): Element {
-    const element = document.createElement(html.tag)
-
-    for (let attribute of html.attributes)
-        _insertAttribute(attribute, dispatch, element)
-
-    for (let child of html.children)
-        element.appendChild(toElement(child, document, dispatch))
-
-    return element
-}
-
 
 // Attr
 
@@ -71,4 +56,26 @@ export function on<Evt>(eventName: string, handler: (event: any) => Evt): Attrib
 
 export function style<Evt>(property: string, value: string): Attribute<Evt> {
     return { tag: "style", property, value }
+}
+
+export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {
+    switch (attribute.tag) {
+        case "attribute":
+            $element.setAttribute(attribute.name, attribute.value)
+            return
+
+        case "property":
+            ($element as any)[attribute.name] = attribute.value
+            return
+
+        case "eventHandler":
+            ($element as any)[`on${attribute.eventName}`] = (event: any) =>
+                dispatch(attribute.handler(event))
+
+            return
+
+        case "style":
+            ($element as any).style[attribute.property] = attribute.value
+            return
+    }
 }

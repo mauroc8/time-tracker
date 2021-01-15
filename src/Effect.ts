@@ -3,20 +3,13 @@ import * as Maybe from './Maybe'
 
 export type Effect<A> = {
     tag: "Effect",
-    type: EffectTypes,
-    perform: () => A
+    perform: (dispatch: (event: A) => void) => void
 }
 
-export type EffectTypes =
-    | "localStorage"
-    | "preventDefault"
-    | "none"
-
-export function saveToLocalStorage(state: State.State): Effect<void> {
+export function saveToLocalStorage<T>(state: State.State): Effect<T> {
     return {
         tag: "Effect",
-        type: "localStorage",
-        perform: () =>
+        perform: (_) =>
             localStorage.setItem("state", JSON.stringify(state))
     }
 }
@@ -24,35 +17,41 @@ export function saveToLocalStorage(state: State.State): Effect<void> {
 export function getFromLocalStorage(): Effect<Maybe.Maybe<State.State>> {
     return {
         tag: "Effect",
-        type: "localStorage",
-        perform: () => {
+        perform: (dispatch) => {
             const stateString = localStorage.getItem("state")
 
             if (stateString === null) {
-                return Maybe.nothing()
-            }
-
-            try {
-                return State.cast(JSON.parse(stateString))
-            } catch (e) {
-                return Maybe.nothing()
+                dispatch(Maybe.nothing())
+            } else {
+                try {
+                    dispatch(State.cast(JSON.parse(stateString)))
+                } catch (e) {
+                    dispatch(Maybe.nothing())
+                }
             }
         }
     }
 }
 
-export function preventDefault(preventDefault: () => void): Effect<void> {
+export function preventDefault<T>(preventDefault: () => void): Effect<T> {
     return {
         tag: "Effect",
-        type: "preventDefault",
-        perform: preventDefault
+        perform: (_) => preventDefault()
     }
 }
 
-export function none(): Effect<void> {
+export function none<T>(): Effect<T> {
     return {
         tag: "Effect",
-        type: "none",
-        perform: () => { }
+        perform: (_) => { }
+    }
+}
+
+export function batch<T>(effects: Array<Effect<T>>): Effect<T> {
+    return {
+        tag: "Effect",
+        perform: (dispatch) => {
+            effects.forEach(effect => effect.perform(dispatch))
+        }
     }
 }

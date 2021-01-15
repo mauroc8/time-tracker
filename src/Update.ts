@@ -87,20 +87,19 @@ export type Dispatch = (event: Event) => void
  * arbitrarily (BUT it's the ONLY function that can perform side effects in our _whole_ application!)
  * 
  */
-export function update(state: State.State, event: Event): State.State {
+export function update(state: State.State, event: Event): [State.State, Effect.Effect<Event>] {
     const [newState, effect] = update_(state, event);
 
-    console.log(event, newState)
-
-    // Always saveToLocalStorage
-    Effect.saveToLocalStorage(newState).perform()
-
-    effect.perform()
-
-    return newState
+    return [
+        newState,
+        Effect.batch([
+            Effect.saveToLocalStorage(newState),
+            effect,
+        ])
+    ]
 }
 
-function update_(state: State.State, event: Event): [State.State, Effect.Effect<void>] {
+function update_(state: State.State, event: Event): [State.State, Effect.Effect<Event>] {
     switch (event.tag) {
         case "onInput":
             return [
@@ -130,7 +129,7 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
             var state_ = state
 
             // If we press enter, alter the selected input's value.
-            if (event.key === "Enter" && state.autoCompleteMenu.tag === "OpenDropDownMenu") {
+            if (event.key === "Enter" && state.autoCompleteMenu.tag === "OpenAutoCompleteMenu") {
                 state_ = Maybe.fromUndefined(
                     AutoCompleteMenu.getItems(
                         event.input,

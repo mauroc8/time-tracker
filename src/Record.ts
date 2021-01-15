@@ -1,5 +1,3 @@
-import React from 'react'
-import ReactDOM from 'react-dom'
 
 import * as Maybe from './Maybe'
 import * as Utils from './Utils'
@@ -9,6 +7,7 @@ import * as View from './View'
 import * as Levenshtein from './Levenshtein'
 import * as Input from './Input'
 import * as Button from './Button'
+import * as Html from './Html'
 
 export type Id = {
     tag: "recordId",
@@ -100,63 +99,63 @@ export function normalizeInputs(tasks: Array<Task.Task>, record: Record): Record
     }
 }
 
-export function view(record: Record, tasks: Array<Task.Task>, dispatch: Update.Dispatch): Array<JSX.Element> {
-    function onInput(
-        inputName: Input.RecordInputName
-    ): (event: React.FormEvent<HTMLInputElement>) => void {
-        return event => dispatch(Update.onInput(Input.record(record, inputName), event.currentTarget.value))
-    }
+export function view(record: Record, tasks: Array<Task.Task>): Array<Html.Html<Update.Event>> {
+    const input = (inputName: Input.RecordInputName) => Input.record(record, inputName)
 
     return [
         View.inputWithInvisibleLabel(
             `record-${record.id}-description`,
             'Descripción',
-            {
-                value: record.description,
-                onInput: onInput("description"),
-                onBlur: _ => dispatch(Update.gotRecordBlur(record.id)),
-            }
+            [
+                Html.property("value", record.description),
+                Html.on("input", (event: any) => Update.onInput(input("description"), event?.target?.value || "")),
+                Html.on("blur", (_) => Update.gotRecordBlur(record.id)),
+            ]
         ),
         View.inputWithInvisibleLabel(
             `record-${record.id}-task`,
             'Tarea',
-            {
-                value: record.taskInput,
-                onInput: onInput("task"),
-                onBlur: _ => dispatch(Update.gotRecordBlur(record.id)),
-            }
+            [
+                Html.property("value", record.taskInput),
+                Html.on("input", (event: any) => Update.onInput(input("task"), event?.target?.value || "")),
+                Html.on("blur", (_) => Update.gotRecordBlur(record.id))
+            ]
         ),
         View.inputWithInvisibleLabel(
             `record-${record.id}-start`,
             'Tiempo de inicio',
-            {
-                value: record.startInput,
-                onInput: onInput("startTime"),
-                onBlur: _ => dispatch(Update.gotRecordBlur(record.id)),
-            }
+            [
+                Html.property("value", record.startInput),
+                Html.on("input", (event: any) => Update.onInput(input("startTime"), event?.target?.value || "")),
+                Html.on("blur", (_) => Update.gotRecordBlur(record.id))
+            ]
         ),
         View.inputWithInvisibleLabel(
             `record-${record.id}-end`,
             'Tiempo de fin',
-            {
-                value: record.endInput,
-                onInput: onInput("endTime"),
-                onBlur: _ => dispatch(Update.gotRecordBlur(record.id)),
-            }
+            [
+                Html.property("value", record.endInput),
+                Html.on("input", (event: any) => Update.onInput(input("endTime"), event?.target?.value || "")),
+                Html.on("blur", (_) => Update.gotRecordBlur(record.id))
+            ]
         ),
-        <>
-            {Utils.timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate))}
-        </>,
-        <button
-            onClick={(_) => dispatch(Update.clickedButton(Button.deleteRecord(record.id)))}
-        >
-            Delete
-        </button>,
-        <button
-            onClick={(_) => dispatch(Update.clickedButton(Button.resumeRecord(record.id)))}
-        >
-            Resume
-        </button>,
+        Html.text(
+            Utils.timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate))
+        ),
+        Html.node(
+            "button",
+            [
+                Html.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
+            ],
+            [Html.text("Delete")]
+        ),
+        Html.node(
+            "button",
+            [
+                Html.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
+            ],
+            [Html.text("Resume")]
+        ),
     ]
 }
 
@@ -207,16 +206,19 @@ export function cast(json: any): Maybe.Maybe<Record> {
 }
 
 export function search(query: string, records: Array<Record>): Array<Record> {
-    return records.map<[Record, number]>(record =>
-        [record, Levenshtein.distance(query.toLowerCase(), record.description.toLowerCase())]
-    )
-        .sort((a: [Record, number], b: [Record, number]) => {
-            const [recordA, distanceA] = a
-            const [recordB, distanceB] = b
+    if (query === "")
+        return []
+    else
+        return records.map<[Record, number]>(record =>
+            [record, Levenshtein.distance(query.toLowerCase(), record.description.toLowerCase())]
+        )
+            .sort((a: [Record, number], b: [Record, number]) => {
+                const [recordA, distanceA] = a
+                const [recordB, distanceB] = b
 
-            return distanceA - distanceB
-        })
-        .map(([record, _]) => record)
+                return distanceA - distanceB
+            })
+            .map(([record, _]) => record)
 }
 
 export function filterUsingTask(taskId: Task.Id, records: Array<Record>): Array<Record> {

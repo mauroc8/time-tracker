@@ -25,9 +25,15 @@ const backendTask = Task.task(
     Utils.rgba(0.1, 0.2, 0.3, 1.0),
 )
 
-export function initialState(): State {
-    return Effect.getFromLocalStorage().perform()
-        .withDefault(initialState_)
+export function initialState<Event>(flags: any): [State, Effect.Effect<Event>] {
+    try {
+        return [
+            cast(JSON.parse(flags)).withDefault(initialState_),
+            Effect.none(),
+        ]
+    } catch (e) {
+        return [initialState_, Effect.none()]
+    }
 }
 
 const initialState_: State = {
