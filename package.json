@@ -6,7 +6,8 @@
     "parcel-bundler": "^1.12.4"
   },
   "scripts": {
-    "start": "parcel src/index.html"
+    "start": "parcel src/index.html",
+    "build": "rm -rf docs && parcel build src/index.html --public-url=./ --out-dir docs --detailed-report"
   },
   "browserslist": {
     "production": [
