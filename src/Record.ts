@@ -3,7 +3,7 @@ import * as Maybe from './Maybe'
 import * as Utils from './Utils'
 import * as Task from './Task'
 import * as Update from './Update'
-import * as View from './View'
+import * as Element from './Element'
 import * as Levenshtein from './Levenshtein'
 import * as Input from './Input'
 import * as Button from './Button'
@@ -103,7 +103,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Array<Html.Html<U
     const input = (inputName: Input.RecordInputName) => Input.record(record, inputName)
 
     return [
-        View.inputWithInvisibleLabel(
+        Element.inputWithInvisibleLabel(
             `record-${record.id}-description`,
             'Descripción',
             [
@@ -112,7 +112,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Array<Html.Html<U
                 Html.on("blur", (_) => Update.gotRecordBlur(record.id)),
             ]
         ),
-        View.inputWithInvisibleLabel(
+        Element.inputWithInvisibleLabel(
             `record-${record.id}-task`,
             'Tarea',
             [
@@ -121,7 +121,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Array<Html.Html<U
                 Html.on("blur", (_) => Update.gotRecordBlur(record.id))
             ]
         ),
-        View.inputWithInvisibleLabel(
+        Element.inputWithInvisibleLabel(
             `record-${record.id}-start`,
             'Tiempo de inicio',
             [
@@ -130,7 +130,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Array<Html.Html<U
                 Html.on("blur", (_) => Update.gotRecordBlur(record.id))
             ]
         ),
-        View.inputWithInvisibleLabel(
+        Element.inputWithInvisibleLabel(
             `record-${record.id}-end`,
             'Tiempo de fin',
             [

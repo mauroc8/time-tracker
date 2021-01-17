@@ -21,7 +21,7 @@ export function inputWithLabel<T>(
             Html.node(
                 "div",
                 [],
-                [ Html.text(label) ]
+                [Html.text(label)]
             ),
             Html.node(
                 "input",
@@ -42,7 +42,7 @@ export function inputWithInvisibleLabel<T>(
 ): Html.Html<T> {
     return Html.node(
         "label",
-        [ Html.attribute("for", id) ],
+        [Html.attribute("for", id)],
         [
             Html.node(
                 "div",
@@ -51,7 +51,7 @@ export function inputWithInvisibleLabel<T>(
                     Html.style("left", "-99999px"),
                     Html.style("top", "-99999px"),
                 ],
-                [ Html.text(label) ]
+                [Html.text(label)]
             ),
             Html.node(
                 "input",
@@ -104,11 +104,11 @@ function viewRecordTable(
                         "tr",
                         [],
                         [
-                            Html.node("th", [], [ Html.text("Descripción") ]),
-                            Html.node("th", [], [ Html.text("Tarea") ]),
-                            Html.node("th", [], [ Html.text("Inicio") ]),
-                            Html.node("th", [], [ Html.text("Fin") ]),
-                            Html.node("th", [], [ Html.text("Duración") ]),
+                            Html.node("th", [], [Html.text("Descripción")]),
+                            Html.node("th", [], [Html.text("Tarea")]),
+                            Html.node("th", [], [Html.text("Inicio")]),
+                            Html.node("th", [], [Html.text("Fin")]),
+                            Html.node("th", [], [Html.text("Duración")]),
                         ]
                     )
                 ]
@@ -122,7 +122,7 @@ function viewRecordTable(
                         [],
                         Record.view(record, tasks)
                             .map(recordHtml =>
-                                Html.node("td", [], [ recordHtml ])
+                                Html.node("td", [], [recordHtml])
                             )
                     )
                 )

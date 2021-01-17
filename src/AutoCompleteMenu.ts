@@ -1,6 +1,6 @@
 
 import * as Input from './Input'
-import * as View from './View'
+import * as Element from './Element'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
 import * as Task from './Task'
@@ -60,7 +60,7 @@ export function inputWithLabel<T>(args: {
     autoCompleteMenu: AutoCompleteMenu,
     inputAttributes: Array<Html.Attribute<T>>,
 }): Html.Html<T> {
-    const input = View.inputWithLabel<T>(
+    const input = Element.inputWithLabel<T>(
         Input.toStringId(args.input),
         args.label,
         [

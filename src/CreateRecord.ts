@@ -2,7 +2,7 @@
 import * as Update from "./Update"
 import * as Maybe from './Maybe'
 import * as Task from "./Task"
-import * as View from './View'
+import * as Element from './Element'
 import * as Utils from './Utils'
 import * as Result from './Result'
 import * as Record from './Record'
@@ -188,7 +188,7 @@ export function view(args: {
                 "div",
                 [],
                 args.createRecord.start.map<Array<Html.Html<Update.Event>>>(start => [
-                    View.inputWithLabel(
+                    Element.inputWithLabel(
                         "create-record-start-time",
                         "Start time",
                         [
