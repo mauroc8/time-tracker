@@ -6,8 +6,8 @@
 
 import * as State from './State'
 import * as Update from './Update'
+import * as Element from './Element'
 import * as View from './View'
-
 import * as VirtualDom from './utils/vdom/VirtualDom'
 import * as Html from './utils/vdom/Html'
 
@@ -19,7 +19,7 @@ const flags = localStorage.getItem("state")
 
 if ($rootElement !== null) {
     let [state, initialEffect] = State.initialState<Update.Event>(flags)
-    let view = View.view(state)
+    let view = Element.view(state)
 
     const dispatch = (event: Update.Event) => {
         const [newState, effect] = Update.update(state, event)
@@ -29,7 +29,6 @@ if ($rootElement !== null) {
 
         patch($rootElement)
         view = newView
-
         effect.perform(dispatch)
     }
 
