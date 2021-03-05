@@ -1,13 +1,16 @@
 
-import * as Maybe from './Maybe'
-import * as Utils from './Utils'
+import * as Maybe from './utils/Maybe'
+import * as Utils from './utils/Utils'
 import * as Task from './Task'
 import * as Update from './Update'
 import * as View from './View'
-import * as Levenshtein from './Levenshtein'
+import * as Levenshtein from './utils/Levenshtein'
 import * as Input from './Input'
 import * as Button from './Button'
-import * as Html from './Html'
+import * as Html from './utils/vdom/Html'
+import * as Layout from './utils/layout/Layout'
+import * as Component from './style/Component'
+import * as Attribute from './utils/layout/Attribute'
 
 export type Id = {
     tag: "recordId",
@@ -99,64 +102,104 @@ export function normalizeInputs(tasks: Array<Task.Task>, record: Record): Record
     }
 }
 
-export function view(record: Record, tasks: Array<Task.Task>): Array<Html.Html<Update.Event>> {
+export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Update.Event> {
     const input = (inputName: Input.RecordInputName) => Input.record(record, inputName)
 
-    return [
-        View.inputWithInvisibleLabel(
-            `record-${record.id}-description`,
-            'Descripción',
-            [
-                Html.property("value", record.description),
-                Html.on("input", (event: any) => Update.onInput(input("description"), event?.target?.value || "")),
-                Html.on("blur", (_) => Update.gotRecordBlur(record.id)),
-            ]
-        ),
-        View.inputWithInvisibleLabel(
-            `record-${record.id}-task`,
-            'Tarea',
-            [
-                Html.property("value", record.taskInput),
-                Html.on("input", (event: any) => Update.onInput(input("task"), event?.target?.value || "")),
-                Html.on("blur", (_) => Update.gotRecordBlur(record.id))
-            ]
-        ),
-        View.inputWithInvisibleLabel(
-            `record-${record.id}-start`,
-            'Tiempo de inicio',
-            [
-                Html.property("value", record.startInput),
-                Html.on("input", (event: any) => Update.onInput(input("startTime"), event?.target?.value || "")),
-                Html.on("blur", (_) => Update.gotRecordBlur(record.id))
-            ]
-        ),
-        View.inputWithInvisibleLabel(
-            `record-${record.id}-end`,
-            'Tiempo de fin',
-            [
-                Html.property("value", record.endInput),
-                Html.on("input", (event: any) => Update.onInput(input("endTime"), event?.target?.value || "")),
-                Html.on("blur", (_) => Update.gotRecordBlur(record.id))
-            ]
-        ),
-        Html.text(
-            Utils.timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate))
-        ),
-        Html.node(
-            "button",
-            [
-                Html.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
-            ],
-            [Html.text("Delete")]
-        ),
-        Html.node(
-            "button",
-            [
-                Html.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
-            ],
-            [Html.text("Resume")]
-        ),
-    ]
+    return Layout.row(
+        "div",
+        [
+            Attribute.spacing(18),
+        ],
+        [
+            Component.textInput(
+                [
+                    Attribute.style("flex-basis", "40%"),
+                ],
+                {
+                    id: `record-${record.id}-description`,
+                    label: Layout.text('Descripción'),
+                    value: record.description,
+                    attributes: [
+                        Attribute.on("input", (event: any) => Update.onInput(input("description"), event?.target?.value || "")),
+                    ],
+                }
+            ),
+            Component.textInput(
+                [
+                    Attribute.style("flex-basis", "20%"),
+                ],
+                {
+                    id: `record-${record.id}-task`,
+                    label: Layout.text('Tarea'),
+                    value: record.taskInput,
+                    attributes: [
+                        Attribute.on("input", (event: any) => Update.onInput(input("task"), event?.target?.value || "")),
+                    ],
+                }
+            ),
+            Component.textInput(
+                [
+                    Attribute.style("flex-basis", "10%"),
+                ],
+                {
+                    id: `record-${record.id}-start`,
+                    label: Layout.text('Inicio'),
+                    value: record.startInput,
+                    attributes: [
+                        Attribute.on("input", (event: any) => Update.onInput(input("startTime"), event?.target?.value || "")),
+                    ],
+                }
+            ),
+            Component.textInput(
+                [
+                    Attribute.style("flex-basis", "10%"),
+                ],
+                {
+                    id: `record-${record.id}-end`,
+                    label: Layout.text('Fin'),
+                    value: record.endInput,
+                    attributes: [
+                        Attribute.on("input", (event: any) => Update.onInput(input("endTime"), event?.target?.value || "")),
+                    ],
+                }
+            ),
+            Component.textInput(
+                [
+                    Attribute.style("flex-basis", "10%"),
+                ],
+                {
+                    id: `record-${record.id}-duration`,
+                    label: Layout.text('Duración'),
+                    value: Utils
+                        .timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate)),
+                    attributes: [],
+                }
+            ),
+            Layout.column(
+                "div",
+                [
+                    Attribute.style("flex-basis", "10%"),
+                ],
+                [
+                    Layout.column(
+                        "button",
+                        [
+                            Attribute.style("flex-grow", "1"),
+                            Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
+                        ],
+                        [Layout.text("Retomar")]
+                    ),
+                    Layout.column(
+                        "button",
+                        [
+                            Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
+                        ],
+                        [Layout.text("Borrar")]
+                    ),
+                ]
+            ),
+        ]
+    )
 }
 
 export function mapWithId(records: Array<Record>, id: Id, fn: (record: Record) => Record): Array<Record> {
@@ -171,7 +214,7 @@ export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
     return records.filter(record => !matchesId(id, record))
 }
 
-export function castId(json: any): Maybe.Maybe<Id> {
+export function decodeJsonId(json: any): Maybe.Maybe<Id> {
     if (typeof json === "object"
         && json.tag === "recordId"
         && typeof json.id === "number"
@@ -180,7 +223,7 @@ export function castId(json: any): Maybe.Maybe<Id> {
     return Maybe.nothing()
 }
 
-export function cast(json: any): Maybe.Maybe<Record> {
+export function decode(json: any): Maybe.Maybe<Record> {
     if (typeof json === "object"
         && typeof json.description === "string"
         && typeof json.startInput === "string"
@@ -190,8 +233,8 @@ export function cast(json: any): Maybe.Maybe<Record> {
         && typeof json.taskInput === "string"
     )
         return Maybe.map2(
-            castId(json.id),
-            Task.castId(json.taskId),
+            decodeJsonId(json.id),
+            Task.decodeJsonId(json.taskId),
             (id, taskId) => ({
                 id, taskId,
                 description: json.description,

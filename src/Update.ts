@@ -1,13 +1,12 @@
 import * as State from './State'
-import * as Maybe from './Maybe'
+import * as Maybe from './utils/Maybe'
 import * as Record from './Record'
 import * as CreateRecord from './CreateRecord'
 import * as Task from './Task'
-import * as Utils from './Utils'
+import * as Utils from './utils/Utils'
 import * as Input from './Input'
-import * as Effect from './Effect'
+import * as Effect from './utils/Effect'
 import * as Button from './Button'
-import * as AutoCompleteMenu from './AutoCompleteMenu'
 
 
 
@@ -15,14 +14,8 @@ import * as AutoCompleteMenu from './AutoCompleteMenu'
  * 
 */
 export type Event =
-    | { tag: "RecordBlur", id: Record.Id }
-    | { tag: "CreateRecordBlur" }
     | { tag: "onInput", input: Input.Input, value: string }
-    | { tag: "onFocus", input: Input.Input }
-    | { tag: "onBlur", input: Input.Input }
-    | { tag: "onKeyDown", input: Input.Input, key: AutoCompleteMenu.Key }
     | { tag: "ButtonClick", button: Button.Button }
-    | { tag: "onAutoCompleteItemClick", input: Input.Input, index: number }
 
 export function onInput(input: Input.Input, value: string): Event {
     return {
@@ -31,47 +24,11 @@ export function onInput(input: Input.Input, value: string): Event {
     }
 }
 
-export function onFocus(input: Input.Input): Event {
-    return {
-        tag: "onFocus",
-        input
-    }
-}
-
-export function onBlur(input: Input.Input): Event {
-    return {
-        tag: "onBlur",
-        input
-    }
-}
-
-export function onKeyDown(input: Input.Input, key: AutoCompleteMenu.Key): Event {
-    return {
-        tag: "onKeyDown",
-        input, key,
-    }
-}
-
 export function clickedButton(button: Button.Button): Event {
     return {
         tag: "ButtonClick",
         button
     }
-}
-
-export function gotRecordBlur(id: Record.Id): Event {
-    return {
-        tag: "RecordBlur",
-        id
-    }
-}
-
-export function gotCreateRecordBlur(): Event {
-    return { tag: "CreateRecordBlur" }
-}
-
-export function onAutoCompleteItemClick(input: Input.Input, index: number): Event {
-    return { tag: "onAutoCompleteItemClick", input, index }
 }
 
 /** The type of the dispatch function
@@ -107,76 +64,6 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                 Effect.none()
             ]
 
-        case "onFocus":
-            return [
-                {
-                    ...state,
-                    autoCompleteMenu: AutoCompleteMenu.open(event.input)
-                },
-                Effect.none()
-            ]
-
-        case "onBlur":
-            return [
-                {
-                    ...state,
-                    autoCompleteMenu: AutoCompleteMenu.closed()
-                },
-                Effect.none()
-            ]
-
-        case "onKeyDown":
-            var state_ = state
-
-            // If we press enter, alter the selected input's value.
-            if (event.key === "Enter" && state.autoCompleteMenu.tag === "OpenAutoCompleteMenu") {
-                state_ = Maybe.fromUndefined(
-                    AutoCompleteMenu.getItems(
-                        event.input,
-                        state.createRecord,
-                        state.records,
-                        state.tasks
-                    )[state.autoCompleteMenu.index]
-                )
-                    .map(inputValue => updateInput(event.input, inputValue, state))
-                    .withDefault(state)
-            }
-
-            return [
-                {
-                    ...state_,
-                    autoCompleteMenu: AutoCompleteMenu.afterKeyDown(
-                        event.input,
-                        event.key,
-                        AutoCompleteMenu.getItems(event.input, state.createRecord, state.records, state.tasks).length,
-                        state.autoCompleteMenu
-                    )
-                },
-                Effect.none()
-            ]
-
-        case "CreateRecordBlur":
-            return [
-                {
-                    ...state,
-                    createRecord: CreateRecord.normalizeInputs(state.tasks, state.createRecord)
-                },
-                Effect.none()
-            ]
-
-        case "RecordBlur":
-            return [
-                {
-                    ...state,
-                    records: Record.mapWithId(
-                        state.records,
-                        event.id,
-                        record => Record.normalizeInputs(state.tasks, record),
-                    )
-                },
-                Effect.none()
-            ]
-
         case "ButtonClick":
             const button = event.button
 
@@ -203,13 +90,9 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                                         {
                                             ...state,
                                             createRecord: CreateRecord.empty(""),
-                                            createRecordError: Maybe.nothing(),
                                         }
                                     ),
-                                validationError => ({
-                                    ...state,
-                                    createRecordError: Maybe.just(validationError)
-                                })
+                                validationError => state
                             ),
                         Effect.none()
                     ]
@@ -238,13 +121,10 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                                     )
                                     // Start it immediately if it's not running already
                                     .map(createRecord => {
-                                        if (createRecord.start.tag === "nothing") {
-                                            return {
-                                                ...createRecord,
-                                                start: Maybe.just(CreateRecord.start(new Date()))
-                                            }
-                                        }
-                                        return createRecord
+                                        return createRecord.start.map(_ => ({
+                                            ...createRecord,
+                                            start: Maybe.just(CreateRecord.start(new Date()))
+                                        })).orElse(() => createRecord)
                                     })
                                     // Don't do nothing if we didn't find the record
                                     .withDefault(state.createRecord)
@@ -253,21 +133,6 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                     ]
             }
             break
-
-        case "onAutoCompleteItemClick":
-            return [
-                Maybe.fromUndefined(
-                    AutoCompleteMenu.getItems(
-                        event.input,
-                        state.createRecord,
-                        state.records,
-                        state.tasks
-                    )[event.index]
-                )
-                    .map(inputValue => updateInput(event.input, inputValue, state))
-                    .withDefault(state),
-                Effect.none()
-            ]
     }
 }
 

@@ -1,10 +1,9 @@
-import * as Maybe from './Maybe'
-import * as Utils from './Utils'
+import * as Maybe from './utils/Maybe'
+import * as Utils from './utils/Utils'
 import * as Task from './Task'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
-import * as AutoCompleteMenu from './AutoCompleteMenu'
-import * as Effect from './Effect'
+import * as Effect from './utils/Effect'
 
 // STATE ---
 
@@ -15,14 +14,11 @@ export type State = {
     createRecord: CreateRecord.CreateRecord,
     records: Array<Record.Record>,
     tasks: Array<Task.Task>,
-    createRecordError: Maybe.Maybe<CreateRecord.Error>,
-    autoCompleteMenu: AutoCompleteMenu.AutoCompleteMenu
 }
 
 const backendTask = Task.task(
     Task.taskId(0),
     "Backend",
-    Utils.rgba(0.1, 0.2, 0.3, 1.0),
 )
 
 export function initialState<Event>(flags: any): [State, Effect.Effect<Event>] {
@@ -45,18 +41,29 @@ const initialState_: State = {
             new Date(),
             Record.recordId(new Date()),
             backendTask,
-        )
+        ),
+        Record.record(
+            "Login",
+            new Date(),
+            new Date(),
+            Record.recordId(new Date()),
+            backendTask,
+        ),
+        Record.record(
+            "Login",
+            new Date(),
+            new Date(),
+            Record.recordId(new Date()),
+            backendTask,
+        ),
     ],
     tasks: [
         backendTask,
         Task.task(
             Task.taskId(1),
             "Frontend",
-            Utils.rgba(0.8, 0.7, 0.6, 1.0),
         )
     ],
-    createRecordError: Maybe.nothing(),
-    autoCompleteMenu: AutoCompleteMenu.closed(),
 }
 
 export function cast(json: any): Maybe.Maybe<State> {
@@ -66,15 +73,13 @@ export function cast(json: any): Maybe.Maybe<State> {
 
     ) {
         return Maybe.map3(
-            CreateRecord.cast(json.createRecord),
-            Maybe.combine((json.records as Array<any>).map((record: any) => Record.cast(record))),
-            Maybe.combine((json.tasks as Array<any>).map((task: any) => Task.cast(task))),
+            CreateRecord.decodeJson(json.createRecord),
+            Maybe.combine((json.records as Array<any>).map((record: any) => Record.decode(record))),
+            Maybe.combine((json.tasks as Array<any>).map((task: any) => Task.decode(task))),
             (createRecord, records, tasks) => ({
                 createRecord,
                 records,
                 tasks,
-                createRecordError: Maybe.nothing(),
-                autoCompleteMenu: AutoCompleteMenu.closed(),
             })
         )
     } else {

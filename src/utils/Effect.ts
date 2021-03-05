@@ -1,4 +1,4 @@
-import * as State from './State'
+import * as State from '../State'
 import * as Maybe from './Maybe'
 
 export type Effect<A> = {

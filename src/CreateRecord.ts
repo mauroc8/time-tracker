@@ -1,16 +1,17 @@
 
 import * as Update from "./Update"
-import * as Maybe from './Maybe'
+import * as Maybe from './utils/Maybe'
 import * as Task from "./Task"
-import * as View from './View'
-import * as Utils from './Utils'
-import * as Result from './Result'
+import * as Utils from './utils/Utils'
+import * as Layout from './utils/layout/Layout'
+import * as Result from './utils/Result'
 import * as Record from './Record'
 import * as Input from './Input'
 import * as Button from './Button'
-import * as AutoCompleteMenu from './AutoCompleteMenu'
+import * as Component from './style/Component'
+import * as Attribute from './utils/layout/Attribute'
 
-import * as Html from './Html'
+import * as Html from './utils/vdom/Html'
 
 export type CreateRecord = {
     description: string,
@@ -66,26 +67,67 @@ export function normalizeInputs(tasks: Array<Task.Task>, createRecord: CreateRec
 }
 
 
-export type Error = {
-    emptyDescription: boolean,
-    emptyTask: boolean,
+export class Error {
+    readonly emptyDescription: boolean
+    readonly emptyTask: boolean
+
+    private constructor(
+        emptyDescription: boolean,
+        emptyTask: boolean,
+    ) {
+        this.emptyDescription = emptyDescription
+        this.emptyTask = emptyTask
+    }
+
+    static none(): Error {
+        return new Error(false, false)
+    }
+
+    withEmptyDescription(): Error {
+        return new Error(
+            true,
+            this.emptyTask,
+        )
+    }
+
+    withEmptyTask(): Error {
+        return new Error(
+            this.emptyDescription,
+            true,
+        )
+    }
+
+    static equals(a: Error, b: Error): boolean {
+        return a.emptyDescription === b.emptyDescription
+            && a.emptyTask === b.emptyTask
+    }
 }
+
+function getError(createRecord: CreateRecord): Error {
+    function getErrorOfTask(createRecord: CreateRecord) {
+        return createRecord.taskId
+            .map(_ => Error.none())
+            .orElse(() => Error.none().withEmptyTask())
+    }
+
+    if (createRecord.description.trim() === "") {
+        return getErrorOfTask(createRecord).withEmptyDescription()
+    } else {
+        return getErrorOfTask(createRecord)
+    }
+}
+
 
 export function toRecord(
     tasks: Array<Task.Task>,
     endDate: Date,
     createRecord: CreateRecord,
 ): Result.Result<Record.Record, Error> {
-    const errors = {
-        emptyDescription: createRecord.description.trim() === "",
-        emptyTask: createRecord.taskId.map(_ => false).withDefault(true)
-    }
-
-    if (errors.emptyDescription || errors.emptyTask)
-        return Result.error<Record.Record, Error>(errors)
+    if (!Error.equals(getError(createRecord), Error.none()))
+        return Result.error<Record.Record, Error>(getError(createRecord))
 
     return Result.fromMaybe<Record.Record, Error>(
-        errors,
+        getError(createRecord),
         Maybe
             .map2(
                 createRecord.start,
@@ -107,131 +149,103 @@ export function toRecord(
     )
 }
 
-export function view(args: {
-    createRecord: CreateRecord,
-    records: Array<Record.Record>,
-    tasks: Array<Task.Task>,
-    createRecordError: Maybe.Maybe<Error>,
-    autoCompleteMenu: AutoCompleteMenu.AutoCompleteMenu,
-    attributes: Array<Html.Attribute<Update.Event>>,
-}): Html.Html<Update.Event> {
+export function view(
+    attributes: Array<Attribute.Attribute<Update.Event>>,
+    args: {
+        createRecord: CreateRecord,
+        records: Array<Record.Record>,
+        tasks: Array<Task.Task>,
+    }): Layout.Layout<Update.Event> {
     const task = args.createRecord.taskId.andThen(taskId => Task.find(taskId, args.tasks))
 
-    const errorStyles: Array<Html.Attribute<Update.Event>> = [
-        Html.style("borderColor", "red")
-    ]
+    const redBorder: Attribute.Attribute<Update.Event> =
+        Attribute.style("borderColor", "red")
 
     const descriptionInput = Input.createRecord("description")
     const taskInput = Input.createRecord("task")
 
-    return Html.node(
+    return Layout.row<Update.Event>(
         "div",
-        args.attributes,
+        attributes,
         [
-            AutoCompleteMenu.inputWithLabel<Update.Event>({
-                input: descriptionInput,
-                createRecord: args.createRecord,
-                records: args.records,
-                tasks: args.tasks,
-                label: "Description",
-                value: args.createRecord.description,
-                attributes: [],
-                onAutoCompleteItemClick: (input, index) => Update.onAutoCompleteItemClick(input, index),
-                autoCompleteMenu: args.autoCompleteMenu,
-                inputAttributes: [
-                    ...args.createRecordError
-                        .map(error => error.emptyDescription ? errorStyles : [])
-                        .withDefault([]),
-                    Html.on("input", (event: any) =>
-                        Update.onInput(descriptionInput, event?.target?.value || "")
-                    ),
-                    Html.on("focus", (_) =>
-                        Update.onFocus(descriptionInput)
-                    ),
-                    Html.on("blur", (_) =>
-                        Update.onBlur(descriptionInput)
-                    ),
-                    Html.on("keydown", (event: any) =>
-                        Update.onKeyDown(descriptionInput, AutoCompleteMenu.keyDownEventKeyDecoder(event))
-                    ),
-                ]
-            }),
-            AutoCompleteMenu.inputWithLabel({
-                input: Input.createRecord("task"),
-                createRecord: args.createRecord,
-                records: args.records,
-                tasks: args.tasks,
-                label: "Task",
-                value: args.createRecord.taskInput,
-                attributes: [],
-                onAutoCompleteItemClick: (input, index) => Update.onAutoCompleteItemClick(input, index),
-                autoCompleteMenu: args.autoCompleteMenu,
-                inputAttributes: [
-                    ...args.createRecordError
-                        .map(error => error.emptyTask ? errorStyles : [])
-                        .withDefault([]),
-                    Html.on("input", (event: any) =>
-                        Update.onInput(taskInput, event?.target?.value || "")
-                    ),
-                    Html.on("focus", (_) =>
-                        Update.onFocus(taskInput)
-                    ),
-                    Html.on("blur", (_) =>
-                        Update.onBlur(taskInput)
-                    ),
-                    Html.on("keydown", (event: any) =>
-                        Update.onKeyDown(taskInput, AutoCompleteMenu.keyDownEventKeyDecoder(event))
-                    ),
-                ]
-            }),
-            Html.node(
-                "div",
+            Component.textInput(
                 [],
-                args.createRecord.start.map<Array<Html.Html<Update.Event>>>(start => [
-                    View.inputWithLabel(
-                        "create-record-start-time",
-                        "Start time",
-                        [
-                            Html.property("value", start.input),
-                            Html.on("input", (event: any) =>
-                                Update.onInput(Input.createRecord("startTime"), event?.target?.value || ""))
-                        ],
-                    ),
-                    Html.node(
-                        "div",
-                        [],
-                        [
-                            Html.node(
-                                "button",
-                                [
-                                    Html.on("click", (event: any) => Update.clickedButton(Button.stop()))
-                                ],
-                                [
-                                    Html.text("Stop"),
-                                ]
+                {
+                    id: "createRecord-description",
+                    label: Layout.text("Descripción"),
+                    value: args.createRecord.description,
+                    attributes: [
+                        (() => {
+                            if (getError(args.createRecord).emptyDescription) {
+                                return redBorder
+                            } else {
+                                return Attribute.empty()
+                            }
+                        })(),
+                        Attribute.on("change", (event: any) =>
+                            Update.onInput(descriptionInput, event?.target?.value || "")
+                        ),
+                    ] as Array<Attribute.Attribute<Update.Event>>,
+                }
+            ),
+            Component.textInput(
+                [],
+                {
+                    id: "createRecord-task",
+                    label: Layout.text("Tarea"),
+                    value: args.createRecord.taskInput,
+                    attributes: (() => {
+                        if (getError(args.createRecord).emptyTask) {
+                            return [redBorder]
+                        } else {
+                            return [Attribute.empty()]
+                        }
+                    })() as Array<Attribute.Attribute<Update.Event>>,
+                }
+            ),
+            ...args.createRecord.start.map<Array<Layout.Layout<Update.Event>>>(start => [
+                Component.textInput(
+                    [],
+                    {
+                        id: "create-record-start-time",
+                        label: Layout.text("Start time"),
+                        value: start.input,
+                        attributes: [
+                            Attribute.on(
+                                "input",
+                                (event: any) =>
+                                    Update.onInput(Input.createRecord("startTime"), event?.target?.value || "")
                             )
+                        ],
+                    }
+                ),
+                Layout.html(Html.node(
+                    "button",
+                    [
+                        Html.on("click", (event: any) => Update.clickedButton(Button.stop()))
+                    ],
+                    [
+                        Html.text("Parar"),
+                    ]
+                ))
+            ])
+                .withDefault([
+                    Layout.html(Html.node(
+                        "button",
+                        [
+                            Html.on("click", (_) => Update.clickedButton(Button.play()))
+                        ],
+                        [
+                            Html.text("Empezar")
                         ]
-                    )
+                    ))
                 ])
-                    .withDefault([
-                        Html.node(
-                            "button",
-                            [
-                                Html.on("click", (_) => Update.clickedButton(Button.play()))
-                            ],
-                            [
-                                Html.text("Play")
-                            ]
-                        )
-                    ])
-            )
-            ,
         ]
     )
 }
 
 
-function castStart(json: any): Maybe.Maybe<{ input: string, date: Date }> {
+function decodeStartDate(json: any): Maybe.Maybe<{ input: string, date: Date }> {
     if (typeof json === "object"
         && typeof json.input === "string"
         && typeof json.date === "string"
@@ -244,14 +258,14 @@ function castStart(json: any): Maybe.Maybe<{ input: string, date: Date }> {
         return Maybe.nothing()
 }
 
-export function cast(json: any): Maybe.Maybe<CreateRecord> {
+export function decodeJson(json: any): Maybe.Maybe<CreateRecord> {
     if (typeof json === "object"
         && typeof json.description === "string"
         && typeof json.taskInput === "string"
     )
         return Maybe.map2(
-            Maybe.cast(json.start, castStart),
-            Maybe.cast(json.taskId, Task.castId),
+            Maybe.decodeJson(json.start, decodeStartDate),
+            Maybe.decodeJson(json.taskId, Task.decodeJsonId),
             (start, taskId) => ({
                 description: json.description,
                 start: start,

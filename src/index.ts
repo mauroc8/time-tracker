@@ -8,8 +8,8 @@ import * as State from './State'
 import * as Update from './Update'
 import * as View from './View'
 
-import * as VirtualDom from './VirtualDom'
-import * as Html from './Html'
+import * as VirtualDom from './utils/vdom/VirtualDom'
+import * as Html from './utils/vdom/Html'
 
 let $rootElement = document.getElementById('root') as Element | Text
 let timeout = setTimeout(() => { }, 0)
@@ -24,20 +24,11 @@ if ($rootElement !== null) {
     const dispatch = (event: Update.Event) => {
         const [newState, effect] = Update.update(state, event)
 
-        // Wait for one frame and apply the changes.
-        // This is necessary because performing the effect could call `dispatch` again inmediately!
+        const newView = View.view(newState)
+        const patch = VirtualDom.diff(view, newView, dispatch)
 
-        clearTimeout(timeout)
-
-        timeout = setTimeout(() => {
-            const newView = View.view(newState)
-            const patch = VirtualDom.diff(view, newView, dispatch)
-
-            state = newState
-            view = newView
-
-            $rootElement = patch($rootElement);
-        }, 0)
+        patch($rootElement)
+        view = newView
 
         effect.perform(dispatch)
     }

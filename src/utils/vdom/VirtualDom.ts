@@ -1,5 +1,5 @@
 import * as Html from './Html'
-import * as Utils from './Utils'
+import * as Utils from '../Utils'
 
 export function diff<T>(
     oldVDom: Html.Html<T>,

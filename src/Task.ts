@@ -1,6 +1,7 @@
-import * as Utils from './Utils'
-import * as Maybe from './Maybe'
-import * as Levenshtein from './Levenshtein'
+import * as Utils from './utils/Utils'
+import * as Color from './style/Color'
+import * as Maybe from './utils/Maybe'
+import * as Levenshtein from './utils/Levenshtein'
 
 // TASK ---
 
@@ -8,7 +9,6 @@ import * as Levenshtein from './Levenshtein'
 export type Task = {
     id: Id,
     name: string,
-    color: Utils.Rgba,
 }
 
 export type Id = {
@@ -16,8 +16,8 @@ export type Id = {
     id: number,
 }
 
-export function task(id: Id, name: string, color: Utils.Rgba): Task {
-    return { id, name, color }
+export function task(id: Id, name: string): Task {
+    return { id, name }
 }
 
 export function taskId(id: number): Id {
@@ -55,23 +55,20 @@ export function search(query: string, tasks: Array<Task>): Array<Task> {
             .map(([task, _]) => task)
 }
 
-export function cast(json: any): Maybe.Maybe<Task> {
+export function decode(json: any): Maybe.Maybe<Task> {
     if (typeof json === "object"
         && typeof json.name === "string"
     )
-        return Maybe.map2(
-            castId(json.id),
-            Utils.castRgba(json.color),
-            (id, color) => ({
+        return decodeJsonId(json.id)
+            .map(id => ({
                 id: id,
                 name: json.name,
-                color: color
-            })
-        )
+            }))
+
     return Maybe.nothing()
 }
 
-export function castId(json: any): Maybe.Maybe<Id> {
+export function decodeJsonId(json: any): Maybe.Maybe<Id> {
     if (typeof json === "object"
         && json.tag === "task-id"
         && typeof json.id === "number"
