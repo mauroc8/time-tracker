@@ -76,6 +76,8 @@ export const black = hex('000000')
 export const gray50 = hex('0C0C0C')
 export const gray100 = hex('141414')
 export const gray200 = hex('222222')
+export const gray500 = hex('929292')
+export const gray600 = hex('A1A1A1')
 export const gray700 = hex('B1B1B1')
 export const white = hex('FFFFFF')
 

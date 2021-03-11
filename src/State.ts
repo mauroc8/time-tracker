@@ -37,22 +37,22 @@ const initialState_: State = {
     records: [
         Record.record(
             "Login",
-            new Date(),
-            new Date(),
+            new Date(-100),
+            new Date(-50),
             Record.recordId(new Date()),
             backendTask,
         ),
         Record.record(
             "Login",
-            new Date(),
-            new Date(),
+            new Date(-50),
+            new Date(-20),
             Record.recordId(new Date()),
             backendTask,
         ),
         Record.record(
             "Login",
-            new Date(),
-            new Date(),
+            new Date(-20),
+            new Date(0),
             Record.recordId(new Date()),
             backendTask,
         ),

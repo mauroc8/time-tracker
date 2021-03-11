@@ -117,7 +117,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-description`,
-                    label: Layout.text('Descripción'),
+                    label: Layout.text('DESCRIPCIÓN'),
                     value: record.description,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("description"), event?.target?.value || "")),
@@ -130,7 +130,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-task`,
-                    label: Layout.text('Tarea'),
+                    label: Layout.text('TAREA'),
                     value: record.taskInput,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("task"), event?.target?.value || "")),
@@ -143,7 +143,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-start`,
-                    label: Layout.text('Inicio'),
+                    label: Layout.text('INICIO'),
                     value: record.startInput,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("startTime"), event?.target?.value || "")),
@@ -156,7 +156,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-end`,
-                    label: Layout.text('Fin'),
+                    label: Layout.text('FIN'),
                     value: record.endInput,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("endTime"), event?.target?.value || "")),
@@ -169,7 +169,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-duration`,
-                    label: Layout.text('Duración'),
+                    label: Layout.text('DURACIÓN'),
                     value: Utils
                         .timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate)),
                     attributes: [],

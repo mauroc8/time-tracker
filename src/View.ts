@@ -13,25 +13,20 @@ export function view(state: State.State): Html.Html<Update.Event> {
     return Layout.toHtml(
         Layout.column(
             "div",
-            [],
             [
+                Attribute.style("align-items", "center"),
+            ],
+            [
+                // CSS
+                Layout.html(bodyStyles()),
+                // CONTENT
                 Layout.column(
                     "div",
                     [
-                        Attribute.style("background-color", Color.toCssString(Color.accent)),
-                        Attribute.style("width", "100%"),
-                        Attribute.style("height", "5px"),
-                    ],
-                    []
-                ),
-                Layout.column(
-                    "div",
-                    [
-                        Attribute.spacing(10),
-                        Attribute.padding(20),
+                        Attribute.style("max-width", "1024px"),
                     ],
                     [
-                        Layout.html(bodyStyles()),
+                        Layout.space(50),
                         /*CreateRecord.view(
                             [
                                 Attribute.padding(10),
@@ -79,6 +74,7 @@ function bodyStyles(): Html.Html<any> {
     background: transparent;
     border: 0;
     transition: all 0.2s ease-out;
+    color: inherit;
 }
 *:hover, *:focus, *:active {
     outline: 0;
@@ -93,15 +89,21 @@ html {
 
 body {
     background-color: ${Color.toCssString(Color.background)};
-    color: ${Color.toCssString(Color.gray700)};
-    font-size: 16px;
     font-family: Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif;
+    border-top: 6px solid ${Color.toCssString(Color.accent)};
+    color: ${Color.toCssString(Color.gray700)};
 }
 
+label {
+    color: ${Color.toCssString(Color.gray500)};
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+}
 input {
     background-color: ${Color.toCssString(Color.gray50)};
     color: ${Color.toCssString(Color.white)};
-    font-size: 16px;
+    font-size: 14px;
     letter-spacing: 0.04em;
     font-weight: 300;
     line-height: 38px;
