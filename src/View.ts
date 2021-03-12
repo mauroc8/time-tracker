@@ -23,7 +23,8 @@ export function view(state: State.State): Html.Html<Update.Event> {
                 Layout.column(
                     "div",
                     [
-                        Attribute.style("max-width", "1024px"),
+                        Attribute.style("max-width", (1024 + 40) + "px"),
+                        Attribute.style("padding", "0 20px"),
                     ],
                     [
                         Layout.space(50),

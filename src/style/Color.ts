@@ -1,6 +1,6 @@
 import * as Maybe from '../utils/Maybe'
 
-type Color =
+export type Color =
     | Rgba
     | Hex
 

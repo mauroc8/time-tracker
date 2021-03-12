@@ -10,6 +10,8 @@ import * as Button from './Button'
 import * as Html from './utils/vdom/Html'
 import * as Layout from './utils/layout/Layout'
 import * as Component from './style/Component'
+import * as Icon from './style/Icon'
+import * as Color from './style/Color'
 import * as Attribute from './utils/layout/Attribute'
 
 export type Id = {
@@ -17,8 +19,8 @@ export type Id = {
     id: number,
 }
 
-export function recordId(now: Date): Id {
-    return { tag: "recordId", id: now.getMilliseconds() }
+export function recordId(id: number): Id {
+    return { tag: "recordId", id }
 }
 
 export function idEq(a: Id, b: Id): boolean {
@@ -178,23 +180,30 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Layout.column(
                 "div",
                 [
-                    Attribute.style("flex-basis", "10%"),
+                    Attribute.style("flex-basis", "5%"),
                 ],
                 [
                     Layout.column(
                         "button",
                         [
-                            Attribute.style("flex-grow", "1"),
                             Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
+                            Attribute.style("width", "24px"),
+                            Attribute.style("height", "24px"),
                         ],
-                        [Layout.text("Retomar")]
+                        [
+                            Layout.html(Icon.play(Color.gray200))
+                        ]
                     ),
                     Layout.column(
                         "button",
                         [
                             Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
+                            Attribute.style("width", "24px"),
+                            Attribute.style("height", "24px"),
                         ],
-                        [Layout.text("Borrar")]
+                        [
+                            Layout.html(Icon.delete_(Color.gray200))
+                        ]
                     ),
                 ]
             ),
