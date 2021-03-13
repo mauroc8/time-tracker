@@ -15,6 +15,10 @@ export function padding<A>(value: number): Attribute<A> {
     return style("padding", value + "px")
 }
 
+export function paddingXY<A>(x: number, y: number): Attribute<A> {
+    return style("padding", `${y}px ${x}px`)
+}
+
 function html<A>(value: Html.Attribute<A>): Attribute<A> {
     return { attributeType: "htmlAttribute", value }
 }

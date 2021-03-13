@@ -55,7 +55,7 @@ export function record(
         endInput: Utils.dateToString(endDate),
         endDate,
         taskId: task.id,
-        taskInput: task.name,
+        taskInput: task.description,
         id
     }
 }
@@ -99,7 +99,7 @@ export function normalizeInputs(tasks: Array<Task.Task>, record: Record): Record
             .fromUndefined(
                 tasks.find(task => Task.matchesId(record.taskId, task))
             )
-            .map(task => task.name)
+            .map(task => task.description)
             .withDefault("")
     }
 }
@@ -119,7 +119,11 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-description`,
-                    label: Layout.text('DESCRIPCIÓN'),
+                    label: Layout.column(
+                        "div",
+                        [Attribute.paddingXY(8, 0)],
+                        [Layout.text('Descripción')]
+                    ),
                     value: record.description,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("description"), event?.target?.value || "")),
@@ -132,7 +136,11 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 ],
                 {
                     id: `record-${record.id}-task`,
-                    label: Layout.text('TAREA'),
+                    label: Layout.column(
+                        "div",
+                        [Attribute.paddingXY(8, 0)],
+                        [Layout.text('Tarea')]
+                    ),
                     value: record.taskInput,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("task"), event?.target?.value || "")),
@@ -142,10 +150,15 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Component.textInput(
                 [
                     Attribute.style("flex-basis", "10%"),
+                    Attribute.style("text-align", "right"),
                 ],
                 {
                     id: `record-${record.id}-start`,
-                    label: Layout.text('INICIO'),
+                    label: Layout.column(
+                        "div",
+                        [Attribute.paddingXY(8, 0)],
+                        [Layout.text('Inicio')]
+                    ),
                     value: record.startInput,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("startTime"), event?.target?.value || "")),
@@ -155,10 +168,15 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Component.textInput(
                 [
                     Attribute.style("flex-basis", "10%"),
+                    Attribute.style("text-align", "right"),
                 ],
                 {
                     id: `record-${record.id}-end`,
-                    label: Layout.text('FIN'),
+                    label: Layout.column(
+                        "div",
+                        [Attribute.paddingXY(8, 0)],
+                        [Layout.text('Fin')]
+                    ),
                     value: record.endInput,
                     attributes: [
                         Attribute.on("input", (event: any) => Update.onInput(input("endTime"), event?.target?.value || "")),
@@ -168,10 +186,15 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Component.textInput(
                 [
                     Attribute.style("flex-basis", "10%"),
+                    Attribute.style("text-align", "right"),
                 ],
                 {
                     id: `record-${record.id}-duration`,
-                    label: Layout.text('DURACIÓN'),
+                    label: Layout.column(
+                        "div",
+                        [Attribute.paddingXY(8, 0)],
+                        [Layout.text('Duración')]
+                    ),
                     value: Utils
                         .timeDifferenceToString(Utils.dateDifference(record.endDate, record.startDate)),
                     attributes: [],
@@ -180,20 +203,24 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Layout.column(
                 "div",
                 [
-                    Attribute.style("flex-basis", "5%"),
+                    Attribute.style("width", "24px"),
+                    Attribute.spacing(10),
+                    Attribute.style("color", Color.toCssString(Color.gray500)),
+                    Attribute.style("justify-content", "flex-end"),
                 ],
                 [
                     Layout.column(
                         "button",
                         [
-                            Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
+                            //Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
                             Attribute.style("width", "24px"),
                             Attribute.style("height", "24px"),
                         ],
                         [
-                            Layout.html(Icon.play(Color.gray200))
+                            Layout.html(Icon.options())
                         ]
                     ),
+                    /*
                     Layout.column(
                         "button",
                         [
@@ -202,9 +229,10 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                             Attribute.style("height", "24px"),
                         ],
                         [
-                            Layout.html(Icon.delete_(Color.gray200))
+                            Layout.html(Icon.delete_())
                         ]
                     ),
+                    */
                 ]
             ),
         ]
@@ -228,7 +256,7 @@ export function decodeJsonId(json: any): Maybe.Maybe<Id> {
         && json.tag === "recordId"
         && typeof json.id === "number"
     )
-        return Maybe.just(recordId(new Date(json.id)))
+        return Maybe.just(recordId(json.id))
     return Maybe.nothing()
 }
 

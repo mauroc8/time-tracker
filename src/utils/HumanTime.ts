@@ -1,18 +1,7 @@
 import * as Maybe from '../utils/Maybe'
+import * as Utils from '../utils/Utils'
 
-/**
- * Human-readable time groups relative to the present.
- */
-export type Group =
-    | { tag: "year", year: number }
-    | { tag: "lastYear" }
-    | { tag: "month", month: Month }
-    | { tag: "lastMonth" }
-    | { tag: "weeksAgo", x: 2 | 3 | 4 }
-    | { tag: "lastWeek" }
-    | { tag: "thisWeek" }
-    | { tag: "nextWeek" }
-    | { tag: "inTheFuture" }
+// --- MONTH
 
 export type Month =
     | "Enero"
@@ -27,6 +16,10 @@ export type Month =
     | "Octubre"
     | "Noviembre"
     | "Diciembre"
+
+export function monthToSpanishLabel(month: Month): string {
+    return month
+}
 
 function monthFromDate(date: Date): Month {
     switch (date.getMonth()) {
@@ -45,74 +38,81 @@ function monthFromDate(date: Date): Month {
     }
 }
 
-export type Weekday =
-    | "Lunes"
-    | "Martes"
-    | "Miércoles"
-    | "Jueves"
-    | "Viernes"
-    | "Sábado"
-    | "Domingo"
 
-function weekdayFromDate(date: Date): Weekday {
-    switch (date.getDay()) {
-        case 0: return "Domingo" as Weekday
-        case 1: return "Lunes" as Weekday
-        case 2: return "Martes" as Weekday
-        case 3: return "Miércoles" as Weekday
-        case 4: return "Jueves" as Weekday
-        case 5: return "Viernes" as Weekday
-        default: return "Sábado" as Weekday
+// --- GROUP
+
+export type Group =
+    | { tag: "year", year: number }
+    | { tag: "lastYear" }
+    | { tag: "month", month: Month }
+    | { tag: "lastMonth" }
+    | { tag: "weeksAgo", x: 2 | 3 | 4 }
+    | { tag: "lastWeek" }
+    | { tag: "thisWeek" }
+    | { tag: "nextWeek" }
+    | { tag: "inTheFuture" }
+
+export function groupToSpanishLabel(group: Group): string {
+    switch (group.tag) {
+        case "inTheFuture":
+            return "En el futuro"
+        case "nextWeek":
+            return "La semana que viene"
+        case "thisWeek":
+            return "Esta semana"
+        case "lastWeek":
+            return "La semana pasada"
+        case "weeksAgo":
+            return `Hace ${group.x} semanas`
+        case "lastMonth":
+            return "El mes pasado"
+        case "month":
+            return monthToSpanishLabel(group.month)
+        case "lastYear":
+            return "El año pasado"
+        case "year":
+            return String(group.year)
+        default:
+            const _: never = group
+            return _
     }
 }
 
-export function group(args: { now: Date, time: Date }): Group {
-    const { now, time } = args
+export function group(args: { today: Date, time: Date }): Group {
+    const { today, time } = args
 
-    if (time.getFullYear() > now.getFullYear()) {
+    if (time.getFullYear() > today.getFullYear()) {
         return { tag: "inTheFuture" }
-    } else if (time.getFullYear() === now.getFullYear()) {
-        return groupSameYear(now, time)
-    } else if (time.getFullYear() === now.getFullYear() - 1) {
+    } else if (time.getFullYear() === today.getFullYear()) {
+        return groupSameYear(today, time)
+    } else if (time.getFullYear() === today.getFullYear() - 1) {
         return { tag: "lastYear" }
     } else {
         return { tag: "year", year: time.getFullYear() }
     }
 }
 
-export function groupEquals(a: Group, b: Group): boolean {
-    if (a.tag === "year" && b.tag === "year") {
-        return a.year === b.year
-    } else if (a.tag === "month" && b.tag === "month") {
-        return a.month === b.month
-    } else if (a.tag === "weeksAgo" && b.tag === "weeksAgo") {
-        return a.x === b.x
-    } else {
-        return a.tag === b.tag
-    }
-}
-
-function groupSameYear(now: Date, time: Date): Group {
-    if (time.getMonth() > now.getMonth()) {
-        if (isoWeek(time) === isoWeek(now) + 1) {
+function groupSameYear(today: Date, time: Date): Group {
+    if (time.getMonth() > today.getMonth()) {
+        if (isoWeek(time) === isoWeek(today) + 1) {
             return { tag: "nextWeek" }
         } else {
             return { tag: "inTheFuture" }
         }
-    } else if (time.getMonth() === now.getMonth()) {
-        if (isoWeek(time) === isoWeek(now) + 1) {
+    } else if (time.getMonth() === today.getMonth()) {
+        if (isoWeek(time) === isoWeek(today) + 1) {
             return { tag: "nextWeek" }
-        } else if (isoWeek(time) === isoWeek(now)) {
+        } else if (isoWeek(time) === isoWeek(today)) {
             return { tag: "thisWeek" }
-        } else if (isoWeek(time) === isoWeek(now) - 1) {
+        } else if (isoWeek(time) === isoWeek(today) - 1) {
             return { tag: "lastWeek" }
         } else {
             return {
                 tag: "weeksAgo",
-                x: isoWeek(now) - isoWeek(time) as 2 | 3 | 4
+                x: isoWeek(today) - isoWeek(time) as 2 | 3 | 4
             }
         }
-    } else if (time.getMonth() === now.getMonth() - 1) {
+    } else if (time.getMonth() === today.getMonth() - 1) {
         return { tag: "lastMonth" }
     } else {
         return {
@@ -136,7 +136,39 @@ function isoWeek(x: Date): number {
         - 3 + (week1.getDay() + 6) % 7) / 7);
 }
 
-/** Tag a day in a human-readable way */
+
+// --- WEEKDAY
+
+
+export type Weekday =
+    | "Lunes"
+    | "Martes"
+    | "Miércoles"
+    | "Jueves"
+    | "Viernes"
+    | "Sábado"
+    | "Domingo"
+
+export function weekdayToSpanishLabel(weekday: Weekday): string {
+    return weekday
+}
+
+function weekdayFromDate(date: Date): Weekday {
+    switch (date.getDay()) {
+        case 0: return "Domingo" as Weekday
+        case 1: return "Lunes" as Weekday
+        case 2: return "Martes" as Weekday
+        case 3: return "Miércoles" as Weekday
+        case 4: return "Jueves" as Weekday
+        case 5: return "Viernes" as Weekday
+        default: return "Sábado" as Weekday
+    }
+}
+
+
+// --- DAY TAG
+
+
 export type DayTag =
     | { tag: "distantDate", weekday: Weekday, date: number, month: Month, year: number }
     | { tag: "thisYearsDate", weekday: Weekday, date: number, month: Month }
@@ -145,10 +177,11 @@ export type DayTag =
     | { tag: "today" }
     | { tag: "tomorrow" }
 
-export function tagDay(args: { now: Date, time: Date }): DayTag {
-    const { now, time } = args
 
-    if (time.getFullYear() !== now.getFullYear()) {
+export function dayTag(args: { today: Date, time: Date }): DayTag {
+    const { today, time } = args
+
+    if (time.getFullYear() !== today.getFullYear()) {
         return {
             tag: "distantDate",
             weekday: weekdayFromDate(time),
@@ -156,14 +189,14 @@ export function tagDay(args: { now: Date, time: Date }): DayTag {
             month: monthFromDate(time),
             year: time.getFullYear(),
         }
-    } else if (time.getMonth() === now.getMonth()) {
-        if (time.getDay() === now.getDay() - 1) {
+    } else if (time.getMonth() === today.getMonth()) {
+        if (time.getDay() === today.getDay() - 1) {
             return { tag: "yesterday" }
-        } else if (time.getDay() === now.getDay()) {
+        } else if (time.getDay() === today.getDay()) {
             return { tag: "today" }
-        } else if (time.getDay() === now.getDay() + 1) {
+        } else if (time.getDay() === today.getDay() + 1) {
             return { tag: "tomorrow" }
-        } else if (time.getDay() < now.getDay() && isoWeek(time) === isoWeek(now)) {
+        } else if (time.getDay() < today.getDay() && isoWeek(time) === isoWeek(today)) {
             return { tag: "earlierThisWeek", weekday: weekdayFromDate(time) }
         } else {
             return {
@@ -180,5 +213,24 @@ export function tagDay(args: { now: Date, time: Date }): DayTag {
             date: time.getDate(),
             month: monthFromDate(time),
         }
+    }
+}
+
+export function dayTagToSpanishLabel(day: DayTag): string {
+    switch (day.tag) {
+        case "distantDate":
+            return `${weekdayToSpanishLabel(day.weekday)} ${day.date} de `
+                + `${monthToSpanishLabel(day.month)}, ${day.year}`
+        case "thisYearsDate":
+            return `${weekdayToSpanishLabel(day.weekday)} ${day.date} de `
+                + `${monthToSpanishLabel(day.month)}`
+        case "earlierThisWeek":
+            return weekdayToSpanishLabel(day.weekday)
+        case "today":
+            return "Hoy"
+        case "tomorrow":
+            return "Mañana"
+        case "yesterday":
+            return "Ayer"
     }
 }

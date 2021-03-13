@@ -8,7 +8,7 @@ import * as Levenshtein from './utils/Levenshtein'
 
 export type Task = {
     id: Id,
-    name: string,
+    description: string,
 }
 
 export type Id = {
@@ -17,7 +17,7 @@ export type Id = {
 }
 
 export function task(id: Id, name: string): Task {
-    return { id, name }
+    return { id, description: name }
 }
 
 export function taskId(id: number): Id {
@@ -43,7 +43,7 @@ export function search(query: string, tasks: Array<Task>): Array<Task> {
         return []
     else
         return tasks.map<[Task, number]>(task =>
-            [task, Levenshtein.distance(query.toLowerCase(), task.name.toLowerCase())]
+            [task, Levenshtein.distance(query.toLowerCase(), task.description.toLowerCase())]
         )
             .sort((a: [Task, number], b: [Task, number]) => {
                 const [taskA, distanceA] = a
@@ -55,14 +55,15 @@ export function search(query: string, tasks: Array<Task>): Array<Task> {
             .map(([task, _]) => task)
 }
 
-export function decode(json: any): Maybe.Maybe<Task> {
+export function decode(json: unknown): Maybe.Maybe<Task> {
     if (typeof json === "object"
-        && typeof json.name === "string"
+        && json !== null
+        && typeof (json as { description?: unknown }).description === "string"
     )
-        return decodeJsonId(json.id)
+        return decodeJsonId((json as { id?: unknown }).id)
             .map(id => ({
                 id: id,
-                name: json.name,
+                description: (json as { description: string }).description,
             }))
 
     return Maybe.nothing()

@@ -18,32 +18,46 @@ export function filterMap<A, B>(array: Array<A>, fn: (a: A) => Maybe.Maybe<B>): 
     return newArray
 }
 
-export function groupWhile<A>(array: Array<A>, compare: (a: A, b: A) => boolean): Array<Array<A>> {
+export function groupWhile<A>(
+    array: Array<A>,
+    compare: (a: A, b: A) => boolean
+): Array<[A, Array<A>]> {
     const length = array.length;
 
     if (length === 1) {
-        return [array];
+        return [[array[0], []]];
     } else {
-        const newArray: Array<Array<A>> = []
+        const newArray: Array<[A, Array<A>]> = []
 
         let i = 0
 
         while (i < length) {
-            const group: Array<A> = [array[i]]
+            const group: [A, Array<A>] = [array[i], []]
 
-            while (i + 1 < length) {
-                if (compare(array[i], array[i + 1])) {
-                    group.push(array[i + 1])
-                    i = i + 1
-                } else {
-                    i = i + 1
-                    break;
-                }
+            while (i + 1 < length && compare(array[i], array[i + 1])) {
+                group[1].push(array[i + 1])
+                i = i + 1
             }
 
             newArray.push(group)
+            i = i + 1
         }
 
         return newArray
     }
+}
+
+export function map2<A, B, C>(
+    as: Array<A>,
+    bs: Array<B>,
+    fn: (a: A, b: B) => C
+): Array<C> {
+    const cs = []
+    const length = Math.min(as.length, bs.length)
+
+    for (let i = 0; i < length; i++) {
+        cs.push(fn(as[i], bs[i]))
+    }
+
+    return cs
 }

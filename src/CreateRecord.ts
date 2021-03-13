@@ -61,7 +61,7 @@ export function normalizeInputs(tasks: Array<Task.Task>, createRecord: CreateRec
         taskInput: createRecord.taskId.andThen(taskId =>
             Maybe.fromUndefined(tasks.find(task => Task.matchesId(taskId, task)))
         )
-            .map(task => task.name)
+            .map(task => task.description)
             .withDefault("")
     }
 }
@@ -140,7 +140,7 @@ export function toRecord(
                                 createRecord.description,
                                 start.date,
                                 endDate,
-                                Record.recordId(endDate),
+                                Record.recordId(endDate.getUTCMilliseconds()),
                                 task
                             )
                         )
@@ -258,21 +258,30 @@ function decodeStartDate(json: any): Maybe.Maybe<{ input: string, date: Date }> 
         return Maybe.nothing()
 }
 
-export function decodeJson(json: any): Maybe.Maybe<CreateRecord> {
+export function decodeJson(json: unknown): Maybe.Maybe<CreateRecord> {
     if (typeof json === "object"
-        && typeof json.description === "string"
-        && typeof json.taskInput === "string"
-    )
+        && json !== null
+        && typeof (json as { description?: unknown }).description === "string"
+        && typeof (json as { taskInput?: unknown }).taskInput === "string"
+    ) {
+        const json_ = json as {
+            start?: unknown,
+            taskId?: unknown,
+            description: string,
+            taskInput: string
+        }
+
         return Maybe.map2(
-            Maybe.decodeJson(json.start, decodeStartDate),
-            Maybe.decodeJson(json.taskId, Task.decodeJsonId),
+            Maybe.decodeJson(json_.start, decodeStartDate),
+            Maybe.decodeJson(json_.taskId, Task.decodeJsonId),
             (start, taskId) => ({
-                description: json.description,
+                description: json_.description,
                 start: start,
                 taskId: taskId,
-                taskInput: json.taskInput
+                taskInput: json_.taskInput
             })
         )
+    }
     else
         return Maybe.nothing()
 }
@@ -285,7 +294,7 @@ export function fromRecord(record: Record.Record, tasks: Array<Task.Task>): Crea
         taskInput: Maybe.fromUndefined(
             tasks.find(task => Task.matchesId(record.taskId, task))
         )
-            .map(task => task.name)
+            .map(task => task.description)
             .withDefault("")
     }
 }

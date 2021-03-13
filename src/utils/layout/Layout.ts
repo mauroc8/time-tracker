@@ -87,13 +87,15 @@ export function row<A>(
 }
 
 export function space<A>(size: number): Layout<A> {
-    return column(
-        "div",
-        [
-            Attr.style("width", size + "px"),
-            Attr.style("height", size + "px"),
-        ],
-        []
+    return html(
+        Html.node(
+            "div",
+            [
+                Html.style("width", size + "px"),
+                Html.style("height", size + "px"),
+            ],
+            []
+        )
     )
 }
 
