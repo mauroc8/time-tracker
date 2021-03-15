@@ -38,6 +38,29 @@ export function textInput<A>(
     )
 }
 
+export function textInputCss(): string {
+    return `
+    label {
+        color: ${Color.toCssString(Color.gray500)};
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        font-weight: 500;
+    }
+    input {
+        background-color: ${Color.toCssString(Color.gray50)};
+        color: ${Color.toCssString(Color.white)};
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        font-weight: 300;
+        line-height: 38px;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    input:focus {
+        background-color: ${Color.toCssString(Color.black)};
+    }`;
+}
+
 export function button<A>(
     attributes: Array<Attribute.Attribute<A>>,
     args: {

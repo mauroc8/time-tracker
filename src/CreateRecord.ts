@@ -1,18 +1,23 @@
 
-import * as Update from "./Update"
-import * as Maybe from './utils/Maybe'
-import * as Task from "./Task"
-import * as Utils from './utils/Utils'
-import * as Layout from './utils/layout/Layout'
-import * as Result from './utils/Result'
-import * as Record from './Record'
+import * as Task from './Task'
 import * as Input from './Input'
+import * as Record from './Record'
 import * as Button from './Button'
-import * as Component from './style/Component'
-import * as Attribute from './utils/layout/Attribute'
+import * as Update from './Update'
+
+import * as Maybe from './utils/Maybe'
+import * as Utils from './utils/Utils'
+import * as Result from './utils/Result'
 
 import * as Html from './utils/vdom/Html'
 
+import * as Layout from './utils/layout/Layout'
+import * as Attribute from './utils/layout/Attribute'
+
+import * as Component from './style/Component'
+
+/** State of the 'create record' form.
+ */
 export type CreateRecord = {
     description: string,
     start: Maybe.Maybe<{ input: string, date: Date }>,
@@ -25,7 +30,7 @@ export function empty(description: string): CreateRecord {
         description,
         start: Maybe.nothing(),
         taskId: Maybe.nothing(),
-        taskInput: ""
+        taskInput: '',
     }
 }
 

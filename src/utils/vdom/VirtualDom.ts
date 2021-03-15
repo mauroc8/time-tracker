@@ -1,5 +1,8 @@
 import * as Html from './Html'
+
 import * as Utils from '../Utils'
+import * as Maybe from '../Maybe'
+import * as Array_ from '../Array'
 
 export function diff<T>(
     oldVDom: Html.Html<T>,
@@ -16,6 +19,8 @@ export function diff<T>(
             $node.replaceWith($newNode)
             return $newNode
         }
+    } else if (keyOf(oldVDom.attributes) === keyOf(newVDom.attributes)) {
+        return $node => $node
     } else {
         const patchAttributes = diffAttributes(oldVDom.attributes, newVDom.attributes, dispatch)
         const patchChildren = diffChildren(oldVDom.children, newVDom.children, dispatch)
@@ -29,7 +34,17 @@ export function diff<T>(
     }
 }
 
-/** Like List.map2 but without ignoring elements if one list is larger than the other */
+function keyOf<Evt>(attributes: Array<Html.Attribute<Evt>>): string | undefined {
+    return Array_.filterMap<Html.Attribute<Evt>, { tag: "key", value: string }>(
+        attributes,
+        attribute => attribute.tag === "key" ? Maybe.just(attribute) : Maybe.nothing()
+    )
+        .map(attribute => attribute.value)
+    [0];
+}
+
+/** A list's indexed map2 but without dropping elements.
+ */
 function map2Extra<A, B>(
     xs: Array<A>,
     ys: Array<A>,
@@ -89,7 +104,7 @@ function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boole
     if (a.tag === "attribute" && b.tag === "attribute") {
         return a.name === b.name && a.value === b.value
     } else if (a.tag === "property" && b.tag === "property") {
-        return a.name === b.name && Utils.deepEquality(a.value, b.value)
+        return a.name === b.name && Utils.equals(a.value, b.value)
     } else if (a.tag === "eventHandler" && b.tag === "eventHandler") {
         // The function comparison will most likely always return false;
         // a smarter implementation could optimize this case somehow.
@@ -119,6 +134,8 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
             return
         case "style":
             ($node as any).style[attr.property] = ""
+            return
+        case "key":
             return
     }
 

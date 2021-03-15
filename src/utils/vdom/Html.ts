@@ -41,6 +41,7 @@ export type Attribute<Evt> =
     | { tag: "property", name: string, value: any }
     | { tag: "eventHandler", eventName: string, handler: (event: any) => Evt }
     | { tag: "style", property: string, value: string }
+    | { tag: "key", value: string }
 
 export function attribute<Evt>(name: string, value: string): Attribute<Evt> {
     return { tag: "attribute", name, value }
@@ -56,6 +57,10 @@ export function on<Evt>(eventName: string, handler: (event: any) => Evt): Attrib
 
 export function style<Evt>(property: string, value: string): Attribute<Evt> {
     return { tag: "style", property, value }
+}
+
+export function key<Evt>(value: string): Attribute<Evt> {
+    return { tag: "key", value }
 }
 
 export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {

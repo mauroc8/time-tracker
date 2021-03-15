@@ -1,5 +1,5 @@
-import * as Maybe from '../utils/Maybe'
-import * as Utils from '../utils/Utils'
+import * as Maybe from './Maybe'
+import * as Utils from './Utils'
 
 // --- MONTH
 
@@ -41,6 +41,10 @@ function monthFromDate(date: Date): Month {
 
 // --- GROUP
 
+/** A group expresses the relationship between today and some other date
+ * in a human-comprehensible way:
+ * "This week", "Last week", ["Weeks ago", x], "Last month", and so on.
+ */
 export type Group =
     | { tag: "year", year: number }
     | { tag: "lastYear" }
@@ -74,11 +78,11 @@ export function groupToSpanishLabel(group: Group): string {
             return String(group.year)
         default:
             const _: never = group
-            return _
+            return "Nunca"
     }
 }
 
-export function group(args: { today: Date, time: Date }): Group {
+export function groupOf(args: { today: Date, time: Date }): Group {
     const { today, time } = args
 
     if (time.getFullYear() > today.getFullYear()) {

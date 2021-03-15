@@ -204,7 +204,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                 "div",
                 [
                     Attribute.style("width", "24px"),
-                    Attribute.spacing(10),
+                    Attribute.spacing(8),
                     Attribute.style("color", Color.toCssString(Color.gray500)),
                     Attribute.style("justify-content", "flex-end"),
                 ],
@@ -213,26 +213,35 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                         "button",
                         [
                             //Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
-                            Attribute.style("width", "24px"),
-                            Attribute.style("height", "24px"),
+                            Attribute.style("width", "16px"),
+                            Attribute.style("height", "16px"),
                         ],
                         [
-                            Layout.html(Icon.options())
+                            Layout.html(Icon.play())
                         ]
                     ),
-                    /*
                     Layout.column(
                         "button",
                         [
-                            Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
-                            Attribute.style("width", "24px"),
-                            Attribute.style("height", "24px"),
+                            //Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
+                            Attribute.style("width", "16px"),
+                            Attribute.style("height", "16px"),
                         ],
                         [
                             Layout.html(Icon.delete_())
                         ]
                     ),
-                    */
+                    Layout.column(
+                        "button",
+                        [
+                            //Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
+                            Attribute.style("width", "16px"),
+                            Attribute.style("height", "16px"),
+                        ],
+                        [
+                            Layout.html(Icon.options())
+                        ]
+                    ),
                 ]
             ),
         ]
