@@ -11,7 +11,6 @@ import * as Button from './Button'
 
 
 /** Event is what's typically called an "action" in Redux
- * 
 */
 export type Event =
     | { tag: "onInput", input: Input.Input, value: string }

@@ -3,7 +3,6 @@ import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
 import * as Task from './Task'
 import * as Update from './Update'
-import * as View from './View'
 import * as Levenshtein from './utils/Levenshtein'
 import * as Input from './Input'
 import * as Button from './Button'
@@ -203,44 +202,29 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Layout.column(
                 "div",
                 [
-                    Attribute.style("width", "24px"),
+                    Attribute.style("width", "16px"),
                     Attribute.spacing(8),
                     Attribute.style("color", Color.toCssString(Color.gray500)),
                     Attribute.style("justify-content", "flex-end"),
                 ],
                 [
-                    Layout.column(
-                        "button",
+                    Icon.button(
                         [
                             //Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
-                            Attribute.style("width", "16px"),
-                            Attribute.style("height", "16px"),
                         ],
-                        [
-                            Layout.html(Icon.play())
-                        ]
+                        Icon.play()
                     ),
-                    Layout.column(
-                        "button",
+                    Icon.button(
                         [
                             //Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
-                            Attribute.style("width", "16px"),
-                            Attribute.style("height", "16px"),
                         ],
-                        [
-                            Layout.html(Icon.delete_())
-                        ]
+                        Icon.delete_()
                     ),
-                    Layout.column(
-                        "button",
+                    Icon.button(
                         [
                             //Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
-                            Attribute.style("width", "16px"),
-                            Attribute.style("height", "16px"),
                         ],
-                        [
-                            Layout.html(Icon.options())
-                        ]
+                        Icon.options()
                     ),
                 ]
             ),

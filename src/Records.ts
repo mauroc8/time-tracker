@@ -11,7 +11,9 @@ import * as Array_ from './utils/Array'
 import * as Layout from './utils/layout/Layout'
 import * as Attribute from './utils/layout/Attribute'
 
+import * as Icon from './style/Icon'
 import * as Color from './style/Color'
+
 
 
 export function view(
@@ -41,7 +43,7 @@ export function view(
 }
 
 function viewRecordGroup(
-    group: [Record.Record, Array<Record.Record>],
+    group: [Record.Record, ...Array<Record.Record>],
     today: Date,
     tasks: Array<Task.Task>
 ): Layout.Layout<Update.Event> {
@@ -57,7 +59,6 @@ function viewRecordGroup(
                     Attribute.style("color", Color.toCssString(Color.gray400)),
                     Attribute.style("font-size", "14px"),
                     Attribute.style("align-items", "baseline"),
-                    Attribute.paddingXY(8, 0),
                     Attribute.spacing(18),
                 ],
                 [
@@ -66,6 +67,7 @@ function viewRecordGroup(
                         [
                             Attribute.style("flex-grow", "1"),
                             Attribute.style("height", "1px"),
+                            Attribute.style("margin-left", "8px"),
                             Attribute.style(
                                 "background-color",
                                 Color.toCssString(Color.gray200)
@@ -98,13 +100,11 @@ function viewRecordGroup(
                         ],
                         []
                     ),
-                    /** Espacio vacío de los íconos */
-                    Layout.column(
-                        "div",
+                    Icon.button(
                         [
-                            Attribute.style("width", "24px"),
+                            Attribute.style("transform", "translateY(5px)"),
                         ],
-                        []
+                        Icon.chevronUp(),
                     ),
                 ]
             ),
@@ -114,7 +114,7 @@ function viewRecordGroup(
                     Attribute.spacing(55),
                 ],
                 Array_.groupWhile(
-                    [group[0], ...group[1]],
+                    group,
                     (a, b) =>
                         Utils.equals(
                             Time.dayTag({ today, time: a.startDate }),
@@ -127,7 +127,7 @@ function viewRecordGroup(
 }
 
 function viewRecordDay(
-    day: [Record.Record, Array<Record.Record>],
+    day: [Record.Record, ...Array<Record.Record>],
     today: Date,
     tasks: Array<Task.Task>,
 ): Layout.Layout<Update.Event> {
@@ -159,7 +159,7 @@ function viewRecordDay(
                 [
                     Attribute.spacing(55),
                 ],
-                [day[0], ...day[1]].map((record) => Record.view(record, tasks))
+                day.map((record) => Record.view(record, tasks))
             )
         ]
     )

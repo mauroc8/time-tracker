@@ -21,26 +21,26 @@ export function filterMap<A, B>(array: Array<A>, fn: (a: A) => Maybe.Maybe<B>): 
 export function groupWhile<A>(
     array: Array<A>,
     compare: (a: A, b: A) => boolean
-): Array<[A, Array<A>]> {
+): Array<[A, ...Array<A>]> {
     const length = array.length;
 
     if (length === 1) {
-        return [[array[0], []]];
+        return [[array[0]]];
     } else {
-        const newArray: Array<[A, Array<A>]> = []
+        const newArray: Array<[A, ...Array<A>]> = []
 
         let i = 0
 
         while (i < length) {
-            const group: [A, Array<A>] = [array[i], []]
+            const group: [A, ...Array<A>] = [array[i]]
+            i = i + 1
 
-            while (i + 1 < length && compare(array[i], array[i + 1])) {
-                group[1].push(array[i + 1])
+            while (i < length && compare(array[i - 1], array[i])) {
+                group.push(array[i])
                 i = i + 1
             }
 
             newArray.push(group)
-            i = i + 1
         }
 
         return newArray
