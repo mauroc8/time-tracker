@@ -88,6 +88,14 @@ export function updateEnd(endInput: string, record: Record): Record {
     }
 }
 
+export function compare(a: Record, b: Record): -1 | 0 | 1 {
+    return a.startDate < b.startDate
+        ? -1
+        : a.startDate > b.startDate
+            ? 1
+            : 0
+}
+
 /** If a date is mispelled or the task is invalid, reset the input value to the last valid value. */
 export function normalizeInputs(tasks: Array<Task.Task>, record: Record): Record {
     return {

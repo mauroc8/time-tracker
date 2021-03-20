@@ -61,3 +61,17 @@ export function map2<A, B, C>(
 
     return cs
 }
+
+export function decodeJson<A>(
+    json: unknown,
+    decodeElement: (json: unknown) => Maybe.Maybe<A>
+): Maybe.Maybe<Array<A>> {
+    if (json instanceof Array) {
+        const decoded = filterMap(json, decodeElement)
+
+        if (json.length === decoded.length) {
+            return Maybe.just(decoded)
+        }
+    }
+    return Maybe.nothing()
+}
