@@ -5,8 +5,6 @@ import * as Task from './Task'
 import * as Update from './Update'
 import * as Levenshtein from './utils/Levenshtein'
 import * as Input from './Input'
-import * as Button from './Button'
-import * as Html from './utils/vdom/Html'
 import * as Layout from './utils/layout/Layout'
 import * as Component from './style/Component'
 import * as Icon from './style/Icon'
@@ -59,7 +57,6 @@ export function record(
     }
 }
 
-
 export function matchesId(id: Id, record: Record): boolean {
     return idEq(id, record.id)
 }
@@ -89,25 +86,31 @@ export function updateEnd(endInput: string, record: Record): Record {
 }
 
 export function compare(a: Record, b: Record): -1 | 0 | 1 {
-    return a.startDate < b.startDate
+    return Number(a.startDate) < Number(b.startDate)
         ? -1
-        : a.startDate > b.startDate
+        : Number(a.startDate) > Number(b.startDate)
             ? 1
             : 0
 }
 
 /** If a date is mispelled or the task is invalid, reset the input value to the last valid value. */
-export function normalizeInputs(tasks: Array<Task.Task>, record: Record): Record {
+export function save(tasks: Array<Task.Task>, record: Record, today: Date): Record {
     return {
-        ...record,
-        startInput: Utils.dateToString(record.startDate),
-        endInput: Utils.dateToString(record.endDate),
-        taskInput: Maybe
-            .fromUndefined(
-                tasks.find(task => Task.matchesId(record.taskId, task))
-            )
-            .map(task => task.description)
-            .withDefault("")
+        id: record.id,
+        description: record.description,
+        ...Utils.dateFromString(today, record.startInput)
+            .map(startDate => ({ startDate, startInput: record.startInput }))
+            .withDefault({ startDate: record.startDate, startInput: Utils.dateToString(record.startDate) }),
+        ...Utils.dateFromString(today, record.endInput)
+            .map(endDate => ({ endDate, endInput: record.endInput }))
+            .withDefault({ endDate: record.endDate, endInput: Utils.dateToString(record.endDate) }),
+        ...Maybe.fromUndefined(tasks.find(task => task.description === record.taskInput))
+            .map(task => ({ taskId: task.id, taskInput: task.description }))
+            .withDefault(
+                Maybe.fromUndefined(tasks.find(task => Task.matchesId(record.taskId, task)))
+                    .map(task => ({ taskId: task.id, taskInput: task.description }))
+                    .withDefault({ taskId: Task.taskId(0), taskInput: "" })
+            ),
     }
 }
 
@@ -125,7 +128,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                     Attribute.style("flex-basis", "40%"),
                 ],
                 {
-                    id: `record-${record.id}-description`,
+                    id: `record_${record.id}_description`,
                     label: Layout.column(
                         "div",
                         [Attribute.paddingXY(8, 0)],
@@ -142,7 +145,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                     Attribute.style("flex-basis", "20%"),
                 ],
                 {
-                    id: `record-${record.id}-task`,
+                    id: `record_${record.id}_task`,
                     label: Layout.column(
                         "div",
                         [Attribute.paddingXY(8, 0)],
@@ -160,7 +163,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                     Attribute.style("text-align", "right"),
                 ],
                 {
-                    id: `record-${record.id}-start`,
+                    id: `record_${record.id}_start`,
                     label: Layout.column(
                         "div",
                         [Attribute.paddingXY(8, 0)],
@@ -178,7 +181,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                     Attribute.style("text-align", "right"),
                 ],
                 {
-                    id: `record-${record.id}-end`,
+                    id: `record_${record.id}_end`,
                     label: Layout.column(
                         "div",
                         [Attribute.paddingXY(8, 0)],
@@ -196,7 +199,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
                     Attribute.style("text-align", "right"),
                 ],
                 {
-                    id: `record-${record.id}-duration`,
+                    id: `record_${record.id}_duration`,
                     label: Layout.column(
                         "div",
                         [Attribute.paddingXY(8, 0)],

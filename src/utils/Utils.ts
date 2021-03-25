@@ -10,7 +10,7 @@ export function dateToString(date: Date): string {
     return `${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-export function dateFromString(date: Date, input: string): Maybe.Maybe<Date> {
+export function dateFromString(today: Date, input: string): Maybe.Maybe<Date> {
     const matches = input.match(/(\d\d?)[:\- ]*(\d\d?)?/)
 
     var hours: Maybe.Maybe<number> = Maybe.nothing()
@@ -40,9 +40,9 @@ export function dateFromString(date: Date, input: string): Maybe.Maybe<Date> {
         minutes,
         (hours, minutes) =>
             new Date(
-                date.getFullYear(),
-                date.getMonth(),
-                date.getDate(),
+                today.getFullYear(),
+                today.getMonth(),
+                today.getDate(),
                 hours,
                 minutes,
                 0,

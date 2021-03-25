@@ -12,7 +12,7 @@ export type Task = {
 }
 
 export type Id = {
-    tag: "task-id",
+    tag: "taskId",
     id: number,
 }
 
@@ -21,7 +21,7 @@ export function task(id: Id, name: string): Task {
 }
 
 export function taskId(id: number): Id {
-    return { tag: "task-id", id }
+    return { tag: "taskId", id }
 }
 
 export function idEq(a: Id, b: Id): boolean {
@@ -71,7 +71,7 @@ export function decode(json: unknown): Maybe.Maybe<Task> {
 
 export function decodeJsonId(json: any): Maybe.Maybe<Id> {
     if (typeof json === "object"
-        && json.tag === "task-id"
+        && json.tag === "taskId"
         && typeof json.id === "number"
     )
         return Maybe.just(taskId(json.id))

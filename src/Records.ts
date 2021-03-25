@@ -28,10 +28,7 @@ export function view(
         ],
         Array_.groupWhile(
             records
-                .sort(
-                    (a, b) =>
-                        b.startDate.getTime() - a.startDate.getTime()
-                ),
+                .sort(Record.compare),
             (a, b) =>
                 Utils.equals(
                     Time.groupOf({ today, time: a.startDate }),

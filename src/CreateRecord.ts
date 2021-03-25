@@ -56,7 +56,7 @@ export function updateStartTime(startInput: string, createRecord: CreateRecord):
     }
 }
 
-export function normalizeInputs(tasks: Array<Task.Task>, createRecord: CreateRecord): CreateRecord {
+export function sanitizeInputs(tasks: Array<Task.Task>, createRecord: CreateRecord): CreateRecord {
     return {
         ...createRecord,
         start: createRecord.start.map(start => ({
