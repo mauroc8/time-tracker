@@ -6,6 +6,7 @@
 
 import * as State from './State'
 import * as Update from './Update'
+import * as Record from './Record'
 import * as Records from './Records'
 import * as CreateRecord from './CreateRecord'
 
@@ -40,6 +41,7 @@ export function view(state: State.State): Html.Html<Update.Event> {
                             Html.text(resetCss()),
                             Html.text(bodyCss()),
                             Html.text(Component.textInputCss()),
+                            Html.text(Record.recordCss()),
                         ]
                     )
                 ),

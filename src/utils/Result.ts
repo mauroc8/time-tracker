@@ -67,3 +67,16 @@ export function fromMaybe<A, E>(err: E, maybe: Maybe.Maybe<A>): Result<A, E> {
         .map(a => ok<A, E>(a))
         .withDefault(error(err))
 }
+
+export function collect<A, E>(array: Array<Result<A, E>>): Result<Array<A>, E> {
+    return array.reduce(
+        (previousValue, currentValue) =>
+            map2(
+                previousValue,
+                currentValue,
+                (array, element) =>
+                    [ ...array, element ]
+            ),
+        ok<Array<A>, E>([])
+    )
+}

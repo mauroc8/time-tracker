@@ -65,6 +65,7 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
 
         case "ButtonClick":
             const button = event.button
+            const now = new Date()
 
             switch (button.tag) {
                 case "play":
@@ -73,7 +74,8 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                             ...state,
                             createRecord: {
                                 ...state.createRecord,
-                                start: Maybe.just(CreateRecord.start(new Date()))
+                                startInputValue: Utils.dateToString(now),
+                                startDate: Maybe.just(now),
                             }
                         },
                         Effect.none()
@@ -81,7 +83,7 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
 
                 case "stop":
                     return [
-                        CreateRecord.toRecord(state.tasks, new Date(), state.createRecord)
+                        CreateRecord.toRecord(state.tasks, now, state.createRecord)
                             .match(
                                 record =>
                                     addRecord(
@@ -116,15 +118,8 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                                 )
                                     // Copy its description and task to createRecord
                                     .map(record =>
-                                        CreateRecord.fromRecord(record, state.tasks)
+                                        CreateRecord.resumeRecord(now, record, state.tasks)
                                     )
-                                    // Start it immediately if it's not running already
-                                    .map(createRecord => {
-                                        return createRecord.start.map(_ => ({
-                                            ...createRecord,
-                                            start: Maybe.just(CreateRecord.start(new Date()))
-                                        })).orElse(() => createRecord)
-                                    })
                                     // Don't do nothing if we didn't find the record
                                     .withDefault(state.createRecord)
                         },
@@ -182,7 +177,7 @@ function updateCreateRecordInput(
 ): CreateRecord.CreateRecord {
     switch (inputName) {
         case "description":
-            return { ...createRecord, description: value }
+            return { ...createRecord, descriptionInputValue: value }
         case "task":
             return CreateRecord.withTask(
                 value,

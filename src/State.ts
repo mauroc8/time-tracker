@@ -4,6 +4,7 @@ import * as Task from './Task'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
 import * as Effect from './utils/Effect'
+import * as Decoder from './utils/decoder/Decoder'
 
 // STATE ---
 
@@ -22,12 +23,17 @@ const backendTask = Task.task(
     "Backend",
 )
 
-export function initialState<Event>(flags: any): [State, Effect.Effect<Event>] {
+export function initialState<Event>(flags: string | null): [State, Effect.Effect<Event>] {
     const today = new Date()
 
     try {
         return [
-            cast(JSON.parse(flags), today).withDefault(initialStateHelp(today)),
+            Decoder
+                .decode(
+                    flags && JSON.parse(flags),
+                    decoder(today)
+                )
+                .withDefault(initialStateHelp(today)),
             Effect.none(),
         ]
     } catch (e) {
@@ -72,26 +78,17 @@ function initialStateHelp(today: Date): State {
     }
 }
 
-export function cast(json: unknown, today: Date): Maybe.Maybe<State> {
-    if (typeof json === "object"
-        && json !== null
-        && (json as { records?: any }).records instanceof Array
-        && (json as { tasks?: any }).tasks instanceof Array
-    ) {
-        const json_ = json as { createRecord?: any, records: Array<any>, tasks: Array<any> }
-
-        return Maybe.map3(
-            CreateRecord.decodeJson(json_.createRecord),
-            Maybe.combine((json_.records as Array<any>).map((record: any) => Record.decode(record))),
-            Maybe.combine((json_.tasks as Array<any>).map((task: any) => Task.decode(task))),
-            (createRecord, records, tasks) => ({
-                createRecord,
+export function decoder(today: Date): Decoder.Decoder<State> {
+    return Decoder.map3(
+        Decoder.property('records', Decoder.array(Record.decoder)),
+        Decoder.property('tasks', Decoder.array(Task.decoder)),
+        Decoder.property('createRecord', CreateRecord.decoder),
+        (records, tasks, createRecord) =>
+            ({
                 records,
                 tasks,
-                today
+                createRecord,
+                today,
             })
-        )
-    } else {
-        return Maybe.nothing()
-    }
+    )
 }

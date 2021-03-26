@@ -91,16 +91,6 @@ class Nothing<A> implements Maybe<A> {
     }
 }
 
-export function decodeJson<A>(json: any, castJust: (json: any) => Maybe<A>): Maybe<Maybe<A>> {
-    if (typeof json === "object") {
-        if (json.tag === "nothing")
-            return just(nothing())
-        if (json.tag === "just")
-            return just(castJust(json.value))
-    }
-    return nothing()
-}
-
 export function combine<A>(maybes: Array<Maybe<A>>): Maybe<Array<A>> {
     return maybes.reduce(
         (maybeArray, maybeItem) =>

@@ -1,5 +1,7 @@
 import * as State from '../State'
 import * as Maybe from './Maybe'
+import * as Result from './Result'
+import * as Decoder from './decoder/Decoder'
 
 export type Effect<A> =
     | { tag: "Effect", perform: (dispatch: (event: A) => void) => void }
@@ -22,7 +24,15 @@ export function getFromLocalStorage(): Effect<Maybe.Maybe<State.State>> {
                 dispatch(Maybe.nothing())
             } else {
                 try {
-                    dispatch(State.cast(JSON.parse(stateString), new Date()))
+                    dispatch(
+                        Result.toMaybe(
+                            Decoder
+                                .decode(
+                                    JSON.parse(stateString),
+                                    State.decoder(new Date())
+                                )
+                        )
+                    )
                 } catch (e) {
                     dispatch(Maybe.nothing())
                 }

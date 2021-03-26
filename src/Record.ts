@@ -10,6 +10,7 @@ import * as Component from './style/Component'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
 import * as Attribute from './utils/layout/Attribute'
+import * as Decoder from './utils/decoder/Decoder'
 
 export type Id = {
     tag: "recordId",
@@ -120,6 +121,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
     return Layout.row(
         "div",
         [
+            Attribute.attribute("class", "parent"),
             Attribute.spacing(18),
         ],
         [
@@ -213,6 +215,7 @@ export function view(record: Record, tasks: Array<Task.Task>): Layout.Layout<Upd
             Layout.column(
                 "div",
                 [
+                    Attribute.attribute("class", "parent-hover-makes-visible"),
                     Attribute.style("width", "16px"),
                     Attribute.spacing(8),
                     Attribute.style("color", Color.toCssString(Color.gray500)),
@@ -255,39 +258,36 @@ export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
     return records.filter(record => !matchesId(id, record))
 }
 
-export function decodeJsonId(json: any): Maybe.Maybe<Id> {
-    if (typeof json === "object"
-        && json.tag === "recordId"
-        && typeof json.id === "number"
+export const idDecoder: Decoder.Decoder<Id> =
+    Decoder.map2(
+        Decoder.property('tag', Decoder.literal('recordId')),
+        Decoder.property('id', Decoder.number),
+        (_, id) =>
+            recordId(id)
     )
-        return Maybe.just(recordId(json.id))
-    return Maybe.nothing()
-}
 
-export function decode(json: any): Maybe.Maybe<Record> {
-    if (typeof json === "object"
-        && typeof json.description === "string"
-        && typeof json.startInput === "string"
-        && typeof json.startDate === "string"
-        && typeof json.endInput === "string"
-        && typeof json.endDate === "string"
-        && typeof json.taskInput === "string"
-    )
-        return Maybe.map2(
-            decodeJsonId(json.id),
-            Task.decodeJsonId(json.taskId),
-            (id, taskId) => ({
-                id, taskId,
-                description: json.description,
-                startInput: json.startInput,
-                endInput: json.endInput,
-                startDate: new Date(json.startDate),
-                endDate: new Date(json.endDate),
-                taskInput: json.taskInput
+export const decoder: Decoder.Decoder<Record> =
+    Decoder.map8(
+        Decoder.property('id', idDecoder),
+        Decoder.property('taskId', Task.idDecoder),
+        Decoder.property('description', Decoder.string),
+        Decoder.property('startInput', Decoder.string),
+        Decoder.property('startDate', Decoder.string),
+        Decoder.property('endInput', Decoder.string),
+        Decoder.property('endDate', Decoder.string),
+        Decoder.property('taskInput', Decoder.string),
+        (id, taskId, description, startInput, startDate, endInput, endDate, taskInput) =>
+            ({
+                id,
+                taskId,
+                description,
+                startInput,
+                startDate: new Date(startDate),
+                endInput,
+                endDate: new Date(endDate),
+                taskInput
             })
-        )
-    return Maybe.nothing()
-}
+    )
 
 export function search(query: string, records: Array<Record>): Array<Record> {
     if (query === "")
@@ -307,4 +307,19 @@ export function search(query: string, records: Array<Record>): Array<Record> {
 
 export function filterUsingTask(taskId: Task.Id, records: Array<Record>): Array<Record> {
     return records.filter(record => Task.idEq(taskId, record.taskId))
+}
+
+export function recordCss(): string {
+    return `
+
+.parent > .parent-hover-makes-visible {
+    opacity: 0%;
+    transition: opacity 0.2s ease-out;
+}
+
+.parent:hover > .parent-hover-makes-visible {
+    opacity: 100%;
+}
+
+`;
 }

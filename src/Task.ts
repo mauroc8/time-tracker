@@ -2,6 +2,7 @@ import * as Utils from './utils/Utils'
 import * as Color from './style/Color'
 import * as Maybe from './utils/Maybe'
 import * as Levenshtein from './utils/Levenshtein'
+import * as Decoder from './utils/decoder/Decoder'
 
 // TASK ---
 
@@ -55,25 +56,18 @@ export function search(query: string, tasks: Array<Task>): Array<Task> {
             .map(([task, _]) => task)
 }
 
-export function decode(json: unknown): Maybe.Maybe<Task> {
-    if (typeof json === "object"
-        && json !== null
-        && typeof (json as { description?: unknown }).description === "string"
+export const idDecoder: Decoder.Decoder<Id> =
+    Decoder.map2(
+        Decoder.property('id', Decoder.literal('taskId')),
+        Decoder.property('id', Decoder.number),
+        (_, id) =>
+            taskId(id)
     )
-        return decodeJsonId((json as { id?: unknown }).id)
-            .map(id => ({
-                id: id,
-                description: (json as { description: string }).description,
-            }))
 
-    return Maybe.nothing()
-}
 
-export function decodeJsonId(json: any): Maybe.Maybe<Id> {
-    if (typeof json === "object"
-        && json.tag === "taskId"
-        && typeof json.id === "number"
+export const decoder: Decoder.Decoder<Task> =
+    Decoder.map2(
+        idDecoder,
+        Decoder.property('description', Decoder.string),
+        (id, description) => ({ id, description })
     )
-        return Maybe.just(taskId(json.id))
-    return Maybe.nothing()
-}
