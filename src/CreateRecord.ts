@@ -1,5 +1,4 @@
 
-import * as Task from './Task'
 import * as Input from './Input'
 import * as Record from './Record'
 import * as Button from './Button'
@@ -8,6 +7,8 @@ import * as Update from './Update'
 import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
 import * as Result from './utils/Result'
+import * as Date from './utils/Date'
+import * as Time from './utils/Time'
 
 import * as Html from './utils/vdom/Html'
 
@@ -21,144 +22,118 @@ import * as Component from './style/Component'
 /** State of the 'create record' form.
  */
 export type CreateRecord = {
-    descriptionInputValue: string,
-    taskInputValue: string,
-    startInputValue: string,
-    startDate: Maybe.Maybe<Date>,
-    taskId: Maybe.Maybe<Task.Id>,
+    descriptionInput: string,
+    taskInput: string,
+    start: Maybe.Maybe<Start>,
+}
+
+export type Start = {
+    input: string,
+    time: Time.Time,
+    date: Date.Date,
+}
+
+export function start(time: Time.Time, date: Date.Date): Start {
+    return { input: Time.toString(time), time, date }
 }
 
 export function empty(descriptionInputValue: string): CreateRecord {
     return {
-        descriptionInputValue,
-        taskInputValue: '',
-        startInputValue: '',
-        startDate: Maybe.nothing(),
-        taskId: Maybe.nothing(),
+        descriptionInput: descriptionInputValue,
+        taskInput: '',
+        start: Maybe.nothing(),
     }
 }
 
-export function start(date: Date): { input: string, date: Date } {
-    return {
-        input: Utils.dateToString(date),
-        date
-    }
-}
-
-
-export function withTask(taskInputValue: string, taskId: Maybe.Maybe<Task.Id>, createRecord: CreateRecord): CreateRecord {
-    return { ...createRecord, taskId, taskInputValue }
-}
-
-export function updateStartTime(startInputValue: string, createRecord: CreateRecord): CreateRecord {
-    return createRecord.startDate.andThen(startDate =>
-        Utils.dateFromString(startDate, startInputValue)
-    )
-        .map(newStartDate => ({
-            ...createRecord,
-            startInputValue,
-            startDate: Maybe.just(newStartDate),
-        }))
-        .withDefault({ ...createRecord, startInputValue })
-}
-
-export function sanitizeInputs(tasks: Array<Task.Task>, createRecord: CreateRecord): CreateRecord {
+export function withStart(time: Time.Time, date: Date.Date, createRecord: CreateRecord): CreateRecord {
     return {
         ...createRecord,
-        startInputValue:
-            createRecord.startDate
-                .map(Utils.dateToString)
-                .withDefault(''),
-        taskInputValue:
-            createRecord.taskId.andThen(taskId =>
-                Maybe.fromUndefined(tasks.find(task => Task.matchesId(taskId, task)))
-            )
-            .map(task => task.description)
-            .withDefault(''),
+        start: Maybe.just(start(time, date)),
     }
 }
 
+export function withTask(taskInputValue: string, createRecord: CreateRecord): CreateRecord {
+    return { ...createRecord, taskInput: taskInputValue }
+}
 
-export class Error {
-    readonly emptyDescription: boolean
-    readonly emptyTask: boolean
+export function withStartInput(startInputValue: string, createRecord: CreateRecord): CreateRecord {
+    return Time.fromString(startInputValue)
+        .map(newStartTime =>
+            ({
+                ...createRecord,
+                start: createRecord.start.map(s => start(newStartTime, s.date))
+            })
+        )
+        .withDefault(createRecord)
+}
 
-    private constructor(
-        emptyDescription: boolean,
-        emptyTask: boolean,
+export function sanitizeInputs(createRecord: CreateRecord): CreateRecord {
+    return {
+        ...createRecord,
+        start: createRecord.start.map(s => start(s.time, s.date))
+    }
+}
+
+export type Error =
+    | { tag: "emptyDescription" }
+    | { tag: "emptyTask" }
+    | { tag: "emptyBoth" }
+
+const emptyDescription: Error = { tag: 'emptyDescription' }
+const emptyTask: Error = { tag: 'emptyTask' }
+const emptyBoth: Error = { tag: 'emptyBoth' }
+
+function hasEmptyDescription(createRecord: CreateRecord): boolean {
+    return createRecord.descriptionInput.trim() === ''
+}
+
+function hasEmptyTask(createRecord: CreateRecord): boolean {
+    return createRecord.taskInput.trim() === ''
+}
+
+function getError(createRecord: CreateRecord): Maybe.Maybe<Error> {
+    if (
+        hasEmptyDescription(createRecord)
+            && hasEmptyTask(createRecord)
     ) {
-        this.emptyDescription = emptyDescription
-        this.emptyTask = emptyTask
+        return Maybe.just(emptyBoth)
     }
 
-    static none(): Error {
-        return new Error(false, false)
+    if (
+        hasEmptyDescription(createRecord)
+    ) {
+        return Maybe.just(emptyDescription)
     }
 
-    withEmptyDescription(): Error {
-        return new Error(
-            true,
-            this.emptyTask,
-        )
+    if (
+        hasEmptyTask(createRecord)
+    ) {
+        return Maybe.just(emptyTask)
     }
 
-    withEmptyTask(): Error {
-        return new Error(
-            this.emptyDescription,
-            true,
-        )
-    }
-
-    static equals(a: Error, b: Error): boolean {
-        return a.emptyDescription === b.emptyDescription
-            && a.emptyTask === b.emptyTask
-    }
+    return Maybe.nothing()
 }
-
-function getError(createRecord: CreateRecord): Error {
-    function getErrorOfTask(createRecord: CreateRecord) {
-        return createRecord.taskId
-            .map(_ => Error.none())
-            .orElse(() => Error.none().withEmptyTask())
-    }
-
-    if (createRecord.descriptionInputValue.trim() === "") {
-        return getErrorOfTask(createRecord).withEmptyDescription()
-    } else {
-        return getErrorOfTask(createRecord)
-    }
-}
-
 
 export function toRecord(
-    tasks: Array<Task.Task>,
-    endDate: Date,
+    recordId: Record.Id,
+    endTime: Time.Time,
+    endDate: Date.Date,
     createRecord: CreateRecord,
 ): Result.Result<Record.Record, Error> {
-    if (!Error.equals(getError(createRecord), Error.none()))
-        return Result.error<Record.Record, Error>(getError(createRecord))
-
-    return Result.fromMaybe<Record.Record, Error>(
-        getError(createRecord),
-        Maybe
-            .map2(
-                createRecord.startDate,
-                createRecord.taskId,
-                (startDate, taskId) =>
-                    Maybe
-                        .fromUndefined(tasks.find(task => Task.matchesId(taskId, task)))
-                        .map(task =>
-                            Record.record(
-                                createRecord.descriptionInputValue,
-                                startDate,
-                                endDate,
-                                Record.recordId(endDate.getUTCMilliseconds()),
-                                task
-                            )
-                        )
+    return getError(createRecord)
+        .map(x => Result.error<Record.Record, Error>(x))
+        .withDefault(
+            Result.ok<Record.Record, Error>(
+                Record.record(
+                    recordId,
+                    createRecord.descriptionInput,
+                    createRecord.start.map(({ time }) => time).withDefault(endTime),
+                    endTime,
+                    createRecord.taskInput,
+                    createRecord.start.map(({ date }) => date).withDefault(endDate)
+                )
             )
-            .andThen(m => m)
-    )
+        )
 }
 
 export function view(
@@ -166,9 +141,8 @@ export function view(
     args: {
         createRecord: CreateRecord,
         records: Array<Record.Record>,
-        tasks: Array<Task.Task>,
-    }): Layout.Layout<Update.Event> {
-    const task = args.createRecord.taskId.andThen(taskId => Task.find(taskId, args.tasks))
+    }
+): Layout.Layout<Update.Event> {
 
     const redBorder: Attribute.Attribute<Update.Event> =
         Attribute.style("borderColor", "red")
@@ -185,10 +159,10 @@ export function view(
                 {
                     id: "createRecord-description",
                     label: Layout.text("Descripción"),
-                    value: args.createRecord.descriptionInputValue,
+                    value: args.createRecord.descriptionInput,
                     attributes: [
                         (() => {
-                            if (getError(args.createRecord).emptyDescription) {
+                            if (hasEmptyDescription(args.createRecord)) {
                                 return redBorder
                             } else {
                                 return Attribute.empty()
@@ -205,23 +179,25 @@ export function view(
                 {
                     id: "createRecord-task",
                     label: Layout.text("Tarea"),
-                    value: args.createRecord.taskInputValue,
-                    attributes: (() => {
-                        if (getError(args.createRecord).emptyTask) {
-                            return [redBorder]
-                        } else {
-                            return [Attribute.empty()]
-                        }
-                    })() as Array<Attribute.Attribute<Update.Event>>,
+                    value: args.createRecord.taskInput,
+                    attributes: [
+                        (() => {
+                            if (hasEmptyTask(args.createRecord)) {
+                                return redBorder
+                            } else {
+                                return Attribute.empty<Update.Event>()
+                            }
+                        })()
+                    ],
                 }
             ),
-            ...args.createRecord.startDate.map<Array<Layout.Layout<Update.Event>>>(startDate => [
+            ...args.createRecord.start.map<Array<Layout.Layout<Update.Event>>>(({ input }) => [
                 Component.textInput(
                     [],
                     {
                         id: "create-record-start-time",
                         label: Layout.text("Start time"),
-                        value: args.createRecord.startInputValue,
+                        value: input,
                         attributes: [
                             Attribute.on(
                                 "input",
@@ -257,32 +233,31 @@ export function view(
 }
 
 export const decoder: Decoder.Decoder<CreateRecord> =
-    Decoder.map5(
-        Decoder.property('descriptionInputValue', Decoder.string),
-        Decoder.property('taskInputValue', Decoder.string),
-        Decoder.property('startInputValue', Decoder.string),
-        Decoder.property('startDate', Decoder.maybe(Decoder.string)),
-        Decoder.property('taskId', Decoder.maybe(Task.idDecoder)),
-        (descriptionInputValue, taskInputValue, startInputValue, startDate, taskId) =>
+    Decoder.map3(
+        Decoder.property('descriptionInput', Decoder.string),
+        Decoder.property('taskInput', Decoder.string),
+        Decoder.property(
+            'start',
+            Decoder.maybe(
+                Decoder.map2(
+                    Decoder.property('time', Time.decoder),
+                    Decoder.property('date', Date.decoder),
+                    start
+                )
+            )
+        ),
+        (descriptionInput, taskInput, start) =>
             ({
-                descriptionInputValue,
-                taskInputValue,
-                startInputValue,
-                startDate: startDate.map(date => new Date(date)),
-                taskId
+                descriptionInput,
+                taskInput,
+                start
             })
     )
 
-export function resumeRecord(now: Date, record: Record.Record, tasks: Array<Task.Task>): CreateRecord {
+export function resumeRecord(now: Time.Time, today: Date.Date, record: Record.Record): CreateRecord {
     return {
-        descriptionInputValue: record.description,
-        startInputValue: Utils.dateToString(now),
-        startDate: Maybe.just(now),
-        taskId: Maybe.just(record.taskId),
-        taskInputValue: Maybe.fromUndefined(
-            tasks.find(task => Task.matchesId(record.taskId, task))
-        )
-            .map(task => task.description)
-            .withDefault('')
+        descriptionInput: record.description,
+        taskInput: record.taskInput,
+        start: Maybe.just(start(now, today))
     }
 }

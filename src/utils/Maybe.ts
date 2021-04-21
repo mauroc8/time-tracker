@@ -14,15 +14,15 @@ export function nothing<A>(): Maybe<A> {
     return new Nothing<A>()
 }
 
-export function map2<A, B, C>(a: Maybe<A>, b: Maybe<B>, fn: (a: A, b: B) => C): Maybe<C> {
+export function map2<A, B, C>(fn: (a: A, b: B) => C, a: Maybe<A>, b: Maybe<B>): Maybe<C> {
     return a.andThen(a_ => b.map(b_ => fn(a_, b_)))
 }
 
 export function map3<A, B, C, D>(
+    fn: (a: A, b: B, c: C) => D,
     maybeA: Maybe<A>,
     maybeB: Maybe<B>,
     maybeC: Maybe<C>,
-    fn: (a: A, b: B, c: C) => D
 ): Maybe<D> {
     return maybeA.andThen(a =>
         maybeB.andThen(b =>
@@ -95,12 +95,12 @@ export function combine<A>(maybes: Array<Maybe<A>>): Maybe<Array<A>> {
     return maybes.reduce(
         (maybeArray, maybeItem) =>
             map2(
-                maybeArray,
-                maybeItem,
                 (array, item) => {
                     array.push(item)
                     return array
-                }
+                },
+                maybeArray,
+                maybeItem,
             ),
         just<Array<A>>([])
     )

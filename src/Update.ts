@@ -2,10 +2,11 @@ import * as State from './State'
 import * as Maybe from './utils/Maybe'
 import * as Record from './Record'
 import * as CreateRecord from './CreateRecord'
-import * as Task from './Task'
 import * as Utils from './utils/Utils'
 import * as Input from './Input'
 import * as Effect from './utils/Effect'
+import * as Time from './utils/Time'
+import * as Date from './utils/Date'
 import * as Button from './Button'
 
 
@@ -65,7 +66,7 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
 
         case "ButtonClick":
             const button = event.button
-            const now = new Date()
+            const now = Time.fromJavascriptDate(new globalThis.Date())
 
             switch (button.tag) {
                 case "play":
@@ -74,7 +75,7 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                             ...state,
                             createRecord: {
                                 ...state.createRecord,
-                                startInputValue: Utils.dateToString(now),
+                                startInputValue: Time.toString(now),
                                 startDate: Maybe.just(now),
                             }
                         },
@@ -114,7 +115,7 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                             createRecord:
                                 // Find record
                                 Maybe.fromUndefined(
-                                    state.records.find(record => Record.matchesId(button.recordId, record))
+                                    state.records.find(record => Record.hasId(button.recordId, record))
                                 )
                                     // Copy its description and task to createRecord
                                     .map(record =>
@@ -126,7 +127,6 @@ function update_(state: State.State, event: Event): [State.State, Effect.Effect<
                         Effect.none()
                     ]
             }
-            break
     }
 }
 
@@ -177,7 +177,7 @@ function updateCreateRecordInput(
 ): CreateRecord.CreateRecord {
     switch (inputName) {
         case "description":
-            return { ...createRecord, descriptionInputValue: value }
+            return { ...createRecord, descriptionInput: value }
         case "task":
             return CreateRecord.withTask(
                 value,

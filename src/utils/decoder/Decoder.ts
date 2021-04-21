@@ -302,6 +302,35 @@ export function map8<A, B, C, D, E, F, G, H, I>(
     )
 }
 
+export function map9<A, B, C, D, E, F, G, H, I, J>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+    decoderE: Decoder<E>,
+    decoderF: Decoder<F>,
+    decoderG: Decoder<G>,
+    decoderH: Decoder<H>,
+    decoderI: Decoder<I>,
+    mapFunction: (a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H, i: I) => J
+): Decoder<J> {
+    return map8(
+        decoderA,
+        decoderB,
+        decoderC,
+        decoderD,
+        decoderE,
+        decoderF,
+        decoderG,
+        map2(
+            decoderH,
+            decoderI,
+            Pair.pair
+        ),
+        (a, b, c, d, e, f, g, [h, i]) => mapFunction(a, b, c, d, e, f, g, h, i)
+    )
+}
+
 export function succeed<A>(a: A): Decoder<A> {
     return decoder((_) => Result.ok(a))
 }

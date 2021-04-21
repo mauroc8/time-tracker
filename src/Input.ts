@@ -21,7 +21,7 @@ export function equals(a: Input, b: Input): boolean {
     }
 
     if (a.tag === "record" && b.tag === "record") {
-        return Record.idEq(a.id, b.id) && a.name === b.name
+        return Record.idEquals(a.id, b.id) && a.name === b.name
     }
 
     return false

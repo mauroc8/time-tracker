@@ -1,31 +1,23 @@
 import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
-import * as Task from './Task'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
 import * as Effect from './utils/Effect'
 import * as Decoder from './utils/decoder/Decoder'
+import * as Time from './utils/Time'
+import * as Date from './utils/Date'
 
 // STATE ---
 
 /** The whole state of the application.
- * 
 */
 export type State = {
     createRecord: CreateRecord.CreateRecord,
     records: Array<Record.Record>,
-    tasks: Array<Task.Task>,
-    today: Date,
+    today: Date.Date,
 }
 
-const backendTask = Task.task(
-    Task.taskId(0),
-    "Backend",
-)
-
-export function initialState<Event>(flags: string | null): [State, Effect.Effect<Event>] {
-    const today = new Date()
-
+export function initialState<Event>(flags: string | null, today: Date.Date): [State, Effect.Effect<Event>] {
     try {
         return [
             Decoder
@@ -33,60 +25,54 @@ export function initialState<Event>(flags: string | null): [State, Effect.Effect
                     flags && JSON.parse(flags),
                     decoder(today)
                 )
-                .withDefault(initialStateHelp(today)),
+                .withDefault(initialUnsavedState(today)),
             Effect.none(),
         ]
     } catch (e) {
-        return [initialStateHelp(today), Effect.none()]
+        return [initialUnsavedState(today), Effect.none()]
     }
 }
 
-function initialStateHelp(today: Date): State {
+function initialUnsavedState(today: Date.Date): State {
     return {
         createRecord: CreateRecord.empty(""),
         records: [
             Record.record(
+                Record.id(0),
                 "Login",
-                new Date(new Date().getTime() - 10000000),
-                new Date(new Date().getTime() - 5000000),
-                Record.recordId(0),
-                backendTask,
+                Time.time(22, 54),
+                Time.time(23, 25),
+                "Inweb",
+                Date.date(21, 4, 2021),
             ),
             Record.record(
+                Record.id(1),
                 "Login",
-                new Date(new Date().getTime() - 5000000),
-                new Date(new Date().getTime() - 2000000),
-                Record.recordId(1),
-                backendTask,
+                Time.time(7, 15),
+                Time.time(10, 49),
+                "Inweb",
+                Date.date(22, 4, 2021),
             ),
             Record.record(
+                Record.id(2),
                 "Login",
-                new Date(new Date().getTime() - 2000000),
-                new Date(new Date().getTime()),
-                Record.recordId(2),
-                backendTask,
+                Time.time(14, 37),
+                Time.time(17, 53),
+                "Inweb",
+                Date.date(22, 4, 2021),
             ),
-        ],
-        tasks: [
-            backendTask,
-            Task.task(
-                Task.taskId(1),
-                "Frontend",
-            )
         ],
         today,
     }
 }
 
-export function decoder(today: Date): Decoder.Decoder<State> {
-    return Decoder.map3(
+export function decoder(today: Date.Date): Decoder.Decoder<State> {
+    return Decoder.map2(
         Decoder.property('records', Decoder.array(Record.decoder)),
-        Decoder.property('tasks', Decoder.array(Task.decoder)),
         Decoder.property('createRecord', CreateRecord.decoder),
-        (records, tasks, createRecord) =>
+        (records, createRecord) =>
             ({
                 records,
-                tasks,
                 createRecord,
                 today,
             })

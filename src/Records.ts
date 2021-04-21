@@ -3,7 +3,7 @@ import * as Record from './Record'
 import * as Update from './Update'
 
 
-import * as Time from './utils/Time'
+import * as Date from './utils/Date'
 import * as Utils from './utils/Utils'
 import * as Array_ from './utils/Array'
 
@@ -14,12 +14,14 @@ import * as Attribute from './utils/layout/Attribute'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
 
+export type Records =
+    { tag: 'Records', array: Array<Record.Record> }
 
 
 export function view(
     records: Array<Record.Record>,
     tasks: Array<Task.Task>,
-    today: Date,
+    today: Date.Date,
 ): Layout.Layout<Update.Event> {
     return Layout.column(
         "div",
@@ -31,8 +33,8 @@ export function view(
                 .sort(Record.compare),
             (a, b) =>
                 Utils.equals(
-                    Time.groupOf({ today, time: a.startDate }),
-                    Time.groupOf({ today, time: b.startDate })
+                    Date.groupOf({ today, time: a.date }),
+                    Date.groupOf({ today, time: b.date })
                 )
         )
             .map(group => viewRecordGroup(group, today, tasks))
@@ -41,7 +43,7 @@ export function view(
 
 function viewRecordGroup(
     group: [Record.Record, ...Array<Record.Record>],
-    today: Date,
+    today: Date.Date,
     tasks: Array<Task.Task>
 ): Layout.Layout<Update.Event> {
     return Layout.column(
@@ -79,8 +81,8 @@ function viewRecordGroup(
                         ],
                         [
                             Layout.text(
-                                Time.groupToSpanishLabel(
-                                    Time.groupOf({ today, time: group[0].startDate })
+                                Date.groupToSpanishLabel(
+                                    Date.groupOf({ today, time: group[0].date })
                                 )
                             ),
                         ]
@@ -99,9 +101,9 @@ function viewRecordGroup(
                     ),
                     Icon.button(
                         [
-                            Attribute.style("transform", "translateY(5px)"),
+                            Attribute.style("transform", `translateY(3px)`),
                         ],
-                        Icon.chevronUp(),
+                        Icon.chevronDown(),
                     ),
                 ]
             ),
@@ -114,8 +116,8 @@ function viewRecordGroup(
                     group,
                     (a, b) =>
                         Utils.equals(
-                            Time.dayTag({ today, time: a.startDate }),
-                            Time.dayTag({ today, time: b.startDate }))
+                            Date.dayTag({ today, time: a.date }),
+                            Date.dayTag({ today, time: b.date }))
                 )
                     .map(day => viewRecordDay(day, today, tasks))
             )
@@ -125,7 +127,7 @@ function viewRecordGroup(
 
 function viewRecordDay(
     day: [Record.Record, ...Array<Record.Record>],
-    today: Date,
+    today: Date.Date,
     tasks: Array<Task.Task>,
 ): Layout.Layout<Update.Event> {
     return Layout.column(
@@ -144,8 +146,8 @@ function viewRecordDay(
                 ],
                 [
                     Layout.text(
-                        Time.dayTagToSpanishLabel(
-                            Time.dayTag({ today, time: day[0].startDate })
+                        Date.dayTagToSpanishLabel(
+                            Date.dayTag({ today, time: day[0].date })
                         )
                             .toUpperCase()
                     ),
