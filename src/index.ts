@@ -14,130 +14,120 @@ import * as Html from './utils/vdom/Html'
 import * as VirtualDom from './utils/vdom/VirtualDom'
 
 import * as Layout from './utils/layout/Layout'
-import * as Attribute from './utils/layout/Attribute'
 
 import * as Color from './style/Color'
 import * as  Component from './style/Component'
 
+
+// --- UPDATE
+
+/** The type of the dispatch function
+ */
+ export type Dispatch = (event: Event) => void
+
+ /** Event is what's typically called an "action" in Redux
+ */
+ export type Event =
+     | { event: "none" }
+
+
+function update(state: State.State, event: Event): Update.Update<State.State, Event> {
+    return Update.pure(state)
+}
+
+
 // --- VIEW
 
+const globalCss: { [selector: string]: string } = {
+    "*": `
+        margin: 0;
+        padding: 0;
+        text: inherit;
+        box-sizing: inherit;
+        text-decoration: inherit;
+        font-weight: inherit;
+        font-size: inherit;
+        background: transparent;
+        border: 0;
+        transition: all 0.2s ease-out;
+        color: inherit;
+        text-align: inherit;
+        outline-color: transparent;
+    `,
+    "button, summary": `cursor: pointer;`,
+    "*:focus": `outline: 1px dashed rgba(255, 255, 255, 0.15);`,
+    "html": `box-sizing: border-box; line-height: 1;`,
+    "body": `
+        background-color: ${Color.toCssString(Color.background)};
+        font-family: Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir,
+            helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif;
+        border-top: 6px solid ${Color.toCssString(Color.accent)};
+        color: ${Color.toCssString(Color.gray700)};
+    `
+}
 
-export function view(state: State.State): Html.Html<Update.Event> {
+export function view(state: State.State): Html.Html<Event> {
     return Layout.toHtml(
-        Layout.column(
-            "div",
-            [
-                Attribute.style("align-items", "center"),
-            ],
-            [
-                // CSS
-                Layout.html(
-                    Html.node(
-                        "style",
+        "div",
+        [
+            Html.style("display", "flex"),
+            Html.style("flex-direction", "column"),
+            Html.style("align-items", "center"),
+        ],
+        Layout.withCss(
+            globalCss,
+            Layout.column(
+                "div",
+                [
+                    Html.style("max-width", (1024 + 40) + "px"),
+                    Html.paddingXY(0, 20),
+                ],
+                [
+                    Layout.space(50),
+                    CreateRecord.view(
                         [
-                            Html.key("1"),
+                            Html.padding(10),
                         ],
-                        [
-                            Html.text(resetCss()),
-                            Html.text(bodyCss()),
-                            Html.text(Component.textInputCss()),
-                            Html.text(Record.recordCss()),
-                        ]
-                    )
-                ),
-                // CONTENT
-                Layout.column(
-                    "div",
-                    [
-                        Attribute.style("max-width", (1024 + 40) + "px"),
-                        Attribute.style("padding", "0 20px"),
-                    ],
-                    [
-                        Layout.space(50),
-                        CreateRecord.view(
-                            [
-                                Attribute.padding(10),
-                            ],
-                            {
-                                createRecord: state.createRecord,
-                                records: state.records,
-                                tasks: state.tasks,
-                            }
-                        ),
-                        Records.view(state.records, state.tasks, state.today),
-                    ]
-                ),
-            ]
+                        {
+                            createRecord: state.createRecord,
+                            records: state.records,
+                        }
+                    ),
+                    Records.view(state.records, state.today),
+                ]
+            )
         )
     )
-}
-
-function resetCss(): string {
-    return `
-* {
-    margin: 0;
-    padding: 0;
-    text: inherit;
-    box-sizing: inherit;
-    text-decoration: inherit;
-    font-weight: inherit;
-    font-size: inherit;
-    background: transparent;
-    border: 0;
-    transition: all 0.2s ease-out;
-    color: inherit;
-    text-align: inherit;
-}
-*:hover, *:focus, *:active {
-    outline: 0;
-}
-
-html {
-    box-sizing: border-box;
-    line-height: 1;
-}
-    `
-}
-
-function bodyCss(): string {
-    return `
-body {
-    background-color: ${Color.toCssString(Color.background)};
-    font-family: Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir,
-        helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-    border-top: 6px solid ${Color.toCssString(Color.accent)};
-    color: ${Color.toCssString(Color.gray700)};
-}
-    `
 }
 
 // --- MAIN
 
 
 let $rootElement = document.getElementById('root') as Element | Text
-let timeout = setTimeout(() => { }, 0)
 
 /** Flags refer to some external state that is passed to app initialization */
 const flags = localStorage.getItem("state")
 
 if ($rootElement !== null) {
-    let [state, initialEffect] = State.initialState<Update.Event>(flags)
+    let [state, initialCmd] = State.initialState<Event>(flags, { day: 23, month: 4, year: 2021 })
     let currentView = view(state)
 
-    const dispatch = (event: Update.Event) => {
-        const [newState, effect] = Update.update(state, event)
+    const dispatch = (event: Event) => {
+        const { state: newState, cmd } = update(state, event)
 
         const newView = view(newState)
         const patch = VirtualDom.diff(currentView, newView, dispatch)
 
         patch($rootElement)
         currentView = newView
-        effect.perform(dispatch)
+        cmd.execute(dispatch)
     }
 
     const $initialRender = Html.toElement(currentView, dispatch)
     $rootElement.replaceWith($initialRender)
     $rootElement = $initialRender
 
-    initialEffect.perform(dispatch)
+    requestAnimationFrame(() => {
+        initialCmd.execute(dispatch)
+    })
 }

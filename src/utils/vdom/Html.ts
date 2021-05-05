@@ -41,7 +41,7 @@ export type Attribute<Evt> =
     | { tag: "property", name: string, value: any }
     | { tag: "eventHandler", eventName: string, handler: (event: any) => Evt }
     | { tag: "style", property: string, value: string }
-    | { tag: "key", value: string }
+    | { tag: "class", value: string }
 
 export function attribute<Evt>(name: string, value: string): Attribute<Evt> {
     return { tag: "attribute", name, value }
@@ -59,8 +59,8 @@ export function style<Evt>(property: string, value: string): Attribute<Evt> {
     return { tag: "style", property, value }
 }
 
-export function key<Evt>(value: string): Attribute<Evt> {
-    return { tag: "key", value }
+export function class_<A>(className: string): Attribute<A> {
+    return { tag: "class", value: className }
 }
 
 export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {
@@ -82,5 +82,27 @@ export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: E
         case "style":
             ($element as any).style[attribute.property] = attribute.value
             return
+
+        case "class":
+            ($element as any).className = (`${($element as any).className} ${attribute.value}`).trim()
+            return
     }
+}
+
+export function padding<A>(x: number): Attribute<A> {
+    return style("padding", `${x}px`)
+}
+
+export function paddingXY<A>(x: number, y: number): Attribute<A> {
+    return style("padding", `${y}px ${x}px`)
+}
+
+export function addAttributes<A>(attrs: Array<Attribute<A>>, html: Html<A>): Html<A> {
+    if (html.nodeType === "node") {
+        return {
+            ...html,
+            attributes: [ ...html.attributes, ...attrs ]
+        }
+    }
+    return html
 }

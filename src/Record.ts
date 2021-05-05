@@ -3,12 +3,11 @@ import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
 import * as Update from './Update'
 import * as Levenshtein from './utils/Levenshtein'
-import * as Input from './Input'
 import * as Layout from './utils/layout/Layout'
 import * as Component from './style/Component'
+import * as Html from './utils/vdom/Html'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
-import * as Attribute from './utils/layout/Attribute'
 import * as Decoder from './utils/decoder/Decoder'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
@@ -20,10 +19,6 @@ export type Id = {
 
 export function id(id: number): Id {
     return { tag: "recordId", id }
-}
-
-export function idEquals(a: Id, b: Id): boolean {
-    return a.id === b.id
 }
 
 // RECORD ---
@@ -61,7 +56,7 @@ export function record(
 }
 
 export function hasId(id: Id, record: Record): boolean {
-    return idEquals(id, record.id)
+    return Utils.equals(id, record.id)
 }
 
 export function withDescription(description: string, record: Record): Record {
@@ -108,132 +103,130 @@ export function save(record: Record, today: Date.Date): Record {
     }
 }
 
-export function view(record: Record): Layout.Layout<Update.Event> {
-    const input = (inputName: Input.RecordInputName) => Input.record(record, inputName)
+export function view<A>(record: Record): Layout.Layout<A> {
+
+    const separator = Layout.column<A>(
+        'div',
+        [
+            Html.style("flex-basis", "2%"),
+        ],
+        []
+    )
 
     return Layout.row(
         "div",
         [
-            Attribute.attribute("class", "parent"),
-            Attribute.spacing(18),
+            Html.attribute("class", "record"),
         ],
         [
             Component.textInput(
                 [
-                    Attribute.style("flex-basis", "40%"),
+                    Html.style("flex-basis", "40%"),
                 ],
                 {
-                    id: `record_${record.id}_description`,
+                    id: `record_${record.id.id}_description`,
                     label: Layout.column(
                         "div",
-                        [Attribute.paddingXY(8, 0)],
+                        [Html.paddingXY(8, 0)],
                         [Layout.text('Descripción')]
                     ),
                     value: record.description,
-                    attributes: [
-                        Attribute.on("input", (event: any) => Update.onInput(input("description"), event?.target?.value || "")),
-                    ],
+                    attributes: [],
                 }
             ),
+            separator,
             Component.textInput(
                 [
-                    Attribute.style("flex-basis", "20%"),
+                    Html.style("flex-basis", "20%"),
                 ],
                 {
-                    id: `record_${record.id}_task`,
+                    id: `record_${record.id.id}_task`,
                     label: Layout.column(
                         "div",
-                        [Attribute.paddingXY(8, 0)],
+                        [Html.paddingXY(8, 0)],
                         [Layout.text('Tarea')]
                     ),
                     value: record.taskInput,
-                    attributes: [
-                        Attribute.on("input", (event: any) => Update.onInput(input("task"), event?.target?.value || "")),
-                    ],
+                    attributes: [],
                 }
             ),
+            separator,
             Component.textInput(
                 [
-                    Attribute.style("flex-basis", "10%"),
-                    Attribute.style("text-align", "right"),
+                    Html.style("flex-basis", "10%"),
+                    Html.style("text-align", "right"),
                 ],
                 {
-                    id: `record_${record.id}_start`,
+                    id: `record_${record.id.id}_start`,
                     label: Layout.column(
                         "div",
-                        [Attribute.paddingXY(8, 0)],
+                        [Html.paddingXY(8, 0)],
                         [Layout.text('Inicio')]
                     ),
                     value: record.startInput,
-                    attributes: [
-                        Attribute.on("input", (event: any) => Update.onInput(input("startTime"), event?.target?.value || "")),
-                    ],
+                    attributes: [],
                 }
             ),
+            separator,
             Component.textInput(
                 [
-                    Attribute.style("flex-basis", "10%"),
-                    Attribute.style("text-align", "right"),
+                    Html.style("flex-basis", "10%"),
+                    Html.style("text-align", "right"),
                 ],
                 {
-                    id: `record_${record.id}_end`,
+                    id: `record_${record.id.id}_end`,
                     label: Layout.column(
                         "div",
-                        [Attribute.paddingXY(8, 0)],
+                        [Html.paddingXY(8, 0)],
                         [Layout.text('Fin')]
                     ),
                     value: record.endInput,
-                    attributes: [
-                        Attribute.on("input", (event: any) => Update.onInput(input("endTime"), event?.target?.value || "")),
-                    ],
+                    attributes: [],
                 }
             ),
+            separator,
             Component.textInput(
                 [
-                    Attribute.style("flex-basis", "10%"),
-                    Attribute.style("text-align", "right"),
+                    Html.style("flex-basis", "10%"),
+                    Html.style("text-align", "right"),
                 ],
                 {
-                    id: `record_${record.id}_duration`,
+                    id: `record_${record.id.id}_duration`,
                     label: Layout.column(
                         "div",
-                        [Attribute.paddingXY(8, 0)],
+                        [Html.paddingXY(8, 0)],
                         [Layout.text('Duración')]
                     ),
                     value: Time.toString(Time.difference(record.endTime, record.startTime)),
                     attributes: [],
                 }
             ),
-            Layout.column(
-                "div",
-                [
-                    Attribute.attribute("class", "parent-hover-makes-visible"),
-                    Attribute.style("width", "16px"),
-                    Attribute.spacing(8),
-                    Attribute.style("color", Color.toCssString(Color.gray500)),
-                    Attribute.style("justify-content", "flex-end"),
-                ],
-                [
-                    Icon.button(
-                        [
-                            //Attribute.on("click", (_) => Update.clickedButton(Button.resumeRecord(record.id))),
-                        ],
-                        Icon.play()
-                    ),
-                    Icon.button(
-                        [
-                            //Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
-                        ],
-                        Icon.delete_()
-                    ),
-                    Icon.button(
-                        [
-                            //Attribute.on("click", (_) => Update.clickedButton(Button.deleteRecord(record.id))),
-                        ],
-                        Icon.options()
-                    ),
-                ]
-            ),
+            separator,
+            Layout.withSpacingY(
+                8,
+                Layout.column(
+                    "div",
+                    [
+                        Html.style("width", "16px"),
+                        Html.style("color", Color.toCssString(Color.gray500)),
+                        Html.style("justify-content", "flex-start"),
+                    ],
+                    [
+                        Icon.button(
+                            [
+                                Html.attribute("class", "visible-when-record-is-hovered visible-when-focused"),
+                            ],
+                            Icon.play()
+                        ),
+                        Icon.button(
+                            [
+                                Html.attribute("class", "visible-when-record-is-hovered visible-when-focused"),
+                            ],
+                            Icon.options()
+                        ),
+                    ]
+                )
+            )
         ]
     )
 }
@@ -299,12 +292,18 @@ export function search(query: string, records: Array<Record>): Array<Record> {
 export function recordCss(): string {
     return `
 
-.parent > .parent-hover-makes-visible {
+.visible-when-record-is-hovered,
+.visible-when-focused {
     opacity: 0%;
     transition: opacity 0.2s ease-out;
 }
 
-.parent:hover > .parent-hover-makes-visible {
+.record:hover .visible-when-record-is-hovered {
+    opacity: 100%;
+}
+
+.visible-when-focused:focus,
+.visible-when-focused:focus + .visible-when-focused {
     opacity: 100%;
 }
 

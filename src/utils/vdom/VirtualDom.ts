@@ -19,8 +19,6 @@ export function diff<T>(
             $node.replaceWith($newNode)
             return $newNode
         }
-    } else if (keyOf(oldVDom.attributes) === keyOf(newVDom.attributes)) {
-        return $node => $node
     } else {
         const patchAttributes = diffAttributes(oldVDom.attributes, newVDom.attributes, dispatch)
         const patchChildren = diffChildren(oldVDom.children, newVDom.children, dispatch)
@@ -32,15 +30,6 @@ export function diff<T>(
             return $node
         }
     }
-}
-
-function keyOf<Evt>(attributes: Array<Html.Attribute<Evt>>): string | undefined {
-    return Array_.filterMap<Html.Attribute<Evt>, { tag: "key", value: string }>(
-        attributes,
-        attribute => attribute.tag === "key" ? Maybe.just(attribute) : Maybe.nothing()
-    )
-        .map(attribute => attribute.value)
-    [0];
 }
 
 /** A list's indexed map2 but without dropping elements.
@@ -111,6 +100,8 @@ function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boole
         return a.eventName === b.eventName && a.handler === b.handler
     } else if (a.tag === "style" && b.tag === "style") {
         return a.property === b.property && a.value === b.value
+    } else if (a.tag === "class" && b.tag === "class") {
+        return a.value === b.value
     }
 
     return false
@@ -135,11 +126,10 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
         case "style":
             ($node as any).style[attr.property] = ""
             return
-        case "key":
-            return
+        case "class":
+            ($node as any).className = ($node as any).className.replace(attr.value, '')
     }
 
-    Utils.assertNever(attr)
 }
 
 

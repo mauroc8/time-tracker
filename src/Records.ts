@@ -1,4 +1,3 @@
-import * as Task from './Task'
 import * as Record from './Record'
 import * as Update from './Update'
 
@@ -9,7 +8,8 @@ import * as Array_ from './utils/Array'
 
 
 import * as Layout from './utils/layout/Layout'
-import * as Attribute from './utils/layout/Attribute'
+
+import * as Html from './utils/vdom/Html'
 
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
@@ -18,16 +18,14 @@ export type Records =
     { tag: 'Records', array: Array<Record.Record> }
 
 
-export function view(
+export function view<A>(
     records: Array<Record.Record>,
-    tasks: Array<Task.Task>,
     today: Date.Date,
-): Layout.Layout<Update.Event> {
-    return Layout.column(
+): Layout.Layout<A> {
+    return Layout.columnWithSpacing(
+        50,
         "div",
-        [
-            Attribute.spacing(50),
-        ],
+        [],
         Array_.groupWhile(
             records
                 .sort(Record.compare),
@@ -37,47 +35,46 @@ export function view(
                     Date.groupOf({ today, time: b.date })
                 )
         )
-            .map(group => viewRecordGroup(group, today, tasks))
+            .map(group => viewRecordGroup(group, today))
     )
 }
 
-function viewRecordGroup(
+function viewRecordGroup<A>(
     group: [Record.Record, ...Array<Record.Record>],
-    today: Date.Date,
-    tasks: Array<Task.Task>
-): Layout.Layout<Update.Event> {
-    return Layout.column(
+    today: Date.Date
+): Layout.Layout<A> {
+    return Layout.columnWithSpacing(
+        20,
         "div",
+        [],
         [
-            Attribute.spacing(20),
-        ],
-        [
-            Layout.row(
+            Layout.rowWithSpacing(
+                18,
                 "div",
                 [
-                    Attribute.style("color", Color.toCssString(Color.gray400)),
-                    Attribute.style("font-size", "14px"),
-                    Attribute.style("align-items", "baseline"),
-                    Attribute.spacing(18),
+                    Html.style("color", Color.toCssString(Color.gray400)),
+                    Html.style("font-size", "14px"),
+                    Html.style("align-items", "baseline"),
                 ],
                 [
-                    Layout.column(
+                    Layout.node(
                         "div",
                         [
-                            Attribute.style("flex-grow", "1"),
-                            Attribute.style("height", "1px"),
-                            Attribute.style("margin-left", "8px"),
-                            Attribute.style(
+                            Html.style("flex-grow", "1"),
+                            Html.style("height", "1px"),
+                            Html.style("margin-left", "8px"),
+                            Html.style(
                                 "background-color",
                                 Color.toCssString(Color.gray200)
                             )
                         ],
                         []
                     ),
-                    Layout.column(
+                    Layout.node(
                         "div",
                         [
-                            Attribute.style("white-space", "nowrap"),
+                            Html.style("display", "inline-flex"),
+                            Html.style("white-space", "nowrap"),
                         ],
                         [
                             Layout.text(
@@ -87,12 +84,12 @@ function viewRecordGroup(
                             ),
                         ]
                     ),
-                    Layout.column(
+                    Layout.node(
                         "div",
                         [
-                            Attribute.style("flex-grow", "1"),
-                            Attribute.style("height", "1px"),
-                            Attribute.style(
+                            Html.style("flex-grow", "1"),
+                            Html.style("height", "1px"),
+                            Html.style(
                                 "background-color",
                                 Color.toCssString(Color.gray200)
                             )
@@ -101,17 +98,16 @@ function viewRecordGroup(
                     ),
                     Icon.button(
                         [
-                            Attribute.style("transform", `translateY(3px)`),
+                            Html.style("transform", `translateY(3px)`),
                         ],
                         Icon.chevronDown(),
                     ),
                 ]
             ),
-            Layout.column(
+            Layout.columnWithSpacing(
+                55,
                 "div",
-                [
-                    Attribute.spacing(55),
-                ],
+                [],
                 Array_.groupWhile(
                     group,
                     (a, b) =>
@@ -119,30 +115,28 @@ function viewRecordGroup(
                             Date.dayTag({ today, time: a.date }),
                             Date.dayTag({ today, time: b.date }))
                 )
-                    .map(day => viewRecordDay(day, today, tasks))
+                    .map(day => viewRecordDay(day, today))
             )
         ]
     )
 }
 
-function viewRecordDay(
+function viewRecordDay<A>(
     day: [Record.Record, ...Array<Record.Record>],
     today: Date.Date,
-    tasks: Array<Task.Task>,
-): Layout.Layout<Update.Event> {
-    return Layout.column(
+): Layout.Layout<A> {
+    return Layout.columnWithSpacing(
+        20,
         "div",
-        [
-            Attribute.spacing(20),
-        ],
+        [],
         [
             Layout.column(
                 "div",
                 [
-                    Attribute.style("color", Color.toCssString(Color.accent)),
-                    Attribute.style("font-size", "12px"),
-                    Attribute.style("letter-spacing", "0.15em"),
-                    Attribute.paddingXY(8, 0),
+                    Html.style("color", Color.toCssString(Color.accent)),
+                    Html.style("font-size", "12px"),
+                    Html.style("letter-spacing", "0.15em"),
+                    Html.paddingXY(8, 0),
                 ],
                 [
                     Layout.text(
@@ -153,12 +147,11 @@ function viewRecordDay(
                     ),
                 ]
             ),
-            Layout.column(
+            Layout.columnWithSpacing(
+                55,
                 "div",
-                [
-                    Attribute.spacing(55),
-                ],
-                day.map((record) => Record.view(record, tasks))
+                [],
+                day.map(record => Record.view(record))
             )
         ]
     )

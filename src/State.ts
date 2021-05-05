@@ -2,7 +2,7 @@ import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
 import * as CreateRecord from './CreateRecord'
 import * as Record from './Record'
-import * as Effect from './utils/Effect'
+import * as Effect from './utils/Cmd'
 import * as Decoder from './utils/decoder/Decoder'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
@@ -17,7 +17,7 @@ export type State = {
     today: Date.Date,
 }
 
-export function initialState<Event>(flags: string | null, today: Date.Date): [State, Effect.Effect<Event>] {
+export function initialState<Event>(flags: string | null, today: Date.Date): [State, Effect.Cmd<Event>] {
     try {
         return [
             Decoder

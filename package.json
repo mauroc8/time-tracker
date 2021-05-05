@@ -2,10 +2,13 @@
   "name": "time-tracker",
   "version": "0.1.0",
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "layout.css": "^1.0.0"
+  },
   "scripts": {
     "start": "parcel src/index.html",
-    "build": "rm -rf docs && parcel build src/index.html --public-url=./ --out-dir docs --detailed-report"
+    "build": "rm -rf docs && parcel build src/index.html --public-url=./ --out-dir docs --detailed-report",
+    "typecheck": "tsc -p . -w"
   },
   "browserslist": {
     "production": [

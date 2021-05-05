@@ -10,6 +10,7 @@ export function assertNever(never: never): void {
     console.warn(`Value of tipe never`, never)
 }
 
+/** Structural equality */
 export function equals(a: unknown, b: unknown): boolean {
     if (a instanceof Array && b instanceof Array) {
         return a.every((x, i) => equals(x, b[i]))

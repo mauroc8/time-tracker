@@ -1,93 +1,116 @@
 import * as Html from "../vdom/Html";
-import * as Utils from "../Utils";
-import * as Maybe from "../Maybe";
-import * as Array from '../Array';
-import * as Attr from './Attribute'
 
-export type Layout<A> =
-    | {
-        layoutType: "layout",
-        direction: "column" | "row",
-        htmlTag: string,
-        attributes: Array<Attr.Attribute<A>>,
-        children: Array<Layout<A>>,
-    }
-    | {
-        layoutType: "html",
-        html: Html.Html<A>
-    }
-
-
-function getSpacing<A>(attribute: Attr.Attribute<A>): Maybe.Maybe<number> {
-    if (attribute.attributeType === "spacing")
-        return Maybe.just(attribute.value)
-    else
-        return Maybe.nothing()
+export type Layout<A> = {
+    html: Html.Html<A>,
+    css: { [selector: string]: string }
 }
 
-function toHtmlAttribute<A>(attribute: Attr.Attribute<A>): Maybe.Maybe<Html.Attribute<A>> {
-    switch (attribute.attributeType) {
-        case "htmlAttribute":
-            return Maybe.just(attribute.value)
-        case "spacing":
-            return Maybe.nothing()
-        case "emptyAttribute":
-            return Maybe.nothing()
-    }
+export function fromHtml<A>(html: Html.Html<A>, css: { [selector: string]: string }): Layout<A> {
+    return { html, css }
 }
 
-export function toHtml<A>(layout: Layout<A>): Html.Html<A> {
-    switch (layout.layoutType) {
-        case "html":
-            return layout.html
+export function toHtml<A>(
+    htmlTag: string,
+    attributes: Array<Html.Attribute<A>>,
+    layout: Layout<A>
+): Html.Html<A> {
+    return Html.node(
+        htmlTag,
+        attributes,
+        [
+            Html.node("style", [], [Html.text(cssToString(layout.css))]),
+            layout.html
+        ]
+    )
+}
 
-        case "layout":
-            const spacing =
-                Array.filterMap(layout.attributes, getSpacing)[0] ?? 0
+function cssToString(css: { [selector: string]: string }): string {
+    return Object.entries(css).reduce(
+        (accumulated, [selector, css]) => `${accumulated}\n${selector} { ${css} }`,
+        ""
+    )
+}
 
-            return Html.node(
-                layout.htmlTag,
-                [
-                    Html.style("display", "flex"),
-                    Html.style("flex-direction", layout.direction),
-                    ...Array.filterMap(layout.attributes, toHtmlAttribute)
-                ],
-                (() => {
-                    const childrenToHtml =
-                        (children: Array<Layout<A>>) =>
-                            children.map(child => toHtml(child))
-
-                    if (spacing !== 0) {
-                        return childrenToHtml(
-                            Array.intersperse(layout.children, space(spacing))
-                        )
-                    } else {
-                        return childrenToHtml(layout.children)
-                    }
-                })()
-            )
-    }
+export function node<A>(
+    htmlTag: string,
+    attributes: Array<Html.Attribute<A>>,
+    children: Array<Layout<A>>,
+): Layout<A> {
+    return fromHtml(
+        Html.node(htmlTag, attributes, children.map(({ html }) => html)),
+        children.reduce(
+            (css, layout) => ({ ...css, ...layout.css }),
+            {}
+        )
+    )
 }
 
 export function column<A>(
     htmlTag: string,
-    attributes: Array<Attr.Attribute<A>>,
+    attributes: Array<Html.Attribute<A>>,
     children: Array<Layout<A>>,
 ): Layout<A> {
-    return { layoutType: "layout", direction: "column", htmlTag, attributes, children }
+    return fromHtml(
+        Html.node(
+            htmlTag,
+            [ ...attributes, Html.class_("flex flex-column")],
+            children.map(({ html }) => html)
+        ),
+        children.reduce(
+            (css, layout) => ({ ...css, ...layout.css }),
+            {
+                ".flex": "display: flex",
+                ".flex-column": "flex-direction: column",
+            }
+        )
+    )
 }
 
+export function columnWithSpacing<A>(
+    spacing: number,
+    htmlTag: string,
+    attributes: Array<Html.Attribute<A>>,
+    children: Array<Layout<A>>,
+): Layout<A> {
+    return withSpacingY(spacing, column(htmlTag, attributes, children))
+}
+
+export function rowWithSpacing<A>(
+    spacing: number,
+    htmlTag: string,
+    attributes: Array<Html.Attribute<A>>,
+    children: Array<Layout<A>>,
+): Layout<A> {
+    return withSpacingX(spacing, row(htmlTag, attributes, children))
+}
 
 export function row<A>(
     htmlTag: string,
-    attributes: Array<Attr.Attribute<A>>,
+    attributes: Array<Html.Attribute<A>>,
     children: Array<Layout<A>>,
 ): Layout<A> {
-    return { layoutType: "layout", direction: "row", htmlTag, attributes, children }
+    return fromHtml(
+        Html.node(
+            htmlTag,
+            [...attributes, Html.class_("flex flex-row")],
+            children.map(({ html }) => html)
+        ),
+        children.reduce(
+            (css, layout) => ({ ...css, ...layout.css }),
+            {
+                ".flex": "display: flex",
+                ".flex-row": "flex-direction: row"
+            }
+        )
+    )
+}
+
+export function text<A>(text: string): Layout<A> {
+    return fromHtml(Html.text(text), {})
 }
 
 export function space<A>(size: number): Layout<A> {
-    return html(
+    return fromHtml(
         Html.node(
             "div",
             [
@@ -95,14 +118,60 @@ export function space<A>(size: number): Layout<A> {
                 Html.style("height", size + "px"),
             ],
             []
+        ),
+        {}
+    )
+}
+
+function mapHtml<A, B>(
+    fun: (a: Html.Html<A>) => Html.Html<B>,
+    layout: Layout<A>
+): Layout<B> {
+    return fromHtml(
+        fun(layout.html),
+        layout.css
+    )
+}
+
+export function withCss<A>(css: { [selector: string]: string }, layout: Layout<A>): Layout<A> {
+    return fromHtml(
+        layout.html,
+        { ...layout.css, ...css }
+    )
+}
+
+export function withSpacingY<A>(spacing: number, layout: Layout<A>): Layout<A> {
+    return withCss(
+        {
+            [`.spacing-y-${spacing} > *`]: `margin-top: ${spacing}px`,
+            [`.spacing-y-${spacing} > *:first-child`]: `margin-top: 0`
+        },
+        mapHtml(
+            (html =>
+                Html.addAttributes(
+                    [Html.class_(`spacing-y-${spacing}`)],
+                    html
+                )
+            ),
+            layout
         )
     )
 }
 
-export function html<A>(html: Html.Html<A>): Layout<A> {
-    return { layoutType: "html", html }
-}
-
-export function text<A>(text: string): Layout<A> {
-    return html(Html.text(text))
+export function withSpacingX<A>(spacing: number, layout: Layout<A>): Layout<A> {
+    return withCss(
+        {
+            [`.spacing-x-${spacing} > *`]: `margin-left: ${spacing}px`,
+            [`.spacing-x-${spacing} > *:first-child`]: `margin-left: 0`
+        },
+        mapHtml(
+            (html =>
+                Html.addAttributes(
+                    [Html.class_(`spacing-x-${spacing}`)],
+                    html
+                )
+            ),
+            layout
+        )
+    )
 }

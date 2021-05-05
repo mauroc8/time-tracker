@@ -172,13 +172,13 @@ export function weekdayToSpanishLabel(weekday: Weekday): string {
 
 function weekdayFromDate(date: Date): Weekday {
     switch (toJavascriptDate(date).getDay()) {
-        case 0: return "Domingo" as Weekday
-        case 1: return "Lunes" as Weekday
-        case 2: return "Martes" as Weekday
-        case 3: return "Miércoles" as Weekday
-        case 4: return "Jueves" as Weekday
-        case 5: return "Viernes" as Weekday
-        default: return "Sábado" as Weekday
+        case 0: return "Domingo"
+        case 1: return "Lunes"
+        case 2: return "Martes"
+        case 3: return "Miércoles"
+        case 4: return "Jueves"
+        case 5: return "Viernes"
+        default: return "Sábado"
     }
 }
 

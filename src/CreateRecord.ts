@@ -1,11 +1,8 @@
 
-import * as Input from './Input'
 import * as Record from './Record'
-import * as Button from './Button'
 import * as Update from './Update'
 
 import * as Maybe from './utils/Maybe'
-import * as Utils from './utils/Utils'
 import * as Result from './utils/Result'
 import * as Date from './utils/Date'
 import * as Time from './utils/Time'
@@ -15,7 +12,6 @@ import * as Html from './utils/vdom/Html'
 import * as Decoder from './utils/decoder/Decoder'
 
 import * as Layout from './utils/layout/Layout'
-import * as Attribute from './utils/layout/Attribute'
 
 import * as Component from './style/Component'
 
@@ -136,21 +132,18 @@ export function toRecord(
         )
 }
 
-export function view(
-    attributes: Array<Attribute.Attribute<Update.Event>>,
+export function view<A>(
+    attributes: Array<Html.Attribute<A>>,
     args: {
         createRecord: CreateRecord,
         records: Array<Record.Record>,
     }
-): Layout.Layout<Update.Event> {
+): Layout.Layout<A> {
 
-    const redBorder: Attribute.Attribute<Update.Event> =
-        Attribute.style("borderColor", "red")
+    const redBorder: Html.Attribute<A> =
+        Html.style("borderColor", "red")
 
-    const descriptionInput = Input.createRecord("description")
-    const taskInput = Input.createRecord("task")
-
-    return Layout.row<Update.Event>(
+    return Layout.row<A>(
         "div",
         attributes,
         [
@@ -165,13 +158,10 @@ export function view(
                             if (hasEmptyDescription(args.createRecord)) {
                                 return redBorder
                             } else {
-                                return Attribute.empty()
+                                return Html.class_<A>("")
                             }
                         })(),
-                        Attribute.on("change", (event: any) =>
-                            Update.onInput(descriptionInput, event?.target?.value || "")
-                        ),
-                    ] as Array<Attribute.Attribute<Update.Event>>,
+                    ],
                 }
             ),
             Component.textInput(
@@ -185,48 +175,48 @@ export function view(
                             if (hasEmptyTask(args.createRecord)) {
                                 return redBorder
                             } else {
-                                return Attribute.empty<Update.Event>()
+                                return Html.class_<A>("")
                             }
                         })()
                     ],
                 }
             ),
-            ...args.createRecord.start.map<Array<Layout.Layout<Update.Event>>>(({ input }) => [
+            ...args.createRecord.start.map<Array<Layout.Layout<A>>>(({ input }) => [
                 Component.textInput(
                     [],
                     {
                         id: "create-record-start-time",
                         label: Layout.text("Start time"),
                         value: input,
-                        attributes: [
-                            Attribute.on(
-                                "input",
-                                (event: any) =>
-                                    Update.onInput(Input.createRecord("startTime"), event?.target?.value || "")
-                            )
-                        ],
+                        attributes: [],
                     }
                 ),
-                Layout.html(Html.node(
-                    "button",
-                    [
-                        Html.on("click", (event: any) => Update.clickedButton(Button.stop()))
-                    ],
-                    [
-                        Html.text("Parar"),
-                    ]
-                ))
-            ])
-                .withDefault([
-                    Layout.html(Html.node(
+                Layout.fromHtml(
+                    Html.node(
                         "button",
                         [
-                            Html.on("click", (_) => Update.clickedButton(Button.play()))
+                            //Html.on("click", (event: any) => Update.clickedButton(Button.stop()))
                         ],
                         [
-                            Html.text("Empezar")
+                            Html.text("Parar"),
                         ]
-                    ))
+                    ),
+                    {}
+                )
+            ])
+                .withDefault([
+                    Layout.fromHtml(
+                        Html.node(
+                            "button",
+                            [
+                                //Html.on("click", (_) => Update.clickedButton(Button.play()))
+                            ],
+                            [
+                                Html.text("Empezar")
+                            ]
+                        ),
+                        {}
+                    )
                 ])
         ]
     )
