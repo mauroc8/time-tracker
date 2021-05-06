@@ -14,6 +14,7 @@ import * as Html from './utils/vdom/Html'
 import * as VirtualDom from './utils/vdom/VirtualDom'
 
 import * as Layout from './utils/layout/Layout'
+import * as Css from './utils/layout/Css'
 
 import * as Color from './style/Color'
 import * as  Component from './style/Component'
@@ -38,32 +39,32 @@ function update(state: State.State, event: Event): Update.Update<State.State, Ev
 
 // --- VIEW
 
-const globalCss: { [selector: string]: string } = {
-    "*": `
-        margin: 0;
-        padding: 0;
-        text: inherit;
-        box-sizing: inherit;
-        text-decoration: inherit;
-        font-weight: inherit;
-        font-size: inherit;
-        background: transparent;
-        border: 0;
-        transition: all 0.2s ease-out;
-        color: inherit;
-        text-align: inherit;
-        outline-color: transparent;
-    `,
-    "button, summary": `cursor: pointer;`,
-    "*:focus": `outline: 1px dashed rgba(255, 255, 255, 0.15);`,
-    "html": `box-sizing: border-box; line-height: 1;`,
-    "body": `
-        background-color: ${Color.toCssString(Color.background)};
-        font-family: Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir,
-            helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-        border-top: 6px solid ${Color.toCssString(Color.accent)};
-        color: ${Color.toCssString(Color.gray700)};
-    `
+const globalCss: Css.Css = {
+    "*": {
+        "margin": "0",
+        "padding": "0",
+        "text": "inherit",
+        "box-sizing": "inherit",
+        "text-decoration": "inherit",
+        "font-weight": "inherit",
+        "font-size": "inherit",
+        "background": "transparent",
+        "border": "0",
+        "transition": "all 0.2s ease-out",
+        "color": "inherit",
+        "text-align": "inherit",
+        "outline-color": "transparent",
+    },
+    "button, summary": { "cursor": "pointer" },
+    "*:focus": { "outline": "1px dashed rgba(255, 255, 255, 0.15)" },
+    "html": { "box-sizing": "border-box", "line-height": "1" },
+    "body": {
+        "background-color": Color.toCssString(Color.background),
+        "font-family": "Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir "
+            + " helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif",
+        "border-top": `6px solid ${Color.toCssString(Color.accent)}`,
+        "color": Color.toCssString(Color.gray700)
+    }
 }
 
 export function view(state: State.State): Html.Html<Event> {

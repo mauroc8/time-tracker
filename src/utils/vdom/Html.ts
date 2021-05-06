@@ -84,7 +84,11 @@ export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: E
             return
 
         case "class":
-            ($element as any).className = (`${($element as any).className} ${attribute.value}`).trim()
+            try {
+                $element.classList.add(attribute.value);
+            } catch (e) {
+                // ¯\_(ツ)_/¯
+            }
             return
     }
 }
@@ -101,7 +105,7 @@ export function addAttributes<A>(attrs: Array<Attribute<A>>, html: Html<A>): Htm
     if (html.nodeType === "node") {
         return {
             ...html,
-            attributes: [ ...html.attributes, ...attrs ]
+            attributes: [...html.attributes, ...attrs]
         }
     }
     return html

@@ -1,11 +1,12 @@
 import * as Html from "../vdom/Html";
+import * as Css from './Css'
 
 export type Layout<A> = {
     html: Html.Html<A>,
-    css: { [selector: string]: string }
+    css: Css.Css
 }
 
-export function fromHtml<A>(html: Html.Html<A>, css: { [selector: string]: string }): Layout<A> {
+export function fromHtml<A>(html: Html.Html<A>, css: Css.Css): Layout<A> {
     return { html, css }
 }
 
@@ -18,16 +19,9 @@ export function toHtml<A>(
         htmlTag,
         attributes,
         [
-            Html.node("style", [], [Html.text(cssToString(layout.css))]),
+            Css.toHtml(layout.css),
             layout.html
         ]
-    )
-}
-
-function cssToString(css: { [selector: string]: string }): string {
-    return Object.entries(css).reduce(
-        (accumulated, [selector, css]) => `${accumulated}\n${selector} { ${css} }`,
-        ""
     )
 }
 
@@ -37,11 +31,10 @@ export function node<A>(
     children: Array<Layout<A>>,
 ): Layout<A> {
     return fromHtml(
-        Html.node(htmlTag, attributes, children.map(({ html }) => html)),
-        children.reduce(
-            (css, layout) => ({ ...css, ...layout.css }),
-            {}
-        )
+        Html.node(htmlTag, attributes, children.map(layout => layout.html)),
+        children
+            .map(layout => layout.css)
+            .reduce(Css.merge, Css.empty())
     )
 }
 
@@ -53,14 +46,16 @@ export function column<A>(
     return fromHtml(
         Html.node(
             htmlTag,
-            [ ...attributes, Html.class_("flex flex-column")],
-            children.map(({ html }) => html)
+            [ ...attributes, Html.class_("flex"), Html.class_("flex-column")],
+            children.map(layout => layout.html)
         ),
-        children.reduce(
-            (css, layout) => ({ ...css, ...layout.css }),
+        Css.merge(
+            children
+                .map(layout => layout.css)
+                .reduce(Css.merge, Css.empty()),
             {
-                ".flex": "display: flex",
-                ".flex-column": "flex-direction: column",
+                ".flex": { "display": "flex" },
+                ".flex-column": { "flex-direction": "column" }
             }
         )
     )
@@ -92,14 +87,16 @@ export function row<A>(
     return fromHtml(
         Html.node(
             htmlTag,
-            [...attributes, Html.class_("flex flex-row")],
-            children.map(({ html }) => html)
+            [...attributes, Html.class_("flex"), Html.class_("flex-row")],
+            children.map(layout => layout.html)
         ),
-        children.reduce(
-            (css, layout) => ({ ...css, ...layout.css }),
+        Css.merge(
+            children
+                .map(layout => layout.css)
+                .reduce(Css.merge, Css.empty()),
             {
-                ".flex": "display: flex",
-                ".flex-row": "flex-direction: row"
+                ".flex": { "display": "flex" },
+                ".flex-row": { "flex-direction": "row" }
             }
         )
     )
@@ -123,55 +120,45 @@ export function space<A>(size: number): Layout<A> {
     )
 }
 
-function mapHtml<A, B>(
-    fun: (a: Html.Html<A>) => Html.Html<B>,
-    layout: Layout<A>
-): Layout<B> {
-    return fromHtml(
-        fun(layout.html),
-        layout.css
-    )
-}
-
-export function withCss<A>(css: { [selector: string]: string }, layout: Layout<A>): Layout<A> {
+export function withCss<A>(css: Css.Css, layout: Layout<A>): Layout<A> {
     return fromHtml(
         layout.html,
-        { ...layout.css, ...css }
+        Css.merge(layout.css, css)
     )
 }
 
 export function withSpacingY<A>(spacing: number, layout: Layout<A>): Layout<A> {
-    return withCss(
-        {
-            [`.spacing-y-${spacing} > *`]: `margin-top: ${spacing}px`,
-            [`.spacing-y-${spacing} > *:first-child`]: `margin-top: 0`
-        },
-        mapHtml(
-            (html =>
-                Html.addAttributes(
-                    [Html.class_(`spacing-y-${spacing}`)],
-                    html
-                )
-            ),
-            layout
+    spacing = Math.floor(spacing)
+
+    return fromHtml(
+        Html.addAttributes(
+            [Html.class_(`spacing-y-${spacing}`)],
+            layout.html
+        ),
+        Css.merge(
+            layout.css,
+            {
+                [`.spacing-y-${spacing} > *`]: { "margin-top": `${spacing}px` },
+                [`.spacing-y-${spacing} > *:first-child`]: { "margin-top": "0" }
+            }
         )
     )
 }
 
 export function withSpacingX<A>(spacing: number, layout: Layout<A>): Layout<A> {
-    return withCss(
-        {
-            [`.spacing-x-${spacing} > *`]: `margin-left: ${spacing}px`,
-            [`.spacing-x-${spacing} > *:first-child`]: `margin-left: 0`
-        },
-        mapHtml(
-            (html =>
-                Html.addAttributes(
-                    [Html.class_(`spacing-x-${spacing}`)],
-                    html
-                )
-            ),
-            layout
+    spacing = Math.floor(spacing)
+
+    return fromHtml(
+        Html.addAttributes(
+            [Html.class_(`spacing-x-${spacing}`)],
+            layout.html
+        ),
+        Css.merge(
+            layout.css,
+            {
+                [`.spacing-x-${spacing} > *`]: { "margin-left": `${spacing}px` },
+                [`.spacing-x-${spacing} > *:first-child`]: { "margin-left": "0" }
+            }
         )
     )
 }

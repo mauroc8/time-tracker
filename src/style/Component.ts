@@ -1,27 +1,28 @@
 import * as Html from '../utils/vdom/Html'
 import * as Layout from '../utils/layout/Layout'
+import * as Css from '../utils/layout/Css'
 import * as Color from './Color'
 
-const textInputCss = {
-    "label": `
-        color: ${Color.toCssString(Color.gray500)};
-        font-size: 14px;
-        letter-spacing: 0.08em;
-        font-weight: 500;
-    `,
-    "input": `
-        background-color: ${Color.toCssString(Color.gray50)};
-        color: ${Color.toCssString(Color.white)};
-        font-size: 14px;
-        letter-spacing: 0.04em;
-        font-weight: 300;
-        line-height: 38px;
-        padding-left: 8px;
-        padding-right: 8px;
-    `,
-    "input:focus": `
-        background-color: ${Color.toCssString(Color.black)};
-    `
+const textInputCss: Css.Css = {
+    "label": {
+        "color": Color.toCssString(Color.gray500),
+        "font-size": "14px",
+        "letter-spacing": "0.08em",
+        "font-weight": "500"
+    },
+    "input": {
+        "background-color": Color.toCssString(Color.gray50),
+        "color": Color.toCssString(Color.white),
+        "font-size": "14px",
+        "letter-spacing": "0.04em",
+        "font-weight": "300",
+        "line-height": "38px",
+        "padding-left": "8px",
+        "padding-right": "8px",
+    },
+    "input:focus": {
+        "background-color": Color.toCssString(Color.black),
+    }
 }
 
 export function textInput<A>(

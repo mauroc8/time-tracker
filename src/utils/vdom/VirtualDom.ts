@@ -127,9 +127,12 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
             ($node as any).style[attr.property] = ""
             return
         case "class":
-            ($node as any).className = ($node as any).className.replace(attr.value, '')
+            try {
+                $node.classList.remove(attr.value);
+            } catch (e) {
+                // ¯\_(ツ)_/¯
+            }
     }
-
 }
 
 
