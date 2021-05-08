@@ -36,6 +36,17 @@ export function fromUndefined<A>(a: A | undefined): Maybe<A> {
         return just(a)
 }
 
+export function filter<A>(maybe: Maybe<A>, f: (a: A) => boolean): Maybe<A> {
+    return maybe.andThen(a => f(a) ? just(a) : nothing())
+}
+
+export function caseOf<A, B>(maybe: Maybe<A>, ifJust: (a: A) => B, ifNothing: () => B): B {
+    return maybe
+        .map(a => () => ifJust(a))
+        .withDefault(ifNothing)
+        ();
+}
+
 class Just<A> implements Maybe<A> {
     public tag: "just" = "just"
     value: A

@@ -5,6 +5,7 @@ import * as Update from './Update'
 import * as Date from './utils/Date'
 import * as Utils from './utils/Utils'
 import * as Array_ from './utils/Array'
+import * as Maybe from './utils/Maybe'
 
 
 import * as Layout from './utils/layout/Layout'
@@ -14,6 +15,9 @@ import * as Html from './utils/vdom/Html'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
 
+import * as Group from './Group'
+import * as Transition from './Transition'
+
 export type Records =
     { tag: 'Records', array: Array<Record.Record> }
 
@@ -21,37 +25,132 @@ export type Records =
 export function view<A>(
     records: Array<Record.Record>,
     today: Date.Date,
+    collapsedGroups: Array<Group.ByAge>,
+    collapsingTransition: Transition.Collapsing,
+    clickedCollapseButton: (group: Group.ByAge) => A,
 ): Layout.Layout<A> {
     return Layout.columnWithSpacing(
         50,
         "div",
-        [],
+        [Html.class_("w-full")],
         Array_.groupWhile(
             records
-                .sort(Record.compare),
+                .sort(Record.compare)
+                .reverse(),
             (a, b) =>
                 Utils.equals(
-                    Date.groupOf({ today, time: a.date }),
-                    Date.groupOf({ today, time: b.date })
+                    Group.byAge({ today, time: a.date }),
+                    Group.byAge({ today, time: b.date })
                 )
         )
-            .map(group => viewRecordGroup(group, today))
+            .map(group =>
+                viewRecordsInAgeGroup(
+                    group,
+                    today,
+                    collapsedGroups,
+                    collapsingTransition,
+                    clickedCollapseButton,
+                )
+            )
     )
 }
 
-function viewRecordGroup<A>(
-    group: [Record.Record, ...Array<Record.Record>],
-    today: Date.Date
+export type ViewTransition =
+    | { tag: "uncollapsed" }
+    | { tag: "aboutToCollapse", height: number }
+    | { tag: "collapsing" }
+    | { tag: "collapsed" }
+
+export function ageGroupTransitionOf(
+    group: Group.ByAge,
+    collapsedGroups: Array<Group.ByAge>,
+    collapsingTransition: Transition.Collapsing,
+): ViewTransition {
+    switch (collapsingTransition.tag) {
+        case 'aboutToCollapse':
+            if (Utils.equals(collapsingTransition.group, group)) {
+                return { tag: 'aboutToCollapse', height: collapsingTransition.height }
+            }
+            break;
+        case 'collapsing':
+            if (Utils.equals(collapsingTransition.group, group)) {
+                return { tag: 'collapsing' }
+            }
+            break;
+        case 'idle':
+            break;
+        default:
+            Utils.assertNever(collapsingTransition)
+            break;
+    }
+
+    if (collapsedGroups.some(x => Utils.equals(x, group))) {
+        return { tag: 'collapsed' }
+    }
+
+    return { tag: 'uncollapsed' }
+}
+
+export function isCollapsed(groupTransition: ViewTransition): boolean {
+    return groupTransition.tag === 'collapsed'
+}
+
+export function toCssHeight(groupTransition: ViewTransition): string {
+    switch (groupTransition.tag) {
+        case 'uncollapsed':
+        case 'collapsed':
+            return 'auto'
+        case 'aboutToCollapse':
+            return `${groupTransition.height}px`
+        case 'collapsing':
+            return `0px`
+    }
+}
+
+export function toOpacity(groupTransition: ViewTransition): number {
+    switch (groupTransition.tag) {
+        case 'collapsed':
+        case 'collapsing':
+            return 0
+        case 'uncollapsed':
+        case 'aboutToCollapse':
+            return 1
+    }
+}
+
+export function toCssRotation(transition: ViewTransition): number {
+    switch (transition.tag) {
+        case 'uncollapsed':
+            return 0
+        case 'aboutToCollapse':
+        case 'collapsed':
+        case 'collapsing':
+            return 90
+    }
+}
+
+export const collapsingTransitionDuration: number = 0.24
+
+function viewRecordsInAgeGroup<A>(
+    records: [Record.Record, ...Array<Record.Record>],
+    today: Date.Date,
+    collapsedGroups: Array<Group.ByAge>,
+    collapsingTransition: Transition.Collapsing,
+    clickedCollapseButton: (group: Group.ByAge) => A,
 ): Layout.Layout<A> {
+    const group = Group.byAge({ today, time: records[0].date })
+    const groupTransition = ageGroupTransitionOf(group, collapsedGroups, collapsingTransition)
+
     return Layout.columnWithSpacing(
         20,
         "div",
-        [],
+        [Html.class_("w-full")],
         [
             Layout.rowWithSpacing(
                 18,
                 "div",
                 [
+                    Html.class_("w-full"),
                     Html.style("color", Color.toCssString(Color.gray400)),
                     Html.style("font-size", "14px"),
                     Html.style("align-items", "baseline"),
@@ -77,11 +176,7 @@ function viewRecordGroup<A>(
                             Html.style("white-space", "nowrap"),
                         ],
                         [
-                            Layout.text(
-                                Date.groupToSpanishLabel(
-                                    Date.groupOf({ today, time: group[0].date })
-                                )
-                            ),
+                            Layout.text(Group.toSpanishLabel(group)),
                         ]
                     ),
                     Layout.node(
@@ -98,7 +193,12 @@ function viewRecordGroup<A>(
                     ),
                     Icon.button(
                         [
-                            Html.style("transform", `translateY(3px)`),
+                            Html.style(
+                                "transform",
+                                `translateY(3px) rotate(${toCssRotation(groupTransition)}deg)`
+                            ),
+                            Html.style("transition", `transform ${collapsingTransitionDuration}s ease-out`),
+                            Html.on("click", () => clickedCollapseButton(group)),
                         ],
                         Icon.chevronDown(),
                     ),
@@ -107,21 +207,38 @@ function viewRecordGroup<A>(
             Layout.columnWithSpacing(
                 55,
                 "div",
-                [],
-                Array_.groupWhile(
-                    group,
-                    (a, b) =>
-                        Utils.equals(
-                            Date.dayTag({ today, time: a.date }),
-                            Date.dayTag({ today, time: b.date }))
-                )
-                    .map(day => viewRecordDay(day, today))
+                [
+                    Html.class_("w-full"),
+                    Html.property("id", Group.toStringId(group)),
+                    Html.style("overflow", "hidden"),
+                    Html.style(
+                        "transition",
+                        `
+                            height ${collapsingTransitionDuration}s ease-out,
+                            opacity ${collapsingTransitionDuration}s linear,
+                            transform ${collapsingTransitionDuration}s ease-out
+                        `
+                    ),
+                    Html.style("height", toCssHeight(groupTransition)),
+                    Html.style("opacity", `${toOpacity(groupTransition)}`),
+                ],
+                isCollapsed(groupTransition)
+                    ? []
+                    : Array_.groupWhile(
+                        records,
+                        (a, b) =>
+                            Utils.equals(
+                                Group.byDate({ today, time: a.date }),
+                                Group.byDate({ today, time: b.date })
+                            )
+                    )
+                        .map(day => viewRecordsInDateGroup(day, today))
             )
         ]
     )
 }
 
-function viewRecordDay<A>(
+function viewRecordsInDateGroup<A>(
     day: [Record.Record, ...Array<Record.Record>],
     today: Date.Date,
 ): Layout.Layout<A> {
@@ -140,8 +257,8 @@ function viewRecordDay<A>(
                 ],
                 [
                     Layout.text(
-                        Date.dayTagToSpanishLabel(
-                            Date.dayTag({ today, time: day[0].date })
+                        Group.byDateToSpanishLabel(
+                            Group.byDate({ today, time: day[0].date })
                         )
                             .toUpperCase()
                     ),

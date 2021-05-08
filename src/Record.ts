@@ -27,20 +27,20 @@ export function id(id: number): Id {
 export type Record = {
     id: Id,
     description: string,
+    taskInput: string,
     startInput: string,
     startTime: Time.Time,
     endInput: string,
     endTime: Time.Time,
-    taskInput: string,
     date: Date.Date
 }
 
 export function record(
     id: Id,
     description: string,
+    taskInput: string,
     start: Time.Time,
     end: Time.Time,
-    taskInput: string,
     date: Date.Date
 ): Record {
     return {
@@ -84,7 +84,13 @@ export function withEnd(endInput: string, record: Record): Record {
 }
 
 export function compare(a: Record, b: Record): -1 | 0 | 1 {
-    return Time.compare(a.startTime, b.startTime)
+    const dateComparison = Date.compare(a.date, b.date)
+
+    if (dateComparison == 0) {
+        return Time.compare(a.startTime, b.startTime)
+    }
+
+    return dateComparison
 }
 
 /** If a date is mispelled or the task is invalid, reset the input value to the last valid value. */

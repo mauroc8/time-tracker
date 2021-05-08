@@ -123,9 +123,9 @@ export function toRecord(
                 Record.record(
                     recordId,
                     createRecord.descriptionInput,
+                    createRecord.taskInput,
                     createRecord.start.map(({ time }) => time).withDefault(endTime),
                     endTime,
-                    createRecord.taskInput,
                     createRecord.start.map(({ date }) => date).withDefault(endDate)
                 )
             )

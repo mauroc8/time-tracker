@@ -38,8 +38,8 @@ export function toElement<Evt>(html: Html<Evt>, dispatch: (evt: Evt) => void): E
 
 export type Attribute<Evt> =
     | { tag: "attribute", name: string, value: string }
-    | { tag: "property", name: string, value: any }
-    | { tag: "eventHandler", eventName: string, handler: (event: any) => Evt }
+    | { tag: "property", name: string, value: unknown }
+    | { tag: "eventHandler", eventName: string, handler: (event: unknown) => Evt }
     | { tag: "style", property: string, value: string }
     | { tag: "class", value: string }
 
@@ -47,11 +47,11 @@ export function attribute<Evt>(name: string, value: string): Attribute<Evt> {
     return { tag: "attribute", name, value }
 }
 
-export function property<Evt>(name: string, value: any): Attribute<Evt> {
+export function property<Evt>(name: string, value: unknown): Attribute<Evt> {
     return { tag: "property", name, value }
 }
 
-export function on<Evt>(eventName: string, handler: (event: any) => Evt): Attribute<Evt> {
+export function on<Evt>(eventName: string, handler: (event: unknown) => Evt): Attribute<Evt> {
     return { tag: "eventHandler", eventName, handler }
 }
 
@@ -74,7 +74,7 @@ export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: E
             return
 
         case "eventHandler":
-            ($element as any)[`on${attribute.eventName}`] = (event: any) =>
+            ($element as any)[`on${attribute.eventName}`] = (event: unknown) =>
                 dispatch(attribute.handler(event))
 
             return

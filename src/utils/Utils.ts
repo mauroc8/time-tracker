@@ -13,43 +13,58 @@ export function assertNever(never: never): void {
 /** Structural equality */
 export function equals(a: unknown, b: unknown): boolean {
     if (a instanceof Array && b instanceof Array) {
-        return a.every((x, i) => equals(x, b[i]))
+        return a.every((x, i) => equals(x, b[i]));
     }
 
-
-    if (typeof a === "object" && typeof b === "object") {
+    if (typeof a === 'object' && typeof b === 'object') {
         if (a === null || b === null) {
             return a === b;
-        } else {
-            const aEntries =
-                Object.entries(a)
-
-            const bEntries =
-                Object.entries(b)
-
-            const sortFunction =
-                (a: [string, any], b: [string, any]) =>
-                    compareStrings(Pair.first(a), Pair.first(b))
-
-            return aEntries.length === bEntries.length
-                && Array_.map2(
-                    aEntries.sort(sortFunction),
-                    bEntries.sort(sortFunction),
-                    ([aKey, aValue], [bKey, bValue]) =>
-                        aKey === bKey && equals(aValue, bValue)
-                )
-                    .every(x => x)
         }
+
+        for (const [key, value] of Object.entries(a)) {
+            if (
+                !(key in b)
+                    || !equals(
+                        value,
+                        (b as { [property: string]: unknown })[key]
+                    )
+            ) {
+                return false;
+            }
+        }
+
+        for (const key of Object.keys(b)) {
+            if (!(key in a)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    return a === b
+    return a === b;
 }
 
-export function compareStrings(a: string, b: string): number {
+export function compareStrings(a: string, b: string): -1 | 0 | 1 {
     if (a < b)
         return -1
     else if (a === b)
         return 0
     else
         return 1
+}
+
+export function compareNumbers(a: number, b: number): -1 | 0 | 1 {
+    if (a < b) {
+        return -1
+    }
+    if (a === b) {
+        return 0
+    }
+    return 1
+}
+
+export function debug<A>(tag: string, value: A): A {
+    console.log(tag, value)
+    return value
 }

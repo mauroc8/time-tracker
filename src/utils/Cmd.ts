@@ -1,9 +1,8 @@
-import * as State from '../State'
 import * as Maybe from './Maybe'
 import * as Result from './Result'
 import * as Decoder from './decoder/Decoder'
 
-export type Func<A, B> = (a: A) => B
+type Func<A, B> = (a: A) => B
 
 export type Cmd<A> =
     | { tag: "Cmd", execute: Func<Func<A, void>, void> }
@@ -83,6 +82,44 @@ export function preventDefault<T>(event: Event): Cmd<T> {
     return of(
         (_) => {
             event.preventDefault()
+        }
+    )
+}
+
+export function waitMilliseconds(milliseconds: number): Cmd<globalThis.Date> {
+    return of(
+        (dispatch) => {
+            setTimeout(() => dispatch(new Date()), milliseconds)
+        }
+    )
+}
+
+export function getRectOf(
+    id: string
+) : Cmd<Maybe.Maybe<{ x: number, y: number, width: number, height: number }>> {
+    return of(
+        (dispatch) => {
+            try {
+                const elem = document.getElementById(id)
+
+                if (elem === null) {
+                    dispatch(Maybe.nothing())
+                } else {
+                    const rect = elem.getBoundingClientRect();
+
+                    dispatch(
+                        Maybe.just({
+                            x: rect.x,
+                            y: rect.y,
+                            width: rect.width,
+                            height: rect.height
+                        })
+                    )
+                }
+            } catch (e) {
+                console.error(e)
+                dispatch(Maybe.nothing())
+            }
         }
     )
 }

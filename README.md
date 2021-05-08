@@ -13,3 +13,7 @@ Create a build in the /docs folder:
 ```bash
 yarn build
 ```
+
+## Icons
+
+https://useiconic.com/open

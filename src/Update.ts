@@ -1,11 +1,4 @@
-import * as State from './State'
-import * as Maybe from './utils/Maybe'
-import * as Record from './Record'
-import * as CreateRecord from './CreateRecord'
-import * as Utils from './utils/Utils'
 import * as Cmd from './utils/Cmd'
-import * as Time from './utils/Time'
-import * as Date from './utils/Date'
 
 export type Update<A, B> =
     { tag: 'Update', state: A, cmd: Cmd.Cmd<B> }

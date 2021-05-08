@@ -82,3 +82,15 @@ export function chevronDown<A>(): Html.Html<A> {
         []
     )
 }
+
+export function chevronLeft<A>(): Html.Html<A> {
+    return Html.node(
+        "img",
+        [
+            Html.attribute("src", "chevron-left.svg"),
+            Html.attribute("width", "8"),
+            Html.attribute("height", "8"),
+        ],
+        []
+    )
+}

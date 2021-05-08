@@ -25,6 +25,10 @@ export function toHtml<A>(
     )
 }
 
+export function none<A>(): Layout<A> {
+    return fromHtml(Html.text(""), Css.empty())
+}
+
 export function node<A>(
     htmlTag: string,
     attributes: Array<Html.Attribute<A>>,

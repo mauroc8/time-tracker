@@ -82,3 +82,8 @@ export const decoder: Decoder.Decoder<Time> =
 export function fromJavascriptDate(date: globalThis.Date): Time {
     return time(date.getHours(), date.getMinutes())
 }
+
+/** Devuelve la cantidad de minutos que faltan para que termine el día. */
+export function minutesBeforeMidnight(time: Time): number {
+    return (23 - time.hours) * 60 + (60 - time.minutes);
+}
