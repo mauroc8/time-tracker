@@ -7,11 +7,11 @@ import * as Result from './utils/Result'
 import * as Date from './utils/Date'
 import * as Time from './utils/Time'
 
-import * as Html from './utils/vdom/Html'
+import * as Html from './vdom/Html'
 
-import * as Decoder from './utils/decoder/Decoder'
+import * as Decoder from './utils/Decoder'
 
-import * as Layout from './utils/layout/Layout'
+import * as Layout from './layout/Layout'
 
 import * as Component from './style/Component'
 

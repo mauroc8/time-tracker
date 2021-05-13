@@ -1,8 +1,8 @@
 import * as Color from './Color'
 
-import * as Html from '../utils/vdom/Html'
+import * as Html from '../vdom/Html'
 
-import * as Layout from '../utils/layout/Layout'
+import * as Layout from '../layout/Layout'
 
 
 export function button<A>(attributes: Array<Html.Attribute<A>>, icon: Html.Html<never>): Layout.Layout<A> {

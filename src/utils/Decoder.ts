@@ -1,8 +1,8 @@
-import * as Result from '../Result'
-import * as Utils from '../Utils'
-import * as Maybe from '../Maybe'
-import * as Array_ from '../Array'
-import * as Pair from '../Pair'
+import * as Result from './Result'
+import * as Utils from './Utils'
+import * as Maybe from './Maybe'
+import * as Array_ from './Array'
+import * as Pair from './Pair'
 
 // https://package.elm-lang.org/packages/elm/json/latest/Json-Decode
 

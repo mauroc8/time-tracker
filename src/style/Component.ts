@@ -1,6 +1,6 @@
-import * as Html from '../utils/vdom/Html'
-import * as Layout from '../utils/layout/Layout'
-import * as Css from '../utils/layout/Css'
+import * as Html from '../vdom/Html'
+import * as Layout from '../layout/Layout'
+import * as Css from '../layout/Css'
 import * as Color from './Color'
 
 const textInputCss: Css.Css = {

@@ -1,5 +1,5 @@
 import * as Utils from './Utils'
-import * as Decoder from './decoder/Decoder'
+import * as Decoder from './Decoder'
 
 export type Date =
     { year: number, month: Month, day: number }

@@ -9,11 +9,11 @@ import * as Record from './Record'
 import * as Records from './Records'
 import * as CreateRecord from './CreateRecord'
 
-import * as Html from './utils/vdom/Html'
-import * as VirtualDom from './utils/vdom/VirtualDom'
+import * as Html from './vdom/Html'
+import * as VirtualDom from './vdom/VirtualDom'
 
-import * as Layout from './utils/layout/Layout'
-import * as Css from './utils/layout/Css'
+import * as Layout from './layout/Layout'
+import * as Css from './layout/Css'
 
 import * as Color from './style/Color'
 import * as  Component from './style/Component'
@@ -23,7 +23,7 @@ import * as Time from './utils/Time'
 
 import * as Cmd from './utils/Cmd'
 
-import * as Decoder from './utils/decoder/Decoder'
+import * as Decoder from './utils/Decoder'
 
 import * as Utils from './utils/Utils'
 import * as Maybe from './utils/Maybe'

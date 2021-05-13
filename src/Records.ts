@@ -8,9 +8,9 @@ import * as Array_ from './utils/Array'
 import * as Maybe from './utils/Maybe'
 
 
-import * as Layout from './utils/layout/Layout'
+import * as Layout from './layout/Layout'
 
-import * as Html from './utils/vdom/Html'
+import * as Html from './vdom/Html'
 
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'

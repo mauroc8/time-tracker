@@ -1,5 +1,5 @@
 import * as Maybe from './Maybe'
-import * as Decoder from './decoder/Decoder'
+import * as Decoder from './Decoder'
 
 
 

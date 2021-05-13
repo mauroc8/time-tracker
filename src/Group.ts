@@ -1,6 +1,6 @@
 import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
-import * as Decoder from './utils/decoder/Decoder'
+import * as Decoder from './utils/Decoder'
 import * as Date from './utils/Date'
 
 // --- GROUP

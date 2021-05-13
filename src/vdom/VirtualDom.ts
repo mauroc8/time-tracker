@@ -1,8 +1,8 @@
 import * as Html from './Html'
 
-import * as Utils from '../Utils'
-import * as Maybe from '../Maybe'
-import * as Array_ from '../Array'
+import * as Utils from '../utils/Utils'
+import * as Maybe from '../utils/Maybe'
+import * as Array_ from '../utils/Array'
 
 export function diff<T>(
     oldVDom: Html.Html<T>,

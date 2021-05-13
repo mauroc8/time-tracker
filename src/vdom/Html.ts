@@ -1,4 +1,4 @@
-import * as Utils from '../Utils'
+import * as Utils from '../utils/Utils'
 
 export type Html<Evt> =
     | { nodeType: "node", tagName: string, attributes: Array<Attribute<Evt>>, children: Array<Html<Evt>> }

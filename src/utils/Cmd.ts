@@ -1,6 +1,6 @@
 import * as Maybe from './Maybe'
 import * as Result from './Result'
-import * as Decoder from './decoder/Decoder'
+import * as Decoder from './Decoder'
 
 type Func<A, B> = (a: A) => B
 
