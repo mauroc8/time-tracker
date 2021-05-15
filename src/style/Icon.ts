@@ -4,14 +4,18 @@ import * as Html from '../vdom/Html'
 
 import * as Layout from '../layout/Layout'
 
-
-export function button<A>(attributes: Array<Html.Attribute<A>>, icon: Html.Html<never>): Layout.Layout<A> {
-    return Layout.column(
-        "button",
+export function wrapper<A>(
+    htmlTag: string,
+    attributes: Array<Html.Attribute<A>>,
+    icon: Html.Html<never>
+): Layout.Layout<A> {
+    return Layout.node(
+        htmlTag,
         [
             Html.style("width", "16px"),
             Html.style("height", "16px"),
             Html.style("border-radius", "50%"),
+            Html.style("display", "flex"),
             Html.style("align-items", "center"),
             Html.style("justify-content", "center"),
             Html.style("background-color", Color.toCssString(Color.gray100)),
@@ -20,6 +24,14 @@ export function button<A>(attributes: Array<Html.Attribute<A>>, icon: Html.Html<
         [
             Layout.fromHtml(icon, {})
         ]
+    )
+}
+
+export function button<A>(attributes: Array<Html.Attribute<A>>, icon: Html.Html<never>): Layout.Layout<A> {
+    return wrapper(
+        "button",
+        attributes,
+        icon
     )
 }
 
@@ -88,6 +100,18 @@ export function chevronLeft<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "chevron-left.svg"),
+            Html.attribute("width", "8"),
+            Html.attribute("height", "8"),
+        ],
+        []
+    )
+}
+
+export function chevronRight<A>(): Html.Html<A> {
+    return Html.node(
+        "img",
+        [
+            Html.attribute("src", "chevron-right.svg"),
             Html.attribute("width", "8"),
             Html.attribute("height", "8"),
         ],

@@ -166,3 +166,35 @@ export function withSpacingX<A>(spacing: number, layout: Layout<A>): Layout<A> {
         )
     )
 }
+
+export function below<A>(
+    tagName: string,
+    attrs: Array<Html.Attribute<A>>,
+    layout: Layout<A>,
+    below: Layout<A>
+): Layout<A> {
+    return fromHtml(
+        Html.node(
+            tagName,
+            [ ...attrs, Html.class_("relative")],
+            [
+                layout.html,
+                Html.addAttributes(
+                    [Html.class_(`absolute`), Html.class_(`t-full`)],
+                    below.html
+                )
+            ]
+        ),
+        Css.merge(
+            Css.merge(
+                below.css,
+                layout.css
+            ),
+            {
+                [`.relative`]: { "position": "relative" },
+                [`.absolute`]: { "position": "absolute" },
+                [`.t-full`]: { "top": "100%" },
+            }
+        )
+    )
+}

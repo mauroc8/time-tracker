@@ -11,6 +11,7 @@ import * as Color from './style/Color'
 import * as Decoder from './utils/Decoder'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
+import * as ViewConfig from './ViewConfig'
 
 export type Id = {
     tag: "recordId",
@@ -109,7 +110,10 @@ export function save(record: Record, today: Date.Date): Record {
     }
 }
 
-export function view<A>(record: Record): Layout.Layout<A> {
+export function view<A>(
+    record: Record,
+    viewConfig: ViewConfig.ViewConfig
+): Layout.Layout<A> {
 
     const separator = Layout.column<A>(
         'div',
@@ -119,121 +123,162 @@ export function view<A>(record: Record): Layout.Layout<A> {
         []
     )
 
-    return Layout.row(
-        "div",
-        [
-            Html.attribute("class", "record"),
-        ],
-        [
-            Component.textInput(
-                [
-                    Html.style("flex-basis", "40%"),
-                ],
-                {
-                    id: `record_${record.id.id}_description`,
-                    label: Layout.column(
-                        "div",
-                        [Html.paddingXY(8, 0)],
-                        [Layout.text('Descripción')]
-                    ),
-                    value: record.description,
-                    attributes: [],
-                }
-            ),
-            separator,
-            Component.textInput(
-                [
-                    Html.style("flex-basis", "20%"),
-                ],
-                {
-                    id: `record_${record.id.id}_task`,
-                    label: Layout.column(
-                        "div",
-                        [Html.paddingXY(8, 0)],
-                        [Layout.text('Tarea')]
-                    ),
-                    value: record.taskInput,
-                    attributes: [],
-                }
-            ),
-            separator,
-            Component.textInput(
-                [
-                    Html.style("flex-basis", "10%"),
-                    Html.style("text-align", "right"),
-                ],
-                {
-                    id: `record_${record.id.id}_start`,
-                    label: Layout.column(
-                        "div",
-                        [Html.paddingXY(8, 0)],
-                        [Layout.text('Inicio')]
-                    ),
-                    value: record.startInput,
-                    attributes: [],
-                }
-            ),
-            separator,
-            Component.textInput(
-                [
-                    Html.style("flex-basis", "10%"),
-                    Html.style("text-align", "right"),
-                ],
-                {
-                    id: `record_${record.id.id}_end`,
-                    label: Layout.column(
-                        "div",
-                        [Html.paddingXY(8, 0)],
-                        [Layout.text('Fin')]
-                    ),
-                    value: record.endInput,
-                    attributes: [],
-                }
-            ),
-            separator,
-            Component.textInput(
-                [
-                    Html.style("flex-basis", "10%"),
-                    Html.style("text-align", "right"),
-                ],
-                {
-                    id: `record_${record.id.id}_duration`,
-                    label: Layout.column(
-                        "div",
-                        [Html.paddingXY(8, 0)],
-                        [Layout.text('Duración')]
-                    ),
-                    value: Time.toString(Time.difference(record.endTime, record.startTime)),
-                    attributes: [],
-                }
-            ),
-            separator,
-            Layout.withSpacingY(
-                8,
-                Layout.column(
-                    "div",
+    return Layout.withCss(
+        {
+            '.record-zen': {
+                color: 'transparent'
+            },
+            '.record-zen:hover': {
+                color: 'inherit',
+            },
+            '.visible-when-record-is-hovered, .visible-when-focused': {
+                opacity: '0%',
+                transition: 'opacity 0.2s ease-out',
+            },
+            '.record:hover .visible-when-record-is-hovered': {
+                opacity: '100%',
+            },
+            '.visible-when-focused:focus': {
+                opacity: '100%',
+            },
+        },
+        Layout.row(
+            "div",
+            [
+                Html.class_("record"),
+                ViewConfig.isZenMode(viewConfig)
+                    ? Html.class_("record-zen")
+                    : Html.class_("")
+            ],
+            [
+                Component.textInput(
                     [
-                        Html.style("width", "16px"),
-                        Html.style("color", Color.toCssString(Color.gray500)),
-                        Html.style("justify-content", "flex-start"),
+                        Html.style("flex-basis", "40%"),
                     ],
+                    {
+                        id: `record_${record.id.id}_description`,
+                        label: Layout.column(
+                            "div",
+                            [Html.paddingXY(8, 0)],
+                            [Layout.text('Descripción')]
+                        ),
+                        value: record.description,
+                        attributes: [],
+                    }
+                ),
+                separator,
+                Component.textInput(
                     [
-                        Icon.button(
-                            [
-                                Html.attribute("class", "visible-when-record-is-hovered visible-when-focused"),
-                            ],
-                            Icon.play()
+                        Html.style("flex-basis", "20%"),
+                    ],
+                    {
+                        id: `record_${record.id.id}_task`,
+                        label: Layout.column(
+                            "div",
+                            [Html.paddingXY(8, 0)],
+                            [Layout.text('Tarea')]
                         ),
-                        Icon.button(
-                            [
-                                Html.attribute("class", "visible-when-record-is-hovered visible-when-focused"),
-                            ],
-                            Icon.options()
+                        value: record.taskInput,
+                        attributes: [],
+                    }
+                ),
+                separator,
+                Component.textInput(
+                    [
+                        Html.style("flex-basis", "10%"),
+                        Html.style("text-align", "right"),
+                    ],
+                    {
+                        id: `record_${record.id.id}_start`,
+                        label: Layout.column(
+                            "div",
+                            [Html.paddingXY(8, 0)],
+                            [Layout.text('Inicio')]
                         ),
-                    ]
+                        value: record.startInput,
+                        attributes: [],
+                    }
+                ),
+                separator,
+                Component.textInput(
+                    [
+                        Html.style("flex-basis", "10%"),
+                        Html.style("text-align", "right"),
+                    ],
+                    {
+                        id: `record_${record.id.id}_end`,
+                        label: Layout.column(
+                            "div",
+                            [Html.paddingXY(8, 0)],
+                            [Layout.text('Fin')]
+                        ),
+                        value: record.endInput,
+                        attributes: [],
+                    }
+                ),
+                separator,
+                Component.textInput(
+                    [
+                        Html.style("flex-basis", "10%"),
+                        Html.style("text-align", "right"),
+                    ],
+                    {
+                        id: `record_${record.id.id}_duration`,
+                        label: Layout.column(
+                            "div",
+                            [Html.paddingXY(8, 0)],
+                            [Layout.text('Duración')]
+                        ),
+                        value: Time.toString(Time.difference(record.endTime, record.startTime)),
+                        attributes: [],
+                    }
+                ),
+                separator,
+                Layout.withSpacingY(
+                    8,
+                    Layout.column(
+                        "div",
+                        [
+                            Html.style("width", "16px"),
+                            Html.style("color", Color.toCssString(Color.gray500)),
+                            Html.style("justify-content", "flex-start"),
+                        ],
+                        [
+                            Icon.button(
+                                [
+                                    ViewConfig.isZenMode(viewConfig)
+                                        ? Html.attribute("class", "visible-when-record-is-hovered visible-when-focused")
+                                        : Html.attribute("class", ""),
+                                ],
+                                Icon.play()
+                            ),
+                            Layout.below(
+                                "details",
+                                [],
+                                Icon.wrapper(
+                                    "summary",
+                                    [
+                                        ViewConfig.isZenMode(viewConfig)
+                                            ? Html.attribute("class", "visible-when-record-is-hovered visible-when-focused")
+                                            : Html.attribute("class", ""),
+                                    ],
+                                    Icon.options()
+                                ),
+                                Layout.column(
+                                    "div",
+                                    [
+                                        Html.style("right", "0")
+                                    ],
+                                    [
+                                        Layout.text("Hola")
+                                    ]
+                                )
+                            )
+                        ]
+                    )
                 )
-            )
-        ]
+            ]
+        )
     )
 }
 
@@ -293,25 +338,4 @@ export function search(query: string, records: Array<Record>): Array<Record> {
                 return distanceA - distanceB
             })
             .map(([record, _]) => record)
-}
-
-export function recordCss(): string {
-    return `
-
-.visible-when-record-is-hovered,
-.visible-when-focused {
-    opacity: 0%;
-    transition: opacity 0.2s ease-out;
-}
-
-.record:hover .visible-when-record-is-hovered {
-    opacity: 100%;
-}
-
-.visible-when-focused:focus,
-.visible-when-focused:focus + .visible-when-focused {
-    opacity: 100%;
-}
-
-`;
 }

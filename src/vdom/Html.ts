@@ -39,7 +39,7 @@ export function toElement<Evt>(html: Html<Evt>, dispatch: (evt: Evt) => void): E
 export type Attribute<Evt> =
     | { tag: "attribute", name: string, value: string }
     | { tag: "property", name: string, value: unknown }
-    | { tag: "eventHandler", eventName: string, handler: (event: unknown) => Evt }
+    | { tag: "eventHandler", eventName: string, handler: (event: Event) => Evt }
     | { tag: "style", property: string, value: string }
     | { tag: "class", value: string }
 
@@ -51,7 +51,7 @@ export function property<Evt>(name: string, value: unknown): Attribute<Evt> {
     return { tag: "property", name, value }
 }
 
-export function on<Evt>(eventName: string, handler: (event: unknown) => Evt): Attribute<Evt> {
+export function on<Evt>(eventName: string, handler: (event: Event) => Evt): Attribute<Evt> {
     return { tag: "eventHandler", eventName, handler }
 }
 
@@ -74,7 +74,7 @@ export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: E
             return
 
         case "eventHandler":
-            ($element as any)[`on${attribute.eventName}`] = (event: unknown) =>
+            ($element as any)[`on${attribute.eventName}`] = (event: Event) =>
                 dispatch(attribute.handler(event))
 
             return
@@ -106,6 +106,16 @@ export function addAttributes<A>(attrs: Array<Attribute<A>>, html: Html<A>): Htm
         return {
             ...html,
             attributes: [...html.attributes, ...attrs]
+        }
+    }
+    return html
+}
+
+export function addChild<A>(child: Html<A>, html: Html<A>): Html<A> {
+    if (html.nodeType === "node") {
+        return {
+            ...html,
+            children: [ ...html.children, child ]
         }
     }
     return html

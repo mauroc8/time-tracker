@@ -1,6 +1,8 @@
 # Time tracker
 
-A **minimal**, vainilla-ts time tracking app.
+A homemade, vainilla-ts time tracking app.
+
+I shamelessly stole almost every idea I could from **Elm** and **elm-ui**.
 
 Development server (powered by [parcel](https://parceljs.org/)):
 

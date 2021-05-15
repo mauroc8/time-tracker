@@ -1,5 +1,9 @@
 import * as Maybe from './Maybe'
 
+export function append<A>(array: Array<A>, element: A): Array<A> {
+    return [ ...array, element ]
+}
+
 export function intersperse<A>(array: Array<A>, element: A): Array<A> {
     return array.reduce(
         (accum, value) => [...accum, element, value],
@@ -7,12 +11,27 @@ export function intersperse<A>(array: Array<A>, element: A): Array<A> {
     ).slice(1)
 }
 
+export function mapNotNull<A, B>(array: Array<A>, fn: (a: A) => B | null): Array<B> {
+    const newArray: Array<B> = []
+    const l = array.length
+
+    for (let i = 0; i < l; i ++) {
+        const x = fn(array[i])
+
+        if (x !== null) {
+            newArray.push(x)
+        }
+    }
+
+    return newArray
+}
+
 export function filterMap<A, B>(array: Array<A>, fn: (a: A) => Maybe.Maybe<B>): Array<B> {
     const newArray: Array<B> = []
     const l = array.length
 
     for (let i = 0; i < l; i++) {
-        fn(array[i])?.map(x => newArray.push(x))
+        fn(array[i]).map(x => newArray.push(x))
     }
 
     return newArray

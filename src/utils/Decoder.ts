@@ -160,6 +160,13 @@ export function map2<A, B, C>(
     )
 }
 
+export function andMap<A, B>(
+    decoderFunction: Decoder<(a: A) => B>,
+    decoderArgument: Decoder<A>
+): Decoder<B> {
+    return map2(decoderFunction, decoderArgument, (fn, arg) => fn(arg))
+}
+
 export function andThen<A, B>(decoder_: Decoder<A>, func: (a: A) => Decoder<B>): Decoder<B> {
     return decoder(
         (x: unknown) =>
@@ -335,7 +342,7 @@ export function succeed<A>(a: A): Decoder<A> {
     return decoder((_) => Result.ok(a))
 }
 
-export function  fail<A>(message: string): Decoder<A> {
+export function fail<A>(message: string): Decoder<A> {
     return decoder((_) => Result.error<A, Error>({ tag: 'message', message }))
 }
 

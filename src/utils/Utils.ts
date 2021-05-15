@@ -45,6 +45,8 @@ export function equals(a: unknown, b: unknown): boolean {
     return a === b;
 }
 
+export const eq = (a: unknown) => (b: unknown) => equals(a, b)
+
 export function compareStrings(a: string, b: string): -1 | 0 | 1 {
     if (a < b)
         return -1

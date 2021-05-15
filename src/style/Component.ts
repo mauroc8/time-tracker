@@ -5,7 +5,6 @@ import * as Color from './Color'
 
 const textInputCss: Css.Css = {
     "label": {
-        "color": Color.toCssString(Color.gray500),
         "font-size": "14px",
         "letter-spacing": "0.08em",
         "font-weight": "500"

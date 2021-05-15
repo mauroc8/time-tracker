@@ -30,6 +30,7 @@ import * as Maybe from './utils/Maybe'
 
 import * as Group from './Group'
 import * as Transition from './Transition'
+import * as ViewConfig from './ViewConfig'
 
 // STATE ---
 
@@ -41,6 +42,7 @@ export type State = {
     today: Date.Date,
     collapsedGroups: Array<Group.ByAge>,
     collapsingTransition: Transition.Collapsing,
+    viewConfig: ViewConfig.ViewConfig,
 }
 
 export function stateOf(state: State): State {
@@ -118,6 +120,7 @@ function newInitialState(today: Date.Date): State {
         today,
         collapsedGroups: [],
         collapsingTransition: Transition.collapsingIdle(),
+        viewConfig: ViewConfig.of({ mode: 'normal' }),
     }
 }
 
@@ -136,12 +139,9 @@ export function decoder(today: Date.Date): Decoder.Decoder<State> {
                 today,
                 collapsedGroups,
                 collapsingTransition: Transition.collapsingIdle(),
+                viewConfig: ViewConfig.of({ mode: 'zen' }),
             })
     )
-}
-
-function groupIsCollapsed(group: Group.ByAge, state: State): boolean {
-    return state.collapsedGroups.some(x => Utils.equals(x, group))
 }
 
 // --- UPDATE
@@ -176,31 +176,29 @@ function update(state: State, event: Event): Update.Update<State, Event> {
                 waitTilTomorrow(Time.fromJavascriptDate(event.date))
             )
 
-        case "clickedCollapseButton":
-            if (groupIsCollapsed(event.group, state)) {
-                return Update.pure({
-                    ...state,
-                    collapsedGroups: state.collapsedGroups.filter(group => !Utils.equals(group, event.group)),
-                })
-            }
-            return Update.of(
-                state,
-                Cmd.map(
-                    Cmd.getRectOf(Group.toStringId(event.group)),
-                    maybeRect =>
-                        maybeRect
-                            .map(rect =>
-                                eventOf({
-                                    event: "gotHeightOfGroupBeingCollapsed",
-                                    group: event.group,
-                                    height: rect.height
-                                })
-                            )
-                            .withDefault(eventOf({ event: "none" }))
-                )
-            )
+        // --- Collapse groups (with transitions)
 
-        // --- Collapse transition
+        case "clickedCollapseButton":
+            return Records.groupIsCollapsed(event.group, state.collapsedGroups)
+                ? Update.pure({
+                    ...state,
+                    collapsedGroups:
+                        state.collapsedGroups.filter(group => !Utils.equals(group, event.group)),
+                })
+                // The "collapsing" transition requires querying the DOM and waiting an init frame.
+                : Update.of(
+                    state,
+                    getHeightOfGroup(
+                        event.group,
+                        height =>
+                            eventOf({
+                                event: "gotHeightOfGroupBeingCollapsed",
+                                group: event.group,
+                                height
+                            }),
+                        eventOf({ event: "none" })
+                    )
+                )
 
         case "gotHeightOfGroupBeingCollapsed":
             return Update.of(
@@ -222,7 +220,7 @@ function update(state: State, event: Event): Update.Update<State, Event> {
                     collapsingTransition: Transition.startCollapsing(state.collapsingTransition)
                 }),
                 Cmd.map(
-                    Cmd.waitMilliseconds(Records.collapsingTransitionDuration * 1000),
+                    Cmd.waitMilliseconds(Records.collapsingTransitionSeconds * 1000),
                     _ => eventOf({ event: "endCollapseTransition" })
                 )
             )
@@ -232,10 +230,22 @@ function update(state: State, event: Event): Update.Update<State, Event> {
                 ...state,
                 collapsingTransition: Transition.collapsingIdle()
             })
-
     }
 }
 
+function getHeightOfGroup<A>(
+    group: Group.ByAge,
+    onHeight: (height: number) => A,
+    onError: A
+): Cmd.Cmd<A> {
+    return Cmd.map(
+        Cmd.getRectOf(Group.toStringId(group)),
+        maybeRect =>
+            maybeRect
+                .map(rect => onHeight(rect.height))
+                .withDefault(onError)
+    )
+}
 
 // --- VIEW
 
@@ -263,7 +273,7 @@ const globalCss: Css.Css = {
         "font-family": "Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir "
             + " helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif",
         "border-top": `6px solid ${Color.toCssString(Color.accent)}`,
-        "color": Color.toCssString(Color.gray700)
+        "color": Color.toCssString(Color.gray500)
     },
     ".w-full": { "width": "100%" },
     ".flex-grow": { "flex-grow": "1" },
@@ -303,6 +313,7 @@ export function view(state: State): Html.Html<Event> {
                         state.collapsedGroups,
                         state.collapsingTransition,
                         group => eventOf({ event: "clickedCollapseButton", group }),
+                        state.viewConfig,
                     ),
                 ]
             )
@@ -334,18 +345,18 @@ if ($rootElement !== null) {
     let currentView = view(currentState)
 
     const dispatch = (event: Event) => {
-        const { state: newState, cmd } = update(currentState, event)
+        const updateResult = update(currentState, event)
 
-        const newView = view(newState)
-        const patch = VirtualDom.diff(currentView, newView, dispatch)
+        const updatedView = view(updateResult.state)
+        const patch = VirtualDom.diff(currentView, updatedView, dispatch)
 
         try {
             patch($rootElement)
-            currentState = newState
-            currentView = newView
+            currentState = updateResult.state
+            currentView = updatedView
             // El comando se ejecuta sincrónicamente, pero las llamadas a "dispatch"
             // dentro del comando se ejecutan en el siguiente frame.
-            cmd.execute(waitAFrameAndDispatch)
+            updateResult.cmd.execute(waitAFrameAndDispatch)
         } catch (e) {
             console.error(e)
         }
