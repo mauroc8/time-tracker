@@ -1,18 +1,18 @@
-import * as Group from './Group'
+import * as Group from './DateGroup'
 import * as Utils from './utils/Utils'
 
 // --- CollapsingTransition
 
 export type Collapsing =
     | { tag: "idle" }
-    | { tag: "aboutToCollapse", group: Group.ByAge, height: number }
-    | { tag: "collapsing", group: Group.ByAge }
+    | { tag: "aboutToCollapse", group: Group.Tag, height: number }
+    | { tag: "collapsing", group: Group.Tag }
 
 export function collapsingIdle(): Collapsing {
     return { tag: "idle" }
 }
 
-export function aboutToCollapse(group: Group.ByAge, height: number): Collapsing {
+export function aboutToCollapse(group: Group.Tag, height: number): Collapsing {
     return { tag: 'aboutToCollapse', group, height }
 }
 
@@ -31,17 +31,17 @@ export function startCollapsing(collapsingTransition: Collapsing): Collapsing {
 
 export type Uncollapsing =
     | { tag: "notUncollapsing" }
-    | { tag: "aboutToUncollapse", group: Group.ByAge }
+    | { tag: "aboutToUncollapse", group: Group.Tag }
 
 export function notUncollapsing(): Uncollapsing {
     return { tag: 'notUncollapsing' }
 }
 
-export function aboutToUncollapse(group: Group.ByAge): Uncollapsing {
+export function aboutToUncollapse(group: Group.Tag): Uncollapsing {
     return { tag: 'aboutToUncollapse', group }
 }
 
-export function isAboutToUncollapse(group: Group.ByAge, uncollapsingTransition: Uncollapsing): boolean {
+export function isAboutToUncollapse(group: Group.Tag, uncollapsingTransition: Uncollapsing): boolean {
     return uncollapsingTransition.tag === 'aboutToUncollapse'
         && Utils.equals(group, uncollapsingTransition.group)
 }

@@ -18,7 +18,7 @@ export function wrapper<A>(
             Html.style("display", "flex"),
             Html.style("align-items", "center"),
             Html.style("justify-content", "center"),
-            Html.style("background-color", Color.toCssString(Color.gray100)),
+            Html.style("background-color", Color.toCssString(Color.background)),
             ...attributes
         ],
         [

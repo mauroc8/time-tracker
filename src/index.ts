@@ -28,7 +28,7 @@ import * as Decoder from './utils/Decoder'
 import * as Utils from './utils/Utils'
 import * as Maybe from './utils/Maybe'
 
-import * as Group from './Group'
+import * as Group from './DateGroup'
 import * as Transition from './Transition'
 import * as ViewConfig from './ViewConfig'
 
@@ -38,9 +38,9 @@ import * as ViewConfig from './ViewConfig'
 */
 export type State = {
     createRecord: CreateRecord.CreateRecord,
-    records: Array<Record.Record>,
+    records: Records.Records,
     today: Date.Date,
-    collapsedGroups: Array<Group.ByAge>,
+    collapsedGroups: Array<Group.Tag>,
     collapsingTransition: Transition.Collapsing,
     viewConfig: ViewConfig.ViewConfig,
 }
@@ -83,40 +83,7 @@ function waitTilTomorrow(now: Time.Time): Cmd.Cmd<Event> {
 function newInitialState(today: Date.Date): State {
     return {
         createRecord: CreateRecord.empty(""),
-        records: [
-            Record.record(
-                Record.id(0),
-                "1",
-                "Time tracker",
-                Time.time(22, 54),
-                Time.time(23, 25),
-                Date.date(2020, 4, 18),
-            ),
-            Record.record(
-                Record.id(1),
-                "2",
-                "Study english",
-                Time.time(7, 15),
-                Time.time(10, 49),
-                Date.date(2021, 4, 22),
-            ),
-            Record.record(
-                Record.id(2),
-                "Login",
-                "Elm",
-                Time.time(14, 37),
-                Time.time(17, 53),
-                Date.date(2021, 4, 22),
-            ),
-            Record.record(
-                Record.id(3),
-                "Siempre es hoy!",
-                "",
-                Time.time(16, 20),
-                Time.time(18, 0),
-                today
-            ),
-        ],
+        records: Records.mockRecords(today),
         today,
         collapsedGroups: [],
         collapsingTransition: Transition.collapsingIdle(),
@@ -126,7 +93,7 @@ function newInitialState(today: Date.Date): State {
 
 export function decoder(today: Date.Date): Decoder.Decoder<State> {
     return Decoder.map3(
-        Decoder.property('records', Decoder.array(Record.decoder)),
+        Decoder.property('records', Records.decoder),
         Decoder.property('createRecord', CreateRecord.decoder),
         Decoder.property(
             'collapsedGroups',
@@ -155,9 +122,9 @@ export function decoder(today: Date.Date): Decoder.Decoder<State> {
  export type Event =
      | { event: "none" }
      | { event: "gotNewDate", date: globalThis.Date }
-     | { event: "clickedCollapseButton", group: Group.ByAge }
+     | { event: "clickedCollapseButton", group: Group.Tag }
      // Collapse transition
-     | { event: "gotHeightOfGroupBeingCollapsed", group: Group.ByAge, height: number }
+     | { event: "gotHeightOfGroupBeingCollapsed", group: Group.Tag, height: number }
      | { event: "startCollapseTransition" }
      | { event: "endCollapseTransition" }
 
@@ -234,7 +201,7 @@ function update(state: State, event: Event): Update.Update<State, Event> {
 }
 
 function getHeightOfGroup<A>(
-    group: Group.ByAge,
+    group: Group.Tag,
     onHeight: (height: number) => A,
     onError: A
 ): Cmd.Cmd<A> {
@@ -273,7 +240,7 @@ const globalCss: Css.Css = {
         "font-family": "Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir "
             + " helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif",
         "border-top": `6px solid ${Color.toCssString(Color.accent)}`,
-        "color": Color.toCssString(Color.gray500)
+        "color": Color.toCssString(Color.text)
     },
     ".w-full": { "width": "100%" },
     ".flex-grow": { "flex-grow": "1" },
@@ -308,7 +275,7 @@ export function view(state: State): Html.Html<Event> {
                         }
                     ),*/
                     Records.view(
-                        state.records,
+                        state.records.array,
                         state.today,
                         state.collapsedGroups,
                         state.collapsingTransition,

@@ -240,7 +240,6 @@ export function view<A>(
                         "div",
                         [
                             Html.style("width", "16px"),
-                            Html.style("color", Color.toCssString(Color.gray500)),
                             Html.style("justify-content", "flex-start"),
                         ],
                         [

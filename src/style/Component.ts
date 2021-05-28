@@ -10,8 +10,8 @@ const textInputCss: Css.Css = {
         "font-weight": "500"
     },
     "input": {
-        "background-color": Color.toCssString(Color.gray50),
-        "color": Color.toCssString(Color.white),
+        "background-color": Color.toCssString(Color.hsl(0, 0, 0.05)),
+        "color": Color.toCssString(Color.hsl(0, 0, 1)),
         "font-size": "14px",
         "letter-spacing": "0.04em",
         "font-weight": "300",
@@ -20,7 +20,8 @@ const textInputCss: Css.Css = {
         "padding-right": "8px",
     },
     "input:focus": {
-        "background-color": Color.toCssString(Color.black),
+        "background-color": Color.toCssString(Color.hsl(0, 0, 0)),
+        "outline": "0",
     }
 }
 

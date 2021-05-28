@@ -70,3 +70,28 @@ export function debug<A>(tag: string, value: A): A {
     console.log(tag, value)
     return value
 }
+
+
+export function pipe<A, B>(
+    a: A,
+    f: (a: A) => B,
+): B {
+    return f(a)
+}
+
+export function pipe2<A, B, C>(
+    a: A,
+    f: (a: A) => B,
+    g: (b: B) => C,
+): C {
+    return g(f(a))
+}
+
+export function pipe3<A, B, C, D>(
+    a: A,
+    f: (a: A) => B,
+    g: (b: B) => C,
+    h: (c: C) => D,
+): D {
+    return h(g(f(a)))
+}
