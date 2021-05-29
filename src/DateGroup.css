@@ -1,0 +1,30 @@
+.date-group-collapse-button {
+    font-size: 14px;
+    transition: opacity 0.2s ease-out;
+    opacity: 0.5;
+}
+
+.date-group-collapse-button:hover {
+    opacity: 0.75;
+}
+
+.date-group-collapse-button:focus {
+    outline: 0;
+    opacity: 1;
+}
+
+.date-group-collapse-button > span {
+    flex-grow: 1;
+    height: 1px;
+    background-color: hsl(0, 0%, 25%);
+    transition: opacity 0.2s ease-out;
+    opacity: 0.5;
+}
+
+.date-group-collapse-button:hover > span {
+    opacity: 0.75;
+}
+
+.date-group-collapse-button:focus > span {
+    opacity: 1;
+}

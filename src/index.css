@@ -1,0 +1,30 @@
+* {
+    margin: 0;
+    padding: 0;
+    font: inherit;
+    box-sizing: inherit;
+    text-decoration: inherit;
+    font-weight: inherit;
+    font-size: inherit;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    text-align: inherit;
+    outline-color: transparent;
+}
+
+button, summary { cursor: pointer; }
+
+*:focus { outline: 1px dashed rgba(255, 255, 255, 0.15); }
+
+html { box-sizing: border-box; line-height: 1; }
+
+body {
+    font-family: Lato, -apple-system, BlinkMacSystemFont, "avenir next", avenir,
+        "Helvetica neue", helvetica, Ubuntu, roboto, noto, "segoe ui", arial, sans-serif;
+}
+
+.w-full { width: 100%; }
+
+.flex-grow { flex-grow: 1; }
+

@@ -100,23 +100,3 @@ export function padding<A>(x: number): Attribute<A> {
 export function paddingXY<A>(x: number, y: number): Attribute<A> {
     return style("padding", `${y}px ${x}px`)
 }
-
-export function addAttributes<A>(attrs: Array<Attribute<A>>, html: Html<A>): Html<A> {
-    if (html.nodeType === "node") {
-        return {
-            ...html,
-            attributes: [...html.attributes, ...attrs]
-        }
-    }
-    return html
-}
-
-export function addChild<A>(child: Html<A>, html: Html<A>): Html<A> {
-    if (html.nodeType === "node") {
-        return {
-            ...html,
-            children: [ ...html.children, child ]
-        }
-    }
-    return html
-}

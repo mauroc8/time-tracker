@@ -5,6 +5,7 @@ import * as Date from './utils/Date'
 import * as TimeGroup from './TimeGroup'
 import * as Record from './Record'
 import * as Array_ from './utils/Array'
+import './DateGroup.css'
 
 export type DateGroup = {
     kind: "DateGroup",

@@ -1,0 +1,21 @@
+label {
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+}
+
+input {
+    background-color: hsl(0, 0%, 5%);
+    color: hsl(0, 0%, 100%);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    font-weight: 300;
+    line-height: 38px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+input:focus {
+    background-color: hsl(0, 0%, 0%);
+    outline: 0;
+}

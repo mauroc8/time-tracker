@@ -19,7 +19,6 @@ import * as Color from './style/Color'
 import * as DateGroup from './DateGroup'
 import * as TimeGroup from './TimeGroup'
 import * as Transition from './Transition'
-import * as ViewConfig from './ViewConfig'
 import * as Decoder from './utils/Decoder'
 
 export type Records =
@@ -95,14 +94,13 @@ export const decoder: Decoder.Decoder<Records> =
         }
     )
 
-export function view<A>(
+export function view<A, C>(
     records: Array<Record.Record>,
     today: Date.Date,
     collapsedGroups: Array<DateGroup.Tag>,
     collapsingTransition: Transition.Collapsing,
     clickedCollapseButton: (group: DateGroup.Tag) => A,
-    viewConfig: ViewConfig.ViewConfig,
-): Layout.Layout<A> {
+): Layout.Layout<A, C> {
     return Layout.columnWithSpacing(
         50,
         "div",
@@ -124,7 +122,6 @@ export function view<A>(
                     collapsedGroups,
                     collapsingTransition,
                     clickedCollapseButton,
-                    viewConfig,
                 )
             )
     )
@@ -200,125 +197,94 @@ function toOpacity(viewTransition: ViewTransition): number {
 
 export const collapsingTransitionSeconds: number = 0.24
 
-function viewRecordsInDateGroup<A>(
+function viewRecordsInDateGroup<A, C>(
     records: [Record.Record, ...Array<Record.Record>],
     today: Date.Date,
     collapsedGroups: Array<DateGroup.Tag>,
     collapsingTransition: Transition.Collapsing,
     clickedCollapseButton: (group: DateGroup.Tag) => A,
-    viewConfig: ViewConfig.ViewConfig
-): Layout.Layout<A> {
+): Layout.Layout<A, C> {
     const group = DateGroup.fromDate({ today, time: records[0].date })
     const viewTransition = viewTransitionOf(group, collapsedGroups, collapsingTransition)
 
-    return Layout.withCss(
-        {
-            ".date-group-collapse-button": {
-                "font-size": "14px",
-                "transition": "opacity 0.2s ease-out",
-                "opacity": "0.5",
-            },
-            ".date-group-collapse-button:hover": {
-                "opacity": "0.75",
-            },
-            ".date-group-collapse-button:focus": {
-                "outline": "0",
-                "opacity": "1",
-            },
-            ".date-group-collapse-button > span": {
-                "flex-grow": "1",
-                "height": "1px",
-                "background-color": Color.toCssString(Color.hsl(0, 0, 0.25)),
-                "transition": "opacity 0.2s ease-out",
-                "opacity": "0.5",
-            },
-            ".date-group-collapse-button:hover > span": {
-                "opacity": "0.75",
-            },
-            ".date-group-collapse-button:focus > span": {
-                "opacity": "1",
-            },
-        },
-        Layout.columnWithSpacing(
-            30,
-            "div",
-            [Html.class_("w-full")],
-            [
-                Layout.rowWithSpacing(
-                    10,
-                    "button",
-                    [
-                        Html.class_("w-full"),
-                        Html.class_("date-group-collapse-button"),
-                        Html.style("align-items", "baseline"),
-                        Html.style("padding", "5px"),
-                        Html.style("margin", "-5px"),
-                        Html.on("click", () => clickedCollapseButton(group)),
-                        Html.attribute("aria-controls", DateGroup.toStringId(group)),
-                    ],
-                    [
-                        Layout.space(8),
-                        Layout.node("span", [], []),
-                        Layout.node(
-                            "div",
-                            [
-                                Html.style("display", "inline-flex"),
-                                Html.style("white-space", "nowrap"),
-                                Html.style("letter-spacing", "2px"),
-                                Html.style("font-size", "10px"),
-                            ],
-                            [
-                                Layout.text(DateGroup.toSpanishLabel(group).toUpperCase()),
-                            ]
-                        ),
-                        Layout.node("span", [], []),
-                    ]
-                ),
-                Layout.columnWithSpacing(
-                    30,
-                    "div",
-                    [
-                        Html.class_("w-full"),
-                        Html.property("id", DateGroup.toStringId(group)),
-                        Html.style(
-                            "overflow",
-                            viewTransition.tag === 'uncollapsed'
-                                ? "visible"
-                                : "hidden"
-                        ),
-                        Html.style(
-                            "transition",
-                            `
-                                height ${collapsingTransitionSeconds}s ease-out,
-                                opacity ${collapsingTransitionSeconds}s linear
-                            `
-                        ),
-                        Html.style("height", toCssHeight(viewTransition)),
-                        Html.style("opacity", `${toOpacity(viewTransition)}`),
-                        Html.attribute("aria-expanded", String(!isCollapsed(viewTransition))),
-                    ],
-                    isCollapsed(viewTransition)
-                        ? []
-                        : Array_.groupWhile(
-                            records,
-                            (a, b) =>
-                                Utils.equals(
-                                    DateGroup.fromDate({ today, time: a.date }),
-                                    DateGroup.fromDate({ today, time: b.date })
-                                )
-                        )
-                            .map(day => viewRecordsInTimeGroup(day, today, viewConfig))
-                )
-            ]
-        )
+    return Layout.columnWithSpacing(
+        30,
+        "div",
+        [Html.class_("w-full")],
+        [
+            Layout.rowWithSpacing(
+                10,
+                "button",
+                [
+                    Html.class_("w-full"),
+                    Html.class_("date-group-collapse-button"),
+                    Html.style("align-items", "baseline"),
+                    Html.style("padding", "5px"),
+                    Html.style("margin", "-5px"),
+                    Html.on("click", () => clickedCollapseButton(group)),
+                    Html.attribute("aria-controls", DateGroup.toStringId(group)),
+                ],
+                [
+                    Layout.space(8),
+                    Layout.node("span", [], []),
+                    Layout.node(
+                        "div",
+                        [
+                            Html.style("display", "inline-flex"),
+                            Html.style("white-space", "nowrap"),
+                            Html.style("letter-spacing", "2px"),
+                            Html.style("font-size", "10px"),
+                        ],
+                        [
+                            Layout.text(DateGroup.toSpanishLabel(group).toUpperCase()),
+                        ]
+                    ),
+                    Layout.node("span", [], []),
+                ]
+            ),
+            Layout.columnWithSpacing(
+                30,
+                "div",
+                [
+                    Html.class_("w-full"),
+                    Html.property("id", DateGroup.toStringId(group)),
+                    Html.style(
+                        "overflow",
+                        viewTransition.tag === 'uncollapsed'
+                            ? "visible"
+                            : "hidden"
+                    ),
+                    Html.style(
+                        "transition",
+                        `
+                            height ${collapsingTransitionSeconds}s ease-out,
+                            opacity ${collapsingTransitionSeconds}s linear
+                        `
+                    ),
+                    Html.style("height", toCssHeight(viewTransition)),
+                    Html.style("opacity", `${toOpacity(viewTransition)}`),
+                    Html.attribute("aria-expanded", String(!isCollapsed(viewTransition))),
+                ],
+                isCollapsed(viewTransition)
+                    ? []
+                    : Array_.groupWhile(
+                        records,
+                        (a, b) =>
+                            Utils.equals(
+                                DateGroup.fromDate({ today, time: a.date }),
+                                DateGroup.fromDate({ today, time: b.date })
+                            )
+                    )
+                        .map(day => viewRecordsInTimeGroup(day, today))
+            )
+        ]
     )
 }
 
-function viewRecordsInTimeGroup<A>(
+function viewRecordsInTimeGroup<A, C>(
     day: [Record.Record, ...Array<Record.Record>],
     today: Date.Date,
-    viewConfig: ViewConfig.ViewConfig
-): Layout.Layout<A> {
+): Layout.Layout<A, C> {
     return Layout.columnWithSpacing(
         30,
         "div",
@@ -345,7 +311,7 @@ function viewRecordsInTimeGroup<A>(
                 50,
                 "div",
                 [],
-                day.map(record => Record.view(record, viewConfig))
+                day.map(record => Record.view(record))
             )
         ]
     )

@@ -7,13 +7,11 @@
 import * as Update from './Update'
 import * as Record from './Record'
 import * as Records from './Records'
-import * as CreateRecord from './CreateRecord'
 
 import * as Html from './vdom/Html'
 import * as VirtualDom from './vdom/VirtualDom'
 
 import * as Layout from './layout/Layout'
-import * as Css from './layout/Css'
 
 import * as Color from './style/Color'
 import * as  Component from './style/Component'
@@ -30,19 +28,18 @@ import * as Maybe from './utils/Maybe'
 
 import * as Group from './DateGroup'
 import * as Transition from './Transition'
-import * as ViewConfig from './ViewConfig'
+
+import './index.css'
 
 // STATE ---
 
 /** The whole state of the application.
 */
 export type State = {
-    createRecord: CreateRecord.CreateRecord,
     records: Records.Records,
     today: Date.Date,
     collapsedGroups: Array<Group.Tag>,
     collapsingTransition: Transition.Collapsing,
-    viewConfig: ViewConfig.ViewConfig,
 }
 
 export function stateOf(state: State): State {
@@ -82,31 +79,26 @@ function waitTilTomorrow(now: Time.Time): Cmd.Cmd<Event> {
 
 function newInitialState(today: Date.Date): State {
     return {
-        createRecord: CreateRecord.empty(""),
         records: Records.mockRecords(today),
         today,
         collapsedGroups: [],
         collapsingTransition: Transition.collapsingIdle(),
-        viewConfig: ViewConfig.of({ mode: 'normal' }),
     }
 }
 
 export function decoder(today: Date.Date): Decoder.Decoder<State> {
-    return Decoder.map3(
+    return Decoder.map2(
         Decoder.property('records', Records.decoder),
-        Decoder.property('createRecord', CreateRecord.decoder),
         Decoder.property(
             'collapsedGroups',
             Decoder.array(Group.decoder)
         ),
-        (records, createRecord, collapsedGroups) =>
+        (records, collapsedGroups) =>
             stateOf({
                 records,
-                createRecord,
                 today,
                 collapsedGroups,
                 collapsingTransition: Transition.collapsingIdle(),
-                viewConfig: ViewConfig.of({ mode: 'zen' }),
             })
     )
 }
@@ -130,6 +122,10 @@ export function decoder(today: Date.Date): Decoder.Decoder<State> {
 
 export function eventOf(event: Event): Event {
     return event;
+}
+
+function clickedCollapseButton(group: Group.Tag): Event {
+    return eventOf({ event: "clickedCollapseButton", group })
 }
 
 function update(state: State, event: Event): Update.Update<State, Event> {
@@ -216,47 +212,30 @@ function getHeightOfGroup<A>(
 
 // --- VIEW
 
-const globalCss: Css.Css = {
-    "*": {
-        "margin": "0",
-        "padding": "0",
-        "text": "inherit",
-        "box-sizing": "inherit",
-        "text-decoration": "inherit",
-        "font-weight": "inherit",
-        "font-size": "inherit",
-        "background": "transparent",
-        "border": "0",
-        "transition": "all 0.2s ease-out",
-        "color": "inherit",
-        "text-align": "inherit",
-        "outline-color": "transparent",
-    },
-    "button, summary": { "cursor": "pointer" },
-    "*:focus": { "outline": "1px dashed rgba(255, 255, 255, 0.15)" },
-    "html": { "box-sizing": "border-box", "line-height": "1" },
-    "body": {
-        "background-color": Color.toCssString(Color.background),
-        "font-family": "Lato, -apple-system, BlinkMacSystemFont, avenir next, avenir "
-            + " helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial, sans-serif",
-        "border-top": `6px solid ${Color.toCssString(Color.accent)}`,
-        "color": Color.toCssString(Color.text)
-    },
-    ".w-full": { "width": "100%" },
-    ".flex-grow": { "flex-grow": "1" },
-}
-
 export function view(state: State): Html.Html<Event> {
     return Layout.toHtml(
+        {},
         "div",
         [
             Html.style("display", "flex"),
             Html.style("flex-direction", "column"),
             Html.style("align-items", "center"),
         ],
-        Layout.withCss(
-            globalCss,
-            Layout.column(
+        [
+            Layout.node(
+                "style",
+                [],
+                [ Layout.text(`
+body {
+    background-color: ${Color.toCssString(Color.background)};
+    border-top: 6px solid ${Color.toCssString(Color.accent)};
+    color: ${Color.toCssString(Color.text)};
+}
+`)
+                ],
+            ),
+            Layout.columnWithSpacing(
+                50,
                 "div",
                 [
                     Html.class_("w-full"),
@@ -264,27 +243,18 @@ export function view(state: State): Html.Html<Event> {
                     Html.paddingXY(0, 20),
                 ],
                 [
-                    Layout.space(50),
-                    /*CreateRecord.view(
-                        [
-                            Html.padding(10),
-                        ],
-                        {
-                            createRecord: state.createRecord,
-                            records: state.records,
-                        }
-                    ),*/
+                    Layout.space(0),
                     Records.view(
                         state.records.array,
                         state.today,
                         state.collapsedGroups,
                         state.collapsingTransition,
-                        group => eventOf({ event: "clickedCollapseButton", group }),
-                        state.viewConfig,
+                        clickedCollapseButton,
                     ),
+                    Layout.space(0),
                 ]
             )
-        )
+        ]
     )
 }
 

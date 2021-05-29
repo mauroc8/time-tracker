@@ -11,7 +11,6 @@ import * as Color from './style/Color'
 import * as Decoder from './utils/Decoder'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
-import * as ViewConfig from './ViewConfig'
 
 export type Id = {
     tag: "recordId",
@@ -110,12 +109,11 @@ export function save(record: Record, today: Date.Date): Record {
     }
 }
 
-export function view<A>(
+export function view<E, C>(
     record: Record,
-    viewConfig: ViewConfig.ViewConfig
-): Layout.Layout<A> {
+): Layout.Layout<E, C> {
 
-    const separator = Layout.column<A>(
+    const separator = Layout.column<E, C>(
         'div',
         [
             Html.style("flex-basis", "2%"),
@@ -123,161 +121,122 @@ export function view<A>(
         []
     )
 
-    return Layout.withCss(
-        {
-            '.record-zen': {
-                color: 'transparent'
-            },
-            '.record-zen:hover': {
-                color: 'inherit',
-            },
-            '.visible-when-record-is-hovered, .visible-when-focused': {
-                opacity: '0%',
-                transition: 'opacity 0.2s ease-out',
-            },
-            '.record:hover .visible-when-record-is-hovered': {
-                opacity: '100%',
-            },
-            '.visible-when-focused:focus': {
-                opacity: '100%',
-            },
-        },
-        Layout.row(
-            "div",
-            [
-                Html.class_("record"),
-                ViewConfig.isZenMode(viewConfig)
-                    ? Html.class_("record-zen")
-                    : Html.class_("")
-            ],
-            [
-                Component.textInput(
-                    [
-                        Html.style("flex-basis", "40%"),
-                    ],
-                    {
-                        id: `record_${record.id.id}_description`,
-                        label: Layout.column(
-                            "div",
-                            [Html.paddingXY(8, 0)],
-                            [Layout.text('Descripción')]
-                        ),
-                        value: record.description,
-                        attributes: [],
-                    }
-                ),
-                separator,
-                Component.textInput(
-                    [
-                        Html.style("flex-basis", "20%"),
-                    ],
-                    {
-                        id: `record_${record.id.id}_task`,
-                        label: Layout.column(
-                            "div",
-                            [Html.paddingXY(8, 0)],
-                            [Layout.text('Tarea')]
-                        ),
-                        value: record.taskInput,
-                        attributes: [],
-                    }
-                ),
-                separator,
-                Component.textInput(
-                    [
-                        Html.style("flex-basis", "10%"),
-                        Html.style("text-align", "right"),
-                    ],
-                    {
-                        id: `record_${record.id.id}_start`,
-                        label: Layout.column(
-                            "div",
-                            [Html.paddingXY(8, 0)],
-                            [Layout.text('Inicio')]
-                        ),
-                        value: record.startInput,
-                        attributes: [],
-                    }
-                ),
-                separator,
-                Component.textInput(
-                    [
-                        Html.style("flex-basis", "10%"),
-                        Html.style("text-align", "right"),
-                    ],
-                    {
-                        id: `record_${record.id.id}_end`,
-                        label: Layout.column(
-                            "div",
-                            [Html.paddingXY(8, 0)],
-                            [Layout.text('Fin')]
-                        ),
-                        value: record.endInput,
-                        attributes: [],
-                    }
-                ),
-                separator,
-                Component.textInput(
-                    [
-                        Html.style("flex-basis", "10%"),
-                        Html.style("text-align", "right"),
-                    ],
-                    {
-                        id: `record_${record.id.id}_duration`,
-                        label: Layout.column(
-                            "div",
-                            [Html.paddingXY(8, 0)],
-                            [Layout.text('Duración')]
-                        ),
-                        value: Time.toString(Time.difference(record.endTime, record.startTime)),
-                        attributes: [],
-                    }
-                ),
-                separator,
-                Layout.withSpacingY(
-                    8,
-                    Layout.column(
+    return Layout.row(
+        "div",
+        [],
+        [
+            Component.textInput(
+                [
+                    Html.style("flex-basis", "40%"),
+                ],
+                {
+                    id: `record_${record.id.id}_description`,
+                    label: Layout.column(
                         "div",
-                        [
-                            Html.style("width", "16px"),
-                            Html.style("justify-content", "flex-start"),
-                        ],
-                        [
-                            Icon.button(
-                                [
-                                    ViewConfig.isZenMode(viewConfig)
-                                        ? Html.attribute("class", "visible-when-record-is-hovered visible-when-focused")
-                                        : Html.attribute("class", ""),
-                                ],
-                                Icon.play()
-                            ),
-                            Layout.below(
-                                "details",
-                                [],
-                                Icon.wrapper(
-                                    "summary",
-                                    [
-                                        ViewConfig.isZenMode(viewConfig)
-                                            ? Html.attribute("class", "visible-when-record-is-hovered visible-when-focused")
-                                            : Html.attribute("class", ""),
-                                    ],
-                                    Icon.options()
-                                ),
-                                Layout.column(
-                                    "div",
-                                    [
-                                        Html.style("right", "0")
-                                    ],
-                                    [
-                                        Layout.text("Hola")
-                                    ]
-                                )
-                            )
-                        ]
+                        [Html.paddingXY(8, 0)],
+                        [Layout.text('Descripción')]
+                    ),
+                    value: record.description,
+                    attributes: [],
+                }
+            ),
+            separator,
+            Component.textInput(
+                [
+                    Html.style("flex-basis", "20%"),
+                ],
+                {
+                    id: `record_${record.id.id}_task`,
+                    label: Layout.column(
+                        "div",
+                        [Html.paddingXY(8, 0)],
+                        [Layout.text('Tarea')]
+                    ),
+                    value: record.taskInput,
+                    attributes: [],
+                }
+            ),
+            separator,
+            Component.textInput(
+                [
+                    Html.style("flex-basis", "10%"),
+                    Html.style("text-align", "right"),
+                ],
+                {
+                    id: `record_${record.id.id}_start`,
+                    label: Layout.column(
+                        "div",
+                        [Html.paddingXY(8, 0)],
+                        [Layout.text('Inicio')]
+                    ),
+                    value: record.startInput,
+                    attributes: [],
+                }
+            ),
+            separator,
+            Component.textInput(
+                [
+                    Html.style("flex-basis", "10%"),
+                    Html.style("text-align", "right"),
+                ],
+                {
+                    id: `record_${record.id.id}_end`,
+                    label: Layout.column(
+                        "div",
+                        [Html.paddingXY(8, 0)],
+                        [Layout.text('Fin')]
+                    ),
+                    value: record.endInput,
+                    attributes: [],
+                }
+            ),
+            separator,
+            Component.textInput(
+                [
+                    Html.style("flex-basis", "10%"),
+                    Html.style("text-align", "right"),
+                ],
+                {
+                    id: `record_${record.id.id}_duration`,
+                    label: Layout.column(
+                        "div",
+                        [Html.paddingXY(8, 0)],
+                        [Layout.text('Duración')]
+                    ),
+                    value: Time.toString(Time.difference(record.endTime, record.startTime)),
+                    attributes: [],
+                }
+            ),
+            separator,
+            Layout.columnWithSpacing(
+                8,
+                "div",
+                [
+                    Html.style("width", "16px"),
+                    Html.style("justify-content", "flex-start"),
+                ],
+                [
+                    Icon.button(
+                        [],
+                        Icon.play()
+                    ),
+                    Layout.below(
+                        "details",
+                        [],
+                        Icon.wrapper(
+                            "summary",
+                            [],
+                            Icon.options()
+                        ),
+                        {
+                            tagName: "div",
+                            attributes: [ Html.style("right", "0") ],
+                            children: [ Layout.text("Hola") ]
+                        }
                     )
-                )
-            ]
-        )
+                ]
+            )
+        ]
     )
 }
 

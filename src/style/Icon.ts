@@ -4,11 +4,11 @@ import * as Html from '../vdom/Html'
 
 import * as Layout from '../layout/Layout'
 
-export function wrapper<A>(
+export function wrapper<A, C>(
     htmlTag: string,
-    attributes: Array<Html.Attribute<A>>,
+    attributes: Array<Layout.Attribute<A, C>>,
     icon: Html.Html<never>
-): Layout.Layout<A> {
+): Layout.Layout<A, C> {
     return Layout.node(
         htmlTag,
         [
@@ -22,12 +22,12 @@ export function wrapper<A>(
             ...attributes
         ],
         [
-            Layout.fromHtml(icon, {})
+            Layout.fromHtml(icon)
         ]
     )
 }
 
-export function button<A>(attributes: Array<Html.Attribute<A>>, icon: Html.Html<never>): Layout.Layout<A> {
+export function button<A, C>(attributes: Array<Layout.Attribute<A, C>>, icon: Html.Html<never>): Layout.Layout<A, C> {
     return wrapper(
         "button",
         attributes,
