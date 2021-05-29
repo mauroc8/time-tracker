@@ -26,7 +26,7 @@ import * as Decoder from './utils/Decoder'
 import * as Utils from './utils/Utils'
 import * as Maybe from './utils/Maybe'
 
-import * as Group from './DateGroup'
+import * as DateGroup from './DateGroup'
 import * as Transition from './Transition'
 
 import './index.css'
@@ -38,7 +38,7 @@ import './index.css'
 export type State = {
     records: Records.Records,
     today: Date.Date,
-    collapsedGroups: Array<Group.Tag>,
+    collapsedGroups: Array<DateGroup.Tag>,
     collapsingTransition: Transition.Collapsing,
 }
 
@@ -91,7 +91,7 @@ export function decoder(today: Date.Date): Decoder.Decoder<State> {
         Decoder.property('records', Records.decoder),
         Decoder.property(
             'collapsedGroups',
-            Decoder.array(Group.decoder)
+            Decoder.array(DateGroup.decoder)
         ),
         (records, collapsedGroups) =>
             stateOf({
@@ -114,9 +114,9 @@ export function decoder(today: Date.Date): Decoder.Decoder<State> {
  export type Event =
      | { event: "none" }
      | { event: "gotNewDate", date: globalThis.Date }
-     | { event: "clickedCollapseButton", group: Group.Tag }
+     | { event: "clickedCollapseButton", group: DateGroup.Tag }
      // Collapse transition
-     | { event: "gotHeightOfGroupBeingCollapsed", group: Group.Tag, height: number }
+     | { event: "gotHeightOfGroupBeingCollapsed", group: DateGroup.Tag, height: number }
      | { event: "startCollapseTransition" }
      | { event: "endCollapseTransition" }
 
@@ -124,7 +124,7 @@ export function eventOf(event: Event): Event {
     return event;
 }
 
-function clickedCollapseButton(group: Group.Tag): Event {
+function clickedCollapseButton(group: DateGroup.Tag): Event {
     return eventOf({ event: "clickedCollapseButton", group })
 }
 
@@ -142,7 +142,7 @@ function update(state: State, event: Event): Update.Update<State, Event> {
         // --- Collapse groups (with transitions)
 
         case "clickedCollapseButton":
-            return Records.groupIsCollapsed(event.group, state.collapsedGroups)
+            return state.collapsedGroups.some(Utils.eq(event.group))
                 ? Update.pure({
                     ...state,
                     collapsedGroups:
@@ -183,7 +183,7 @@ function update(state: State, event: Event): Update.Update<State, Event> {
                     collapsingTransition: Transition.startCollapsing(state.collapsingTransition)
                 }),
                 Cmd.map(
-                    Cmd.waitMilliseconds(Records.collapsingTransitionSeconds * 1000),
+                    Cmd.waitMilliseconds(DateGroup.collapsingTransitionSeconds * 1000),
                     _ => eventOf({ event: "endCollapseTransition" })
                 )
             )
@@ -197,12 +197,12 @@ function update(state: State, event: Event): Update.Update<State, Event> {
 }
 
 function getHeightOfGroup<A>(
-    group: Group.Tag,
+    group: DateGroup.Tag,
     onHeight: (height: number) => A,
     onError: A
 ): Cmd.Cmd<A> {
     return Cmd.map(
-        Cmd.getRectOf(Group.toStringId(group)),
+        Cmd.getRectOf(DateGroup.toStringId(group)),
         maybeRect =>
             maybeRect
                 .map(rect => onHeight(rect.height))

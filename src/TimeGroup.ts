@@ -3,6 +3,9 @@ import * as Date from './utils/Date'
 import * as Record from './Record'
 import * as Array_ from './utils/Array'
 import * as Utils from './utils/Utils'
+import * as Layout from './layout/Layout'
+import * as Html from './vdom/Html'
+import * as Color from './style/Color'
 
 // --- TIME GROUP
 
@@ -117,4 +120,37 @@ export function toSpanishLabel(day: Tag): string {
         case "yesterday":
             return "Ayer"
     }
+}
+
+// --- VIEW
+
+export function view<E, C>(
+    tag: Tag,
+    records: Array<Record.Record>,
+): Layout.Layout<E, C> {
+    return Layout.columnWithSpacing(
+        30,
+        "div",
+        [],
+        [
+            Layout.column(
+                "div",
+                [
+                    Html.style("color", Color.toCssString(Color.accent)),
+                    Html.style("font-size", "12px"),
+                    Html.style("letter-spacing", "0.15em"),
+                    Html.paddingXY(8, 0),
+                ],
+                [
+                    Layout.text(toSpanishLabel(tag).toUpperCase()),
+                ]
+            ),
+            Layout.columnWithSpacing(
+                50,
+                "div",
+                [],
+                records.map(record => Record.view(record))
+            )
+        ]
+    )
 }
