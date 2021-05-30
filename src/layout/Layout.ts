@@ -3,22 +3,23 @@ import * as Html from "../vdom/Html"
 // --- LAYOUT
 
 /** Unlike raw Html, a Layout generates a static stylesheet programatically.
- * Also, it carries a context that can be anything you want:
- * settings or themes. That context can be used to define attributes (see `useContext`).
+ * Also, it carries a context that can be anything you want: state, settings or themes.
 */
 export type Layout<Event, Context> = {
-    html: (context: Context) => Html.Html<Event>,
-    spacingX: Array<number>,
-    spacingY: Array<number>,
+    type: "Layout",
+    build: (context: Context) => {
+        html: Html.Html<Event>,
+        spacingX: Array<number>,
+        spacingY: Array<number>,
+    }
 }
 
 export function fromHtml<Event, Context>(
     html: Html.Html<Event>,
 ): Layout<Event, Context> {
     return {
-        html: _ => html,
-        spacingX: [],
-        spacingY: [],
+        type: "Layout",
+        build: _ => ({ html, spacingX: [], spacingY: [] })
     }
 }
 
@@ -28,7 +29,7 @@ export function toHtml<Event, Context>(
     attributes: Array<Attribute<Event, Context>>,
     children: Array<Layout<Event, Context>>,
 ): Html.Html<Event> {
-    const mergedLayouts = merge(children)
+    const mergedLayouts = merge(children).build(context)
 
     return Html.node(
         htmlTag,
@@ -56,7 +57,7 @@ export function toHtml<Event, Context>(
                     )
                 ]
             ),
-            ...mergedLayouts.html(context),
+            ...mergedLayouts.html,
         ],
     )
 }
@@ -77,13 +78,17 @@ export function node<Event, Context>(
     attributes: Array<Attribute<Event, Context>>,
     children: Array<Layout<Event, Context>>,
 ): Layout<Event, Context> {
-    const mergedLayouts = merge(children)
-
     return {
-        html: context =>
-            Html.node(htmlTag, toHtmlAttributes(attributes, context), mergedLayouts.html(context)),
-        spacingX: mergedLayouts.spacingX,
-        spacingY: mergedLayouts.spacingY,
+        type: "Layout",
+        build: context => {
+            const mergedLayouts = merge(children).build(context)
+
+            return {
+                html: Html.node(htmlTag, toHtmlAttributes(attributes, context), mergedLayouts.html),
+                spacingX: mergedLayouts.spacingX,
+                spacingY: mergedLayouts.spacingY,
+            }
+        }
     }
 }
 
@@ -92,21 +97,45 @@ export function column<E, C>(
     attributes: Array<Attribute<E, C>>,
     children: Array<Layout<E, C>>,
 ): Layout<E, C> {
-    const mergedLayouts = merge(children)
+    return node(
+        htmlTag,
+        [
+            ...attributes,
+            Html.style("display", "flex"),
+            Html.style("flex-direction", "column"),
+        ],
+        children
+    )
+}
 
+export function row<E, C>(
+    htmlTag: string,
+    attributes: Array<Attribute<E, C>>,
+    children: Array<Layout<E, C>>,
+): Layout<E, C> {
+    return node(
+        htmlTag,
+        [
+            ...attributes,
+            Html.style("display", "flex"),
+            Html.style("flex-direction", "row"),
+        ],
+        children
+    )
+}
+
+function addSpacing<E, C>(axis: "x" | "y", spacing: number, layout: Layout<E, C>): Layout<E, C> {
     return {
-        html: context =>
-            Html.node(
-                htmlTag,
-                [
-                    ...toHtmlAttributes(attributes, context),
-                    Html.style("display", "flex"),
-                    Html.style("flex-direction", "column"),
-                ],
-                mergedLayouts.html(context)
-            ),
-        spacingX: mergedLayouts.spacingX,
-        spacingY: mergedLayouts.spacingY
+        type: "Layout",
+        build: context => {
+            const built = layout.build(context)
+
+            return {
+                html: built.html,
+                spacingX: axis === "x" ? [ spacing, ...built.spacingX ] : built.spacingX,
+                spacingY: axis === "y" ? [ spacing, ...built.spacingY ] : built.spacingY,
+            }
+        }
     }
 }
 
@@ -116,48 +145,18 @@ export function columnWithSpacing<E, C>(
     attributes: Array<Attribute<E, C>>,
     children: Array<Layout<E, C>>,
 ): Layout<E, C> {
-    const mergedLayouts = merge(children)
-
-    mergedLayouts.spacingY.push(spacing)
-
-    return {
-        html: context =>
-            Html.node(
-                htmlTag,
-                [
-                    ...toHtmlAttributes(attributes, context),
-                    Html.style("display", "flex"),
-                    Html.style("flex-direction", "column"),
-                    Html.class_(`spacing-y-${spacing}`)
-                ],
-                mergedLayouts.html(context)
-            ),
-        spacingX: mergedLayouts.spacingX,
-        spacingY: mergedLayouts.spacingY,
-    }
-}
-
-export function row<E, C>(
-    htmlTag: string,
-    attributes: Array<Attribute<E, C>>,
-    children: Array<Layout<E, C>>,
-): Layout<E, C> {
-    const mergedLayouts = merge(children)
-
-    return {
-        html: context =>
-            Html.node(
-                htmlTag,
-                [
-                    ...toHtmlAttributes(attributes, context),
-                    Html.style("display", "flex"),
-                    Html.style("flex-direction", "row"),
-                ],
-                mergedLayouts.html(context)
-            ),
-        spacingX: mergedLayouts.spacingX,
-        spacingY: mergedLayouts.spacingY
-    }
+    return addSpacing(
+        "y",
+        spacing,
+        column(
+            htmlTag,
+            [
+                ...attributes,
+                Html.class_(`spacing-y-${spacing}`),
+            ],
+            children
+        )
+    )
 }
 
 export function rowWithSpacing<E, C>(
@@ -166,25 +165,18 @@ export function rowWithSpacing<E, C>(
     attributes: Array<Attribute<E, C>>,
     children: Array<Layout<E, C>>,
 ): Layout<E, C> {
-    const mergedLayouts = merge(children)
-
-    mergedLayouts.spacingX.push(spacing)
-
-    return {
-        html: context =>
-            Html.node(
-                htmlTag,
-                [
-                    ...toHtmlAttributes(attributes, context),
-                    Html.style("display", "flex"),
-                    Html.style("flex-direction", "row"),
-                    Html.class_(`spacing-x-${spacing}`),
-                ],
-                mergedLayouts.html(context)
-            ),
-        spacingX: mergedLayouts.spacingX,
-        spacingY: mergedLayouts.spacingY
-    }
+    return addSpacing(
+        "x",
+        spacing,
+        column(
+            htmlTag,
+            [
+                ...attributes,
+                Html.class_(`spacing-x-${spacing}`),
+            ],
+            children
+        )
+    )
 }
 
 export function text<E, C>(text: string): Layout<E, C> {
@@ -205,49 +197,55 @@ export function space<E, C>(size: number): Layout<E, C> {
     )
 }
 
+/** Dibuja al nodo `below` "flotando" debajo de `above`, como un menú o un tooltip. */
 export function below<E, C>(
     tagName: string,
     attributes: Array<Attribute<E, C>>,
-    layout: Layout<E, C>,
+    above: Layout<E, C>,
     below: {
         tagName: string,
         attributes: Array<Attribute<E, C>>,
         children: Array<Layout<E, C>>,
     }
 ): Layout<E, C> {
-    const belowNode = node<E, C>(
-        below.tagName,
+    return node<E, C>(
+        tagName,
         [
-            ...below.attributes,
-            Html.style("position", "absolute"),
-            Html.style("top", "100%"),
+            ...attributes,
+            Html.style("position", "relative"),
         ],
-        below.children
-    )
-
-    return {
-        html: context =>
-            Html.node(
-                tagName,
+        [
+            above,
+            node(
+                below.tagName,
                 [
-                    ...toHtmlAttributes(attributes, context),
-                    Html.style("position", "relative"),
+                    ...below.attributes,
+                    Html.style("position", "absolute"),
+                    Html.style("top", "100%"),
                 ],
-                [
-                    layout.html(context),
-                    belowNode.html(context),
-                ]
-            ),
-        spacingX: [ ...layout.spacingX, ...belowNode.spacingX ],
-        spacingY: [ ...layout.spacingY, ...belowNode.spacingY ],
+                below.children
+            )
+        ]
+    )
+}
+
+export function withContext<E, Context>(useContext: (context: Context) => Layout<E, Context>): Layout<E, Context> {
+    return {
+        type: "Layout",
+        build: context => {
+            return useContext(context).build(context)
+        }
     }
 }
 
 // --- ATTRIBUTES
 
+/** Layouts can receive the same attributes from the `Html` module, and also a
+ * `Layout.attributeWithContext` that uses the context to create an `Html.Attribute`.
+ */
 export type Attribute<Event, Context> =
     | Html.Attribute<Event>
-    | { tag: "usingContext", htmlAttribute: (context: Context) => Html.Attribute<Event> }
+    | { tag: "attributeWithContext", htmlAttribute: (context: Context) => Html.Attribute<Event> }
 
 /** Use the current context to create a Html attribute.
  * For example, if the context is the color scheme:
@@ -265,15 +263,17 @@ export type Attribute<Event, Context> =
  * )
  * ```
 */
-export function useContext<E, Context>(f: (context: Context) => Html.Attribute<E>): Attribute<E, Context> {
+export function attributeWithContext<E, Context>(
+    htmlAttribute: (context: Context) => Html.Attribute<E>
+): Attribute<E, Context> {
     return {
-        tag: "usingContext",
-        htmlAttribute: f
+        tag: "attributeWithContext",
+        htmlAttribute
     }
 }
 
 function toHtmlAttribute<E, C>(attribute: Attribute<E, C>, context: C): Html.Attribute<E> {
-    if (attribute.tag === "usingContext") {
+    if (attribute.tag === "attributeWithContext") {
         return attribute.htmlAttribute(context)
     }
     return attribute
@@ -286,16 +286,25 @@ function toHtmlAttributes<E, C>(attributes: Array<Attribute<E, C>>, context: C):
 // --- MERGED LAYOUTS (helper)
 
 type MergedLayouts<Event, Context> = {
-    html: (context: Context) => Array<Html.Html<Event>>,
-    spacingX: Array<number>,
-    spacingY: Array<number>,
+    type: "MergedLayouts",
+    build: (context: Context) => {
+        html: Array<Html.Html<Event>>,
+        spacingX: Array<number>,
+        spacingY: Array<number>,
+    }
 }
 
 function merge<E, C>(layouts: Array<Layout<E, C>>): MergedLayouts<E, C> {
     return {
-        html: context =>
-            layouts.map(layout => layout.html(context)),
-        spacingX: layouts.flatMap(layout => layout.spacingX),
-        spacingY: layouts.flatMap(layout => layout.spacingY),
+        type: "MergedLayouts",
+        build: context => {
+            const built = layouts.map(layout => layout.build(context));
+            
+            return {
+                html: built.map(x => x.html),
+                spacingX: built.flatMap(x => x.spacingX),
+                spacingY: built.flatMap(x => x.spacingY),
+            }
+        },
     }
 }

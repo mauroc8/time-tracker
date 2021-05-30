@@ -104,30 +104,32 @@ export function view<A, C>(
         50,
         "div",
         [Html.class_("w-full")],
-        Array_.groupWhile(
-            records
-                .sort(Record.compare)
-                .reverse(),
-            (a, b) =>
-                Utils.equals(
-                    DateGroup.fromDate({ today, time: a.date }),
-                    DateGroup.fromDate({ today, time: b.date })
-                )
-        )
-            .map(groupRecords => {
-                const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date });
+        records.length > 0
+            ? Array_.groupWhile(
+                records
+                    .sort(Record.compare)
+                    .reverse(),
+                (a, b) =>
+                    Utils.equals(
+                        DateGroup.fromDate({ today, time: a.date }),
+                        DateGroup.fromDate({ today, time: b.date })
+                    )
+            )
+                .map(groupRecords => {
+                    const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date });
 
-                return DateGroup.view(
-                    groupTag,
-                    groupRecords,
-                    DateGroup.getCollapsingState(
+                    return DateGroup.view(
                         groupTag,
-                        collapsedGroups,
-                        collapsingTransition
-                    ),
-                    clickedCollapseButton,
-                    today,
-                )
-            })
+                        groupRecords,
+                        DateGroup.getCollapsingState(
+                            groupTag,
+                            collapsedGroups,
+                            collapsingTransition
+                        ),
+                        clickedCollapseButton,
+                        today,
+                    )
+                })
+            : [Layout.text("No hay ninguna entrada todavía")]
     )
 }
