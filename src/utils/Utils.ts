@@ -11,7 +11,7 @@ export function assertNever(never: never): void {
 }
 
 /** Structural equality */
-export function equals(a: unknown, b: unknown): boolean {
+export function equals<A>(a: A, b: A): boolean {
     if (a instanceof Array && b instanceof Array) {
         return a.every((x, i) => equals(x, b[i]));
     }
@@ -26,7 +26,7 @@ export function equals(a: unknown, b: unknown): boolean {
                 !(key in b)
                     || !equals(
                         value,
-                        (b as { [property: string]: unknown })[key]
+                        (b as unknown as { [property: string]: unknown })[key]
                     )
             ) {
                 return false;
@@ -45,7 +45,7 @@ export function equals(a: unknown, b: unknown): boolean {
     return a === b;
 }
 
-export const eq = (a: unknown) => (b: unknown) => equals(a, b)
+export const eq = <A>(a: A) => (b: A) => equals(a, b)
 
 export function compareStrings(a: string, b: string): -1 | 0 | 1 {
     if (a < b)

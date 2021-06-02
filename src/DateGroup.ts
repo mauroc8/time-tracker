@@ -6,9 +6,150 @@ import * as Html from './vdom/Html'
 import * as Date from './utils/Date'
 import * as TimeGroup from './TimeGroup'
 import * as Record from './Record'
-import * as Transition from './Transition'
 import * as Array_ from './utils/Array'
+import * as Update from './Update'
+import * as Cmd from './utils/Cmd'
+import * as Pair from './utils/Pair'
 import './DateGroup.css'
+
+const collapsingTransitionSeconds = 0.26
+
+type Transition =
+    | { tag: "idle" }
+    | { tag: "aboutToCollapse", group: Tag, height: number }
+    | { tag: "collapsing", group: Tag }
+
+function idle(): Transition {
+    return { tag: "idle" }
+}
+
+function aboutToCollapse(group: Tag, height: number): Transition {
+    return { tag: 'aboutToCollapse', group, height }
+}
+
+function startCollapsing(collapsingCollapseTransitionState: Transition): Transition {
+    switch (collapsingCollapseTransitionState.tag) {
+        case 'idle':
+        case 'collapsing':
+            return collapsingCollapseTransitionState
+
+        case 'aboutToCollapse':
+            return { tag: 'collapsing', group: collapsingCollapseTransitionState.group }
+    }
+}
+
+// --- State
+
+// The state needed to make a transition when a group collapses.
+// It is needed in order to create a DateGroup.ViewConfig.
+
+export type State = {
+    transition: Transition,
+    collapsedGroups: Array<Tag>,
+}
+
+function stateOf(state: State): State {
+    return state
+}
+
+export function init(): State {
+    return {
+        transition: idle(),
+        collapsedGroups: [],
+    }
+}
+
+export type Event =
+    | { tag: "clickedCollapseButton", groupTag: Tag }
+    | { tag: "gotHeightOfGroupBeingCollapsed", groupTag: Tag, height: number }
+    | { tag: "startCollapseTransition" }
+    | { tag: "endCollapseTransition" }
+    | { tag: "domError" }
+
+function eventOf(event: Event): Event {
+    return event
+}
+
+function clickedCollapseButton(groupTag: Tag): Event {
+    return { tag: "clickedCollapseButton", groupTag }
+}
+
+export function update(state: State, event: Event): Update.Update<State, Event> {
+    switch (event.tag) {
+        case "domError":
+            // Ignoro
+            return Update.pure(state)
+
+        case "clickedCollapseButton":
+            if (state.collapsedGroups.some(Utils.eq(event.groupTag))) {
+                return Update.pure({
+                    transition: state.transition,
+                    collapsedGroups: state.collapsedGroups
+                        .filter(group => !Utils.equals(group, event.groupTag)),
+                })
+            }
+
+            return Update.of(
+                state,
+                getHeightOfGroup(
+                    event.groupTag,
+                    height =>
+                        eventOf({
+                            tag: "gotHeightOfGroupBeingCollapsed",
+                            groupTag: event.groupTag,
+                            height
+                        }),
+                        eventOf({ tag: "domError" })
+                )
+            )
+
+        case "gotHeightOfGroupBeingCollapsed":
+            return Update.of(
+                stateOf({
+                    collapsedGroups: [...state.collapsedGroups, event.groupTag],
+                    transition: aboutToCollapse(event.groupTag, event.height)
+                }),
+                Cmd.map(
+                    Cmd.waitMilliseconds(0),
+                    _ => eventOf({ tag: "startCollapseTransition" })
+                )
+            )
+
+        case "startCollapseTransition":
+            return Update.of(
+                stateOf({
+                    collapsedGroups: state.collapsedGroups,
+                    transition: startCollapsing(state.transition)
+                }),
+                Cmd.map(
+                    Cmd.waitMilliseconds(collapsingTransitionSeconds * 1000),
+                    _ => eventOf({ tag: "endCollapseTransition" })
+                )
+            )
+
+        case "endCollapseTransition":
+            return Update.pure({
+                collapsedGroups: state.collapsedGroups,
+                transition: idle()
+            })
+    }
+}
+
+function getHeightOfGroup<A>(
+    group: Tag,
+    onHeight: (height: number) => A,
+    onError: A
+): Cmd.Cmd<A> {
+    return Cmd.map(
+        Cmd.getRectOf(toStringId(group)),
+        maybeRect =>
+            maybeRect
+                .map(rect => onHeight(rect.height))
+                .withDefault(onError)
+    )
+}
+
+// --- DATE GROUP
 
 export type DateGroup = {
     kind: "DateGroup",
@@ -204,60 +345,61 @@ export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
 
 // --- VIEW
 
-export type CollapsingState =
+type ViewStatus =
     | { tag: "uncollapsed" }
     | { tag: "aboutToCollapse", height: number }
     | { tag: "collapsing" }
     | { tag: "collapsed" }
 
-export function getCollapsingState(
+
+export function getViewStatus(
     groupTag: Tag,
-    collapsedGroups: Array<Tag>,
-    collapsingTransition: Transition.Collapsing,
-): CollapsingState {
-    switch (collapsingTransition.tag) {
+    state: State,
+): ViewStatus {
+    switch (state.transition.tag) {
         case 'aboutToCollapse':
-            if (Utils.equals(collapsingTransition.group, groupTag)) {
-                return { tag: 'aboutToCollapse', height: collapsingTransition.height }
+            if (Utils.equals(state.transition.group, groupTag)) {
+                return { tag: 'aboutToCollapse', height: state.transition.height }
             }
             break;
         case 'collapsing':
-            if (Utils.equals(collapsingTransition.group, groupTag)) {
+            if (Utils.equals(state.transition.group, groupTag)) {
                 return { tag: 'collapsing' }
             }
             break;
         case 'idle':
             break;
         default:
-            Utils.assertNever(collapsingTransition)
+            Utils.assertNever(state.transition)
             break;
     }
 
-    if (collapsedGroups.some(Utils.eq(groupTag))) {
+    if (state.collapsedGroups.some(Utils.eq(groupTag))) {
         return { tag: 'collapsed' }
     }
 
     return { tag: 'uncollapsed' }
 }
+    
 
-function isCollapsed(viewTransition: CollapsingState): boolean {
-    return viewTransition.tag === 'collapsed'
+function isCollapsed(viewCollapseTransitionState: ViewStatus): boolean {
+    return viewCollapseTransitionState.tag === 'collapsed'
 }
 
-function toCssHeight(viewTransition: CollapsingState): string {
-    switch (viewTransition.tag) {
+function toCssHeight(viewCollapseTransitionState: ViewStatus): string {
+    switch (viewCollapseTransitionState.tag) {
         case 'uncollapsed':
         case 'collapsed':
             return 'auto'
         case 'aboutToCollapse':
-            return `${viewTransition.height}px`
+            return `${viewCollapseTransitionState.height}px`
         case 'collapsing':
             return `0px`
     }
 }
 
-function toOpacity(viewTransition: CollapsingState): number {
-    switch (viewTransition.tag) {
+function toOpacity(viewCollapseTransitionState: ViewStatus): number {
+    switch (viewCollapseTransitionState.tag) {
         case 'collapsed':
         case 'collapsing':
             return 0
@@ -266,88 +408,90 @@ function toOpacity(viewTransition: CollapsingState): number {
             return 1
     }
 }
+    
+export const collapsingCollapseTransitionStateSeconds: number = 0.24
 
-export const collapsingTransitionSeconds: number = 0.24
-
-export function view<E, C>(
+export function view<Context extends { today: Date.Date }>(
     groupTag: Tag,
     records: Array<Record.Record>,
-    collapsingState: CollapsingState,
-    clickedCollapseButton: (group: Tag) => E,
-    today: Date.Date,
-): Layout.Layout<E, C> {
-    return Layout.columnWithSpacing(
-        30,
-        "div",
-        [Html.class_("w-full")],
-        [
-            Layout.rowWithSpacing(
-                10,
-                "button",
-                [
-                    Html.class_("w-full"),
-                    Html.class_("date-group-collapse-button"),
-                    Html.style("align-items", "baseline"),
-                    Html.style("padding", "5px"),
-                    Html.style("margin", "-5px"),
-                    Html.on("click", () => clickedCollapseButton(groupTag)),
-                    Html.attribute("aria-controls", toStringId(groupTag)),
-                ],
-                [
-                    Layout.space(8),
-                    Layout.node("span", [], []),
-                    Layout.node(
-                        "div",
-                        [
-                            Html.style("display", "inline-flex"),
-                            Html.style("white-space", "nowrap"),
-                            Html.style("letter-spacing", "2px"),
-                            Html.style("font-size", "10px"),
-                        ],
-                        [
-                            Layout.text(toSpanishLabel(groupTag).toUpperCase()),
-                        ]
-                    ),
-                    Layout.node("span", [], []),
-                ]
-            ),
-            Layout.columnWithSpacing(
-                30,
-                "div",
-                [
-                    Html.class_("w-full"),
-                    Html.property("id", toStringId(groupTag)),
-                    Html.style(
-                        "overflow",
-                        collapsingState.tag === 'uncollapsed'
-                            ? "visible"
-                            : "hidden"
-                    ),
-                    Html.style(
-                        "transition",
-                        `
-                            height ${collapsingTransitionSeconds}s ease-out,
-                            opacity ${collapsingTransitionSeconds}s linear
-                        `
-                    ),
-                    Html.style("height", toCssHeight(collapsingState)),
-                    Html.style("opacity", `${toOpacity(collapsingState)}`),
-                    Html.attribute("aria-expanded", String(!isCollapsed(collapsingState))),
-                ],
-                isCollapsed(collapsingState)
-                    ? []
-                    : Array_.groupWhile(
-                        records,
-                        (a, b) =>
-                            Utils.equals(
-                                fromDate({ today, time: a.date }),
-                                fromDate({ today, time: b.date })
-                            )
-                    )
-                        .map(day => 
-                            TimeGroup.view(TimeGroup.fromDate({ today, time: day[0].date }), day)
+    state: State,
+): Layout.Layout<Event, Context> {
+    const viewStatus = getViewStatus(groupTag, state)
+
+    return Layout.withContext(({ today }) =>
+        Layout.columnWithSpacing(
+            30,
+            "div",
+            [Html.class_("w-full")],
+            [
+                Layout.rowWithSpacing(
+                    10,
+                    "button",
+                    [
+                        Html.class_("w-full"),
+                        Html.class_("date-group-collapse-button"),
+                        Html.style("align-items", "baseline"),
+                        Html.style("padding", "5px"),
+                        Html.style("margin", "-5px"),
+                        Html.on("click", () => clickedCollapseButton(groupTag)),
+                        Html.attribute("aria-controls", toStringId(groupTag)),
+                    ],
+                    [
+                        Layout.space(8),
+                        Layout.node("span", [], []),
+                        Layout.node(
+                            "div",
+                            [
+                                Html.style("display", "inline-flex"),
+                                Html.style("white-space", "nowrap"),
+                                Html.style("letter-spacing", "2px"),
+                                Html.style("font-size", "10px"),
+                            ],
+                            [
+                                Layout.text(toSpanishLabel(groupTag).toUpperCase()),
+                            ]
+                        ),
+                        Layout.node("span", [], []),
+                    ]
+                ),
+                Layout.columnWithSpacing(
+                    30,
+                    "div",
+                    [
+                        Html.class_("w-full"),
+                        Html.property("id", toStringId(groupTag)),
+                        Html.style(
+                            "overflow",
+                            viewStatus.tag === 'uncollapsed'
+                                ? "visible"
+                                : "hidden"
+                        ),
+                        Html.style(
+                            "transition",
+                            `
+                                height ${collapsingCollapseTransitionStateSeconds}s ease-out,
+                                opacity ${collapsingCollapseTransitionStateSeconds}s linear
+                            `
+                        ),
+                        Html.style("height", toCssHeight(viewStatus)),
+                        Html.style("opacity", `${toOpacity(viewStatus)}`),
+                        Html.attribute("aria-expanded", String(!isCollapsed(viewStatus))),
+                    ],
+                    isCollapsed(viewStatus)
+                        ? []
+                        : Array_.groupWhile(
+                            records,
+                            (a, b) =>
+                                Utils.equals(
+                                    fromDate({ today, time: a.date }),
+                                    fromDate({ today, time: b.date })
+                                )
                         )
-            )
-        ]
+                            .map(day => 
+                                TimeGroup.view(TimeGroup.fromDate({ today, time: day[0].date }), day)
+                            )
+                )
+            ]
+        )
     )
 }

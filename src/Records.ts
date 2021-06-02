@@ -13,11 +13,7 @@ import * as Layout from './layout/Layout'
 
 import * as Html from './vdom/Html'
 
-import * as Icon from './style/Icon'
-
 import * as DateGroup from './DateGroup'
-import * as TimeGroup from './TimeGroup'
-import * as Transition from './Transition'
 import * as Decoder from './utils/Decoder'
 
 export type Records =
@@ -93,43 +89,36 @@ export const decoder: Decoder.Decoder<Records> =
         }
     )
 
-export function view<A, C>(
+export function view<Context extends { today: Date.Date }>(
     records: Array<Record.Record>,
-    today: Date.Date,
-    collapsedGroups: Array<DateGroup.Tag>,
-    collapsingTransition: Transition.Collapsing,
-    clickedCollapseButton: (group: DateGroup.Tag) => A,
-): Layout.Layout<A, C> {
-    return Layout.columnWithSpacing(
-        50,
-        "div",
-        [Html.class_("w-full")],
-        records.length > 0
-            ? Array_.groupWhile(
-                records
-                    .sort(Record.compare)
-                    .reverse(),
-                (a, b) =>
-                    Utils.equals(
-                        DateGroup.fromDate({ today, time: a.date }),
-                        DateGroup.fromDate({ today, time: b.date })
-                    )
-            )
-                .map(groupRecords => {
-                    const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date });
+    dateGroupState: DateGroup.State,
+): Layout.Layout<DateGroup.Event, Context> {
+    return Layout.withContext(({ today }) =>
+        Layout.columnWithSpacing(
+            50,
+            "div",
+            [Html.class_("w-full")],
+            records.length > 0
+                ? Array_.groupWhile(
+                    records
+                        .sort(Record.compare)
+                        .reverse(),
+                    (a, b) =>
+                        Utils.equals(
+                            DateGroup.fromDate({ today, time: a.date }),
+                            DateGroup.fromDate({ today, time: b.date })
+                        )
+                )
+                    .map(groupRecords => {
+                        const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date });
 
-                    return DateGroup.view(
-                        groupTag,
-                        groupRecords,
-                        DateGroup.getCollapsingState(
+                        return DateGroup.view(
                             groupTag,
-                            collapsedGroups,
-                            collapsingTransition
-                        ),
-                        clickedCollapseButton,
-                        today,
-                    )
-                })
-            : [Layout.text("No hay ninguna entrada todavía")]
+                            groupRecords,
+                            dateGroupState
+                        )
+                    })
+                : [Layout.text("No hay ninguna entrada todavía")]
+        )
     )
 }

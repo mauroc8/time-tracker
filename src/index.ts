@@ -27,7 +27,6 @@ import * as Utils from './utils/Utils'
 import * as Maybe from './utils/Maybe'
 
 import * as DateGroup from './DateGroup'
-import * as Transition from './Transition'
 
 import './index.css'
 
@@ -38,8 +37,7 @@ import './index.css'
 export type State = {
     records: Records.Records,
     today: Date.Date,
-    collapsedGroups: Array<DateGroup.Tag>,
-    collapsingTransition: Transition.Collapsing,
+    dateGroupState: DateGroup.State,
 }
 
 export function stateOf(state: State): State {
@@ -51,22 +49,10 @@ export function initialState(
     today: Date.Date,
     now: Time.Time
 ): Update.Update<State, Event> {
-    try {
-        return Update.of(
-            Decoder
-                .decode(
-                    storedState && JSON.parse(storedState),
-                    decoder(today)
-                )
-                .withDefault(newInitialState(today)),
-            waitTilTomorrow(now)
-        )
-    } catch (e) {
-        return Update.of(
-            newInitialState(today),
-            waitTilTomorrow(now)
-        )
-    }
+    return Update.of(
+        newInitialState(today),
+        waitTilTomorrow(now)
+    )
 }
 
 /** Espera hasta la medianoche para actualizar el `today` */
@@ -81,26 +67,8 @@ function newInitialState(today: Date.Date): State {
     return {
         records: Records.mockRecords(today),
         today,
-        collapsedGroups: [],
-        collapsingTransition: Transition.collapsingIdle(),
+        dateGroupState: DateGroup.init(),
     }
-}
-
-export function decoder(today: Date.Date): Decoder.Decoder<State> {
-    return Decoder.map2(
-        Decoder.property('records', Records.decoder),
-        Decoder.property(
-            'collapsedGroups',
-            Decoder.array(DateGroup.decoder)
-        ),
-        (records, collapsedGroups) =>
-            stateOf({
-                records,
-                today,
-                collapsedGroups,
-                collapsingTransition: Transition.collapsingIdle(),
-            })
-    )
 }
 
 // --- UPDATE
@@ -114,18 +82,14 @@ export function decoder(today: Date.Date): Decoder.Decoder<State> {
  export type Event =
      | { event: "none" }
      | { event: "gotNewDate", date: globalThis.Date }
-     | { event: "clickedCollapseButton", group: DateGroup.Tag }
-     // Collapse transition
-     | { event: "gotHeightOfGroupBeingCollapsed", group: DateGroup.Tag, height: number }
-     | { event: "startCollapseTransition" }
-     | { event: "endCollapseTransition" }
+     | { event: "dateGroupEvent", dateGroupEvent: DateGroup.Event }
 
-export function eventOf(event: Event): Event {
+function eventOf(event: Event): Event {
     return event;
 }
 
-function clickedCollapseButton(group: DateGroup.Tag): Event {
-    return eventOf({ event: "clickedCollapseButton", group })
+function dateGroupEvent(dateGroupEvent: DateGroup.Event): Event {
+    return { event: "dateGroupEvent", dateGroupEvent }
 }
 
 function update(state: State, event: Event): Update.Update<State, Event> {
@@ -138,83 +102,21 @@ function update(state: State, event: Event): Update.Update<State, Event> {
                 stateOf({ ...state, today: Date.fromJavascriptDate(event.date) }),
                 waitTilTomorrow(Time.fromJavascriptDate(event.date))
             )
-
-        // --- Collapse groups (with transitions)
-
-        case "clickedCollapseButton":
-            return state.collapsedGroups.some(Utils.eq(event.group))
-                ? Update.pure({
-                    ...state,
-                    collapsedGroups:
-                        state.collapsedGroups.filter(group => !Utils.equals(group, event.group)),
-                })
-                // The "collapsing" transition requires querying the DOM and waiting an init frame.
-                : Update.of(
-                    state,
-                    getHeightOfGroup(
-                        event.group,
-                        height =>
-                            eventOf({
-                                event: "gotHeightOfGroupBeingCollapsed",
-                                group: event.group,
-                                height
-                            }),
-                        eventOf({ event: "none" })
-                    )
-                )
-
-        case "gotHeightOfGroupBeingCollapsed":
-            return Update.of(
-                stateOf({
-                    ...state,
-                    collapsedGroups: [...state.collapsedGroups, event.group],
-                    collapsingTransition: Transition.aboutToCollapse(event.group, event.height)
-                }),
-                Cmd.map(
-                    Cmd.waitMilliseconds(0),
-                    _ => eventOf({ event: "startCollapseTransition" })
-                )
+        
+        case "dateGroupEvent":
+            return Update.mapBoth(
+                DateGroup.update(state.dateGroupState, event.dateGroupEvent),
+                dateGroupState => stateOf({ ...state, dateGroupState }),
+                dateGroupEvent
             )
-
-        case "startCollapseTransition":
-            return Update.of(
-                stateOf({
-                    ...state,
-                    collapsingTransition: Transition.startCollapsing(state.collapsingTransition)
-                }),
-                Cmd.map(
-                    Cmd.waitMilliseconds(DateGroup.collapsingTransitionSeconds * 1000),
-                    _ => eventOf({ event: "endCollapseTransition" })
-                )
-            )
-
-        case "endCollapseTransition":
-            return Update.pure({
-                ...state,
-                collapsingTransition: Transition.collapsingIdle()
-            })
     }
-}
-
-function getHeightOfGroup<A>(
-    group: DateGroup.Tag,
-    onHeight: (height: number) => A,
-    onError: A
-): Cmd.Cmd<A> {
-    return Cmd.map(
-        Cmd.getRectOf(DateGroup.toStringId(group)),
-        maybeRect =>
-            maybeRect
-                .map(rect => onHeight(rect.height))
-                .withDefault(onError)
-    )
 }
 
 // --- VIEW
 
 export function view(state: State): Html.Html<Event> {
     return Layout.toHtml(
-        {},
+        { today: state.today },
         "div",
         [
             Html.style("display", "flex"),
@@ -244,12 +146,12 @@ body {
                 ],
                 [
                     Layout.space(0),
-                    Records.view(
-                        state.records.array,
-                        state.today,
-                        state.collapsedGroups,
-                        state.collapsingTransition,
-                        clickedCollapseButton,
+                    Layout.map(
+                        Records.view(
+                            state.records.array,
+                            state.dateGroupState,
+                        ),
+                        dateGroupEvent
                     ),
                     Layout.space(0),
                 ]

@@ -238,6 +238,21 @@ export function withContext<E, Context>(useContext: (context: Context) => Layout
     }
 }
 
+export function map<A, B, C>(layout: Layout<A, C>, f: (a: A) => B): Layout<B, C> {
+    return {
+        type: "Layout",
+        build: context => {
+            const built = layout.build(context)
+
+            return {
+                html: Html.map(built.html, f),
+                spacingX: built.spacingX,
+                spacingY: built.spacingY,
+            }
+        }
+    }
+}
+
 // --- ATTRIBUTES
 
 /** Layouts can receive the same attributes from the `Html` module, and also a

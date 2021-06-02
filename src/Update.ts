@@ -22,3 +22,15 @@ export function andThen<A, B, C>(update: Update<A, C>, f: (a: A) => Update<B, C>
 
     return of(newState, Cmd.batch([ cmd, cmd0 ]))
 }
+
+export function mapCmd<A, C, D>(update: Update<A, C>, f: (c: C) => D): Update<A, D> {
+    return of(update.state, Cmd.map(update.cmd, f))
+}
+
+export function mapBoth<A, B, C, D>(
+    update: Update<A, C>,
+    f: (a: A) => B,
+    g: (c: C) => D,
+): Update<B, D> {
+    return map(mapCmd(update, g), f)
+}

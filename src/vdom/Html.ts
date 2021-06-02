@@ -34,6 +34,19 @@ export function toElement<Evt>(html: Html<Evt>, dispatch: (evt: Evt) => void): E
     }
 }
 
+export function map<A, B>(html: Html<A>, f: (a: A) => B): Html<B> {
+    switch (html.nodeType) {
+        case "node":
+            return node(
+                html.tagName,
+                html.attributes.map(attr => mapAttribute(attr, f)),
+                html.children.map(child => map(child, f))
+            )
+        case "text":
+            return html
+    }
+}
+
 // Attr
 
 export type Attribute<Evt> =
@@ -90,6 +103,15 @@ export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: E
                 // ¯\_(ツ)_/¯
             }
             return
+    }
+}
+
+function mapAttribute<A, B>(attribute: Attribute<A>, f: (a: A) => B): Attribute<B> {
+    switch (attribute.tag) {
+        case "eventHandler":
+            return on(attribute.eventName, (a) => f(attribute.handler(a)))
+        default:
+            return attribute
     }
 }
 
