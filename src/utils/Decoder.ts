@@ -41,7 +41,7 @@ export const number: Decoder<number> =
                 : Result.error<number, Error>({ tag: 'expectingNumber' })
     )
 
-export function literal<A>(literal: A): Decoder<A> {
+export function literal<A extends string | number | boolean | null | undefined>(literal: A): Decoder<A> {
     return decoder(
         (a: unknown) =>
             a === literal
@@ -101,7 +101,6 @@ export function oneOf<A>(decoder_: Decoder<A>, ...decoders: Array<Decoder<A>>): 
             )
     )
 }
-
 
 export type Error =
     | { tag: 'expectingString' }
@@ -357,5 +356,558 @@ export function maybe<A>(decoder_: Decoder<A>): Decoder<Maybe.Maybe<A>> {
             property('value', decoder_),
             (_, value) => Maybe.just(value)
         )
+    )
+}
+
+type TypeOfDecoderObject<
+    Keys extends string,
+    Object extends { [key in Keys]: Object[key] }
+> =
+    {
+        [key in Keys]:
+            Object[key] extends infer A
+                ? Decoder<A>
+                : never
+    }
+
+type TypeEquality<A, B> = A extends B ? B extends A ? true : false : false
+
+/**
+ * Expects an object with the shape:
+ * 
+ * ```ts
+ * {
+ *   [keyA]: Decoder<A>,
+ *   [keyB]: Decoder<B>,
+ *   ...
+ * }
+ * ```
+ * 
+ * where `keyA`, `keyB`, ... can be any string.
+ * 
+ * And returns a decoder for an object with the shape:
+ * 
+ * ```ts
+ * Decoder<{
+ *   [keyA]: A,
+ *   [keyB]: B,
+ *   ...
+ * }>
+ * ```
+*/
+export function object<
+    Keys extends string,
+    Object extends
+        TypeEquality<Object, { [key in Keys]: Object[key] }> extends true
+            ? { [key in Keys]: Object[key] }
+            : never
+    ,
+>(
+    object: TypeOfDecoderObject<Keys, Object>
+): Decoder<Object> {
+    return Object.entries(object)
+        .reduce(
+            (decoder: Decoder<any>, [key, value]) =>
+                map2(
+                    decoder,
+                    property(key, value as Decoder<unknown>),
+                    (record, decodedValue) => ({ ...record, [key]: decodedValue })
+                ),
+            succeed<any>({})
+        )
+}
+
+export function object1<
+    KeyA extends string,
+    A,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+): Decoder<
+    { [key in KeyA]: A }
+> {
+    return map(
+        property<A>(keyA, decoderA),
+        (valueA) =>
+            ({
+                [keyA]: valueA,
+            } as any)
+    )
+}   
+
+export function object2<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+> {
+    return map2(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        (valueA, valueB) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+            } as any)
+    )
+}
+
+export function object3<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+> {
+    return map3(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        (valueA, valueB, valueC) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+            } as any)
+    )
+}
+
+export function object4<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+    KeyD extends string,
+    D,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+    keyD: KeyD,
+    decoderD: Decoder<D>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+        & { [key in KeyD]: D }
+> {
+    return map4(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        property<D>(keyD, decoderD),
+        (valueA, valueB, valueC, valueD) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+                [keyD]: valueD,
+            } as any)
+    )
+}
+
+export function object5<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+    KeyD extends string,
+    D,
+    KeyE extends string,
+    E,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+    keyD: KeyD,
+    decoderD: Decoder<D>,
+    keyE: KeyE,
+    decoderE: Decoder<E>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+        & { [key in KeyD]: D }
+        & { [key in KeyE]: E }
+> {
+    return map5(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        property<D>(keyD, decoderD),
+        property<E>(keyE, decoderE),
+        (valueA, valueB, valueC, valueD, valueE) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+                [keyD]: valueD,
+                [keyE]: valueE,
+            } as any)
+    )
+}
+
+export function object6<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+    KeyD extends string,
+    D,
+    KeyE extends string,
+    E,
+    KeyF extends string,
+    F,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+    keyD: KeyD,
+    decoderD: Decoder<D>,
+    keyE: KeyE,
+    decoderE: Decoder<E>,
+    keyF: KeyF,
+    decoderF: Decoder<F>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+        & { [key in KeyD]: D }
+        & { [key in KeyE]: E }
+        & { [key in KeyF]: F }
+> {
+    return map6(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        property<D>(keyD, decoderD),
+        property<E>(keyE, decoderE),
+        property<F>(keyF, decoderF),
+        (valueA, valueB, valueC, valueD, valueE, valueF) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+                [keyD]: valueD,
+                [keyE]: valueE,
+                [keyF]: valueF,
+            } as any)
+    )
+}
+
+export function object7<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+    KeyD extends string,
+    D,
+    KeyE extends string,
+    E,
+    KeyF extends string,
+    F,
+    KeyG extends string,
+    G,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+    keyD: KeyD,
+    decoderD: Decoder<D>,
+    keyE: KeyE,
+    decoderE: Decoder<E>,
+    keyF: KeyF,
+    decoderF: Decoder<F>,
+    keyG: KeyG,
+    decoderG: Decoder<G>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+        & { [key in KeyD]: D }
+        & { [key in KeyE]: E }
+        & { [key in KeyF]: F }
+        & { [key in KeyG]: G }
+> {
+    return map7(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        property<D>(keyD, decoderD),
+        property<E>(keyE, decoderE),
+        property<F>(keyF, decoderF),
+        property<G>(keyG, decoderG),
+        (valueA, valueB, valueC, valueD, valueE, valueF, valueG) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+                [keyD]: valueD,
+                [keyE]: valueE,
+                [keyF]: valueF,
+                [keyG]: valueG,
+            } as any)
+    )
+}
+
+export function object8<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+    KeyD extends string,
+    D,
+    KeyE extends string,
+    E,
+    KeyF extends string,
+    F,
+    KeyG extends string,
+    G,
+    KeyH extends string,
+    H,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+    keyD: KeyD,
+    decoderD: Decoder<D>,
+    keyE: KeyE,
+    decoderE: Decoder<E>,
+    keyF: KeyF,
+    decoderF: Decoder<F>,
+    keyG: KeyG,
+    decoderG: Decoder<G>,
+    keyH: KeyH,
+    decoderH: Decoder<H>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+        & { [key in KeyD]: D }
+        & { [key in KeyE]: E }
+        & { [key in KeyF]: F }
+        & { [key in KeyG]: G }
+        & { [key in KeyH]: H }
+> {
+    return map8(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        property<D>(keyD, decoderD),
+        property<E>(keyE, decoderE),
+        property<F>(keyF, decoderF),
+        property<G>(keyG, decoderG),
+        property<H>(keyH, decoderH),
+        (valueA, valueB, valueC, valueD, valueE, valueF, valueG, valueH) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+                [keyD]: valueD,
+                [keyE]: valueE,
+                [keyF]: valueF,
+                [keyG]: valueG,
+                [keyH]: valueH,
+            } as any)
+    )
+}
+
+function union2<
+    A,
+    B,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+): Decoder<A | B> {
+    return decoder(
+        data =>
+            decoderA
+                .decoder(data)
+                .map<A | B>(x => x)
+                .orElse(_ =>
+                    decoderB
+                        .decoder(data)
+                        .map<A | B>(x => x)    
+                )
+    )
+}
+
+export function union3<
+    A,
+    B,
+    C,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+): Decoder<A | B | C> {
+    return union2(
+        union2(decoderA, decoderB),
+        decoderC,
+    )
+}
+
+export function union4<
+    A,
+    B,
+    C,
+    D,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+): Decoder<A | B | C | D> {
+    return union3(
+        union2(decoderA, decoderB),
+        decoderC,
+        decoderD,
+    )
+}
+
+export function union5<
+    A,
+    B,
+    C,
+    D,
+    E,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+    decoderE: Decoder<E>,
+): Decoder<A | B | C | D | E> {
+    return union4(
+        union2(decoderA, decoderB),
+        decoderC,
+        decoderD,
+        decoderE,
+    )
+}
+
+export function union6<
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+    decoderE: Decoder<E>,
+    decoderF: Decoder<F>,
+): Decoder<A | B | C | D | E | F> {
+    return union5(
+        union2(decoderA, decoderB),
+        decoderC,
+        decoderD,
+        decoderE,
+        decoderF,
+    )
+}
+
+export function union7<
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+    decoderE: Decoder<E>,
+    decoderF: Decoder<F>,
+    decoderG: Decoder<G>,
+): Decoder<A | B | C | D | E | F | G> {
+    return union6(
+        union2(decoderA, decoderB),
+        decoderC,
+        decoderD,
+        decoderE,
+        decoderF,
+        decoderG,
+    )
+}
+
+export function union8<
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+    decoderE: Decoder<E>,
+    decoderF: Decoder<F>,
+    decoderG: Decoder<G>,
+    decoderH: Decoder<H>,
+): Decoder<A | B | C | D | E | F | G | H> {
+    return union7(
+        union2(decoderA, decoderB),
+        decoderC,
+        decoderD,
+        decoderE,
+        decoderF,
+        decoderG,
+        decoderH,
     )
 }

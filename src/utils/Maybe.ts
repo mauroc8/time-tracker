@@ -44,7 +44,7 @@ export function caseOf<A, B>(maybe: Maybe<A>, ifJust: (a: A) => B, ifNothing: ()
     return maybe
         .map(a => () => ifJust(a))
         .withDefault(ifNothing)
-        ();
+        ()
 }
 
 class Just<A> implements Maybe<A> {

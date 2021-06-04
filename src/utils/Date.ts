@@ -78,14 +78,14 @@ export const monthDecoder: Decoder.Decoder<Month> =
 // https://weeknumber.net/how-to/javascript
 /** Returns the ISO week of the date. */
 export function isoWeek(x: Date): number {
-    var date = toJavascriptDate(x);
+    var date = toJavascriptDate(x)
     // Thursday in current week decides the year.
-    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7)
     // January 4 is always in week 1.
-    var week1 = new window.Date(date.getFullYear(), 0, 4);
+    var week1 = new window.Date(date.getFullYear(), 0, 4)
     // Adjust to Thursday in week 1 and count number of weeks from date to week1.
     return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000
-        - 3 + (week1.getDay() + 6) % 7) / 7);
+        - 3 + (week1.getDay() + 6) % 7) / 7)
 }
 
 

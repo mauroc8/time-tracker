@@ -98,7 +98,7 @@ export function toDomAttribute<Evt>(attribute: Attribute<Evt>, dispatch: (evt: E
 
         case "class":
             try {
-                $element.classList.add(attribute.value);
+                $element.classList.add(attribute.value)
             } catch (e) {
                 // ¯\_(ツ)_/¯
             }

@@ -95,7 +95,7 @@ function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boole
     } else if (a.tag === "property" && b.tag === "property") {
         return a.name === b.name && Utils.equals(a.value, b.value)
     } else if (a.tag === "eventHandler" && b.tag === "eventHandler") {
-        // The function comparison will most likely always return false;
+        // The function comparison will most likely always return false
         // a smarter implementation could optimize this case somehow.
         return a.eventName === b.eventName && a.handler === b.handler
     } else if (a.tag === "style" && b.tag === "style") {
@@ -128,7 +128,7 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
             return
         case "class":
             try {
-                $node.classList.remove(attr.value);
+                $node.classList.remove(attr.value)
             } catch (e) {
                 // ¯\_(ツ)_/¯
             }

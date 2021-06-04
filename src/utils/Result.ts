@@ -6,6 +6,7 @@ type ResultInterface<A, E> = {
     mapError: <F>(fn: (e: E) => F) => Result<A, F>,
     withDefault: (default_: A) => A,
     match: <B>(mapValue: (a: A) => B, mapError: (e: E) => B) => B,
+    orElse: <F>(fn: (e: E) => Result<A, F>) => Result<A, F>,
 }
 
 export type Result<A, E> =
@@ -21,6 +22,7 @@ export function ok<A, E>(value: A): Result<A, E> {
         mapError: _ => ok(value),
         withDefault: _ => value,
         match: (fn, _) => fn(value),
+        orElse: _ => ok(value)
     }
 }
 
@@ -33,6 +35,7 @@ export function error<A, E>(err: E): Result<A, E> {
         mapError: fn => error(fn(err)),
         withDefault: default_ => default_,
         match: (_, fn) => fn(err),
+        orElse: fn => fn(err),
     }
 }
 

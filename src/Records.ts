@@ -76,17 +76,9 @@ export function mockRecords(today: Date.Date): Records {
 }
 
 export const decoder: Decoder.Decoder<Records> =
-    Decoder.andThen(
-        Decoder.property("tag", Decoder.string),
-        tag => {
-            if (tag === "Records") {
-                return Decoder.map(
-                    Decoder.array(Record.decoder),
-                    array => ({ tag, array })
-                )
-            }
-            return Decoder.fail(`tag "${tag}" is not equal to "Records"`)
-        }
+    Decoder.object2(
+        'tag', Decoder.literal('Records'),
+        'array', Decoder.array(Record.decoder)
     )
 
 export function view<Context extends { today: Date.Date }>(
@@ -110,7 +102,7 @@ export function view<Context extends { today: Date.Date }>(
                         )
                 )
                     .map(groupRecords => {
-                        const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date });
+                        const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date })
 
                         return DateGroup.view(
                             groupTag,

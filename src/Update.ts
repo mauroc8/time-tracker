@@ -16,7 +16,7 @@ export function map<A, B, C>(update: Update<A, C>, f: (a: A) => B): Update<B, C>
 }
 
 export function andThen<A, B, C>(update: Update<A, C>, f: (a: A) => Update<B, C>): Update<B, C> {
-    const { state, cmd } = update;
+    const { state, cmd } = update
 
     const { state: newState, cmd: cmd0 } = f(state)
 
@@ -33,4 +33,8 @@ export function mapBoth<A, B, C, D>(
     g: (c: C) => D,
 ): Update<B, D> {
     return map(mapCmd(update, g), f)
+}
+
+export function addCmd<A, B>(update: Update<A, B>, cmd: Cmd.Cmd<B>): Update<A, B> {
+    return of(update.state, Cmd.batch([ update.cmd, cmd ]))
 }

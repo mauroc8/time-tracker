@@ -1,3 +1,10 @@
+/**
+ * La distancia de Levenshtein es una forma de calcular cuan "parecidas" son dos strings cualquiera.
+ * 
+ * El algoritmo base es simple. Ver https://en.wikipedia.org/wiki/Levenshtein_distance
+ * 
+ * Se complejiza porque es necesario optimizarlo un poco.
+*/
 
 // --- Memoize the intermediate results (a la dynamic programming) ---
 

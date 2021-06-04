@@ -13,12 +13,12 @@ export function assertNever(never: never): void {
 /** Structural equality */
 export function equals<A>(a: A, b: A): boolean {
     if (a instanceof Array && b instanceof Array) {
-        return a.every((x, i) => equals(x, b[i]));
+        return a.every((x, i) => equals(x, b[i]))
     }
 
     if (typeof a === 'object' && typeof b === 'object') {
         if (a === null || b === null) {
-            return a === b;
+            return a === b
         }
 
         for (const [key, value] of Object.entries(a)) {
@@ -29,20 +29,20 @@ export function equals<A>(a: A, b: A): boolean {
                         (b as unknown as { [property: string]: unknown })[key]
                     )
             ) {
-                return false;
+                return false
             }
         }
 
         for (const key of Object.keys(b)) {
             if (!(key in a)) {
-                return false;
+                return false
             }
         }
 
-        return true;
+        return true
     }
 
-    return a === b;
+    return a === b
 }
 
 export const eq = <A>(a: A) => (b: A) => equals(a, b)

@@ -105,7 +105,7 @@ export function getRectOf(
                 if (elem === null) {
                     dispatch(Maybe.nothing())
                 } else {
-                    const rect = elem.getBoundingClientRect();
+                    const rect = elem.getBoundingClientRect()
 
                     dispatch(
                         Maybe.just({

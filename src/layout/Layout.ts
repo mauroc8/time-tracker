@@ -313,7 +313,7 @@ function merge<E, C>(layouts: Array<Layout<E, C>>): MergedLayouts<E, C> {
     return {
         type: "MergedLayouts",
         build: context => {
-            const built = layouts.map(layout => layout.build(context));
+            const built = layouts.map(layout => layout.build(context))
             
             return {
                 html: built.map(x => x.html),

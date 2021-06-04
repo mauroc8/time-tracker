@@ -32,7 +32,7 @@ export type Record = {
     startTime: Time.Time,
     endInput: string,
     endTime: Time.Time,
-    date: Date.Date
+    date: Date.Date,
 }
 
 export function record(
@@ -252,34 +252,19 @@ export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
     return records.filter(record => !hasId(id, record))
 }
 
-export const idDecoder: Decoder.Decoder<Id> =
-    Decoder.map2(
-        Decoder.property('tag', Decoder.literal('recordId')),
-        Decoder.property('id', Decoder.number),
-        (_, x) => id(x)
-    )
-
 export const decoder: Decoder.Decoder<Record> =
-    Decoder.map8(
-        Decoder.property('id', idDecoder),
-        Decoder.property('description', Decoder.string),
-        Decoder.property('startInput', Decoder.string),
-        Decoder.property('startTime', Time.decoder),
-        Decoder.property('endInput', Decoder.string),
-        Decoder.property('endTime', Time.decoder),
-        Decoder.property('taskInput', Decoder.string),
-        Decoder.property('date', Date.decoder),
-        (id, description, startInput, startTime, endInput, endTime, taskInput, date) =>
-            ({
-                id,
-                description,
-                startInput,
-                startTime,
-                endInput,
-                endTime,
-                taskInput,
-                date
-            })
+    Decoder.object8(
+        'id', Decoder.object2(
+            'tag', Decoder.literal('recordId'),
+            'id', Decoder.number,
+        ),
+        'description', Decoder.string,
+        'startInput', Decoder.string,
+        'startTime', Time.decoder,
+        'endInput', Decoder.string,
+        'endTime', Time.decoder,
+        'taskInput', Decoder.string,
+        'date', Date.decoder
     )
 
 export function search(query: string, records: Array<Record>): Array<Record> {

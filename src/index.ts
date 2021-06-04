@@ -40,6 +40,20 @@ export type State = {
     dateGroupState: DateGroup.State,
 }
 
+export const decoderAlt: Decoder.Decoder<State> =
+    Decoder.object({
+        records: Records.decoder,
+        today: Date.decoder,
+        dateGroupState: DateGroup.decoder,
+    })
+
+export const decoder: Decoder.Decoder<State> =
+    Decoder.object3(
+        'records', Records.decoder,
+        'today', Date.decoder,
+        'dateGroupState', DateGroup.decoder,
+    )
+
 export function stateOf(state: State): State {
     return state
 }
@@ -49,6 +63,24 @@ export function initialState(
     today: Date.Date,
     now: Time.Time
 ): Update.Update<State, Event> {
+    if (storedState !== null) {
+        try {
+            const decodedStordedState = Decoder.decode(
+                JSON.parse(storedState),
+                decoder
+            )
+
+            if (decodedStordedState.tag === 'ok') {
+                return Update.of(
+                    { ...decodedStordedState.value, today },
+                    waitTilTomorrow(now)
+                )
+            } else {
+                console.log(decodedStordedState)
+            }
+        } catch (e) {}
+    }
+
     return Update.of(
         newInitialState(today),
         waitTilTomorrow(now)
@@ -85,7 +117,7 @@ function newInitialState(today: Date.Date): State {
      | { event: "dateGroupEvent", dateGroupEvent: DateGroup.Event }
 
 function eventOf(event: Event): Event {
-    return event;
+    return event
 }
 
 function dateGroupEvent(dateGroupEvent: DateGroup.Event): Event {
@@ -104,12 +136,19 @@ function update(state: State, event: Event): Update.Update<State, Event> {
             )
         
         case "dateGroupEvent":
-            return Update.mapBoth(
-                DateGroup.update(state.dateGroupState, event.dateGroupEvent),
-                dateGroupState => stateOf({ ...state, dateGroupState }),
-                dateGroupEvent
+            return Update.andThen(
+                Update.mapBoth(
+                    DateGroup.update(state.dateGroupState, event.dateGroupEvent),
+                    dateGroupState => stateOf({ ...state, dateGroupState }),
+                    dateGroupEvent
+                ),
+                saveStateToLocalStorage
             )
     }
+}
+
+function saveStateToLocalStorage(state: State): Update.Update<State, Event> {
+    return Update.of(state, Cmd.saveToLocalStorage('state', state))
 }
 
 // --- VIEW
@@ -175,7 +214,7 @@ if ($rootElement !== null) {
         Time.fromJavascriptDate(new window.Date())
     )
 
-    let currentState = init.state;
+    let currentState = init.state
 
     requestAnimationFrame(() => {
         init.cmd.execute(dispatch)

@@ -85,5 +85,5 @@ export function fromJavascriptDate(date: globalThis.Date): Time {
 
 /** Devuelve la cantidad de minutos que faltan para que termine el día. */
 export function minutesBeforeMidnight(time: Time): number {
-    return (23 - time.hours) * 60 + (60 - time.minutes);
+    return (23 - time.hours) * 60 + (60 - time.minutes)
 }

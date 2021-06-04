@@ -41,7 +41,7 @@ export function groupWhile<A>(
     array: Array<A>,
     compare: (a: A, b: A) => boolean
 ): Array<[A, ...Array<A>]> {
-    const length = array.length;
+    const length = array.length
 
     const newArray: Array<[A, ...Array<A>]> = []
 

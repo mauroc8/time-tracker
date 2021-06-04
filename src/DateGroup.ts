@@ -15,16 +15,37 @@ import './DateGroup.css'
 const collapsingTransitionSeconds = 0.26
 
 type Transition =
-    | { tag: "idle" }
-    | { tag: "aboutToCollapse", group: Tag, height: number }
-    | { tag: "collapsing", group: Tag }
+    | { tag: 'idle' }
+    | { tag: 'aboutToCollapse', groupTag: Tag, height: number }
+    | { tag: 'collapsing', groupTag: Tag }
+
+function transitionDecoder(): Decoder.Decoder<Transition> {
+    return Decoder.union3(
+        Decoder.object1(
+            'tag', Decoder.literal('idle')
+        ),
+        Decoder.object3(
+            'tag', Decoder.literal('aboutToCollapse'),
+            'groupTag', groupTagDecoder(),
+            'height', Decoder.number,
+        ),
+        Decoder.object2(
+            'tag', Decoder.literal('collapsing'),
+            'groupTag', groupTagDecoder(),
+        ),
+    )
+}
 
 function idle(): Transition {
     return { tag: "idle" }
 }
 
 function aboutToCollapse(group: Tag, height: number): Transition {
-    return { tag: 'aboutToCollapse', group, height }
+    return { tag: 'aboutToCollapse', groupTag: group, height }
+}
+
+function collapsing(tag: Tag): Transition {
+    return { tag: 'collapsing', groupTag: tag }
 }
 
 function startCollapsing(collapsingCollapseTransitionState: Transition): Transition {
@@ -34,7 +55,7 @@ function startCollapsing(collapsingCollapseTransitionState: Transition): Transit
             return collapsingCollapseTransitionState
 
         case 'aboutToCollapse':
-            return { tag: 'collapsing', group: collapsingCollapseTransitionState.group }
+            return collapsing(collapsingCollapseTransitionState.groupTag)
     }
 }
 
@@ -47,6 +68,12 @@ export type State = {
     transition: Transition,
     collapsedGroups: Array<Tag>,
 }
+
+export const decoder: Decoder.Decoder<State> =
+    Decoder.object2(
+        'transition', transitionDecoder(),
+        'collapsedGroups', Decoder.array(groupTagDecoder()),
+    )
 
 function stateOf(state: State): State {
     return state
@@ -210,12 +237,12 @@ export function fromRecords(
     | { groupTag: "nextWeek" }
     | { groupTag: "inTheFuture" }
 
-function of(group: Tag): Tag {
-    return group;
+function tagOf(group: Tag): Tag {
+    return group
 }
 
-export const decoder: Decoder.Decoder<Tag> =
-    Decoder.andThen(
+function groupTagDecoder(): Decoder.Decoder<Tag> {
+    return Decoder.andThen(
         Decoder.property("groupTag", Decoder.string),
         groupTag => {
             switch (groupTag) {
@@ -225,23 +252,23 @@ export const decoder: Decoder.Decoder<Tag> =
                 case "lastWeek":
                 case "lastYear":
                 case "lastMonth":
-                    return Decoder.succeed(of({ groupTag }))
+                    return Decoder.succeed(tagOf({ groupTag }))
                 case "year":
                     return Decoder.map(
                         Decoder.property("year", Decoder.number),
-                        year => of({ groupTag, year })
+                        year => tagOf({ groupTag, year })
                     )
                 case "month":
                     return Decoder.map(
                         Decoder.property("month", Date.monthDecoder),
-                        month => of({ groupTag, month })
+                        month => tagOf({ groupTag, month })
                     )
                 case "weeksAgo":
                     return Decoder.andThen(
                         Decoder.property("x", Decoder.number),
                         x =>
                             x === 2 || x === 3 || x === 4
-                                ? Decoder.succeed(of({ groupTag, x }))
+                                ? Decoder.succeed(tagOf({ groupTag, x }))
                                 : Decoder.fail(`Invalid weeksAgo ${x}`)
                     )
                 default:
@@ -249,6 +276,7 @@ export const decoder: Decoder.Decoder<Tag> =
             }
         }
     )
+}
 
 export function toSpanishLabel(group: Tag): string {
     switch (group.groupTag) {
@@ -358,20 +386,20 @@ export function getViewStatus(
 ): ViewStatus {
     switch (state.transition.tag) {
         case 'aboutToCollapse':
-            if (Utils.equals(state.transition.group, groupTag)) {
+            if (Utils.equals(state.transition.groupTag, groupTag)) {
                 return { tag: 'aboutToCollapse', height: state.transition.height }
             }
-            break;
+            break
         case 'collapsing':
-            if (Utils.equals(state.transition.group, groupTag)) {
+            if (Utils.equals(state.transition.groupTag, groupTag)) {
                 return { tag: 'collapsing' }
             }
-            break;
+            break
         case 'idle':
-            break;
+            break
         default:
             Utils.assertNever(state.transition)
-            break;
+            break
     }
 
     if (state.collapsedGroups.some(Utils.eq(groupTag))) {
