@@ -8,7 +8,7 @@ import * as TimeGroup from './TimeGroup'
 import * as Record from './Record'
 import * as Array_ from './utils/Array'
 import * as Update from './Update'
-import * as Cmd from './utils/Cmd'
+import * as Task from './utils/Task'
 import * as Pair from './utils/Pair'
 import './DateGroup.css'
 
@@ -21,7 +21,7 @@ type Transition =
 
 function transitionDecoder(): Decoder.Decoder<Transition> {
     return Decoder.union3(
-        Decoder.object1(
+        Decoder.object(
             'tag', Decoder.literal('idle')
         ),
         Decoder.object3(
@@ -118,16 +118,18 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
 
             return Update.of(
                 state,
-                getHeightOfGroup(
-                    event.groupTag,
-                    height =>
-                        eventOf({
-                            tag: "gotHeightOfGroupBeingCollapsed",
-                            groupTag: event.groupTag,
-                            height
-                        }),
-                        eventOf({ tag: "domError" })
-                )
+                [
+                    getHeightOfGroup(
+                        event.groupTag,
+                        height =>
+                            eventOf({
+                                tag: "gotHeightOfGroupBeingCollapsed",
+                                groupTag: event.groupTag,
+                                height
+                            }),
+                            eventOf({ tag: "domError" })
+                    )
+                ]
             )
 
         case "gotHeightOfGroupBeingCollapsed":
@@ -136,10 +138,12 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                     collapsedGroups: [...state.collapsedGroups, event.groupTag],
                     transition: aboutToCollapse(event.groupTag, event.height)
                 }),
-                Cmd.map(
-                    Cmd.waitMilliseconds(0),
-                    _ => eventOf({ tag: "startCollapseTransition" })
-                )
+                [
+                    Task.map(
+                        Task.waitMilliseconds(0),
+                        _ => eventOf({ tag: "startCollapseTransition" })
+                    )
+                ]
             )
 
         case "startCollapseTransition":
@@ -148,10 +152,12 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                     collapsedGroups: state.collapsedGroups,
                     transition: startCollapsing(state.transition)
                 }),
-                Cmd.map(
-                    Cmd.waitMilliseconds(collapsingTransitionSeconds * 1000),
-                    _ => eventOf({ tag: "endCollapseTransition" })
-                )
+                [
+                    Task.map(
+                        Task.waitMilliseconds(collapsingTransitionSeconds * 1000),
+                        _ => eventOf({ tag: "endCollapseTransition" })
+                    )
+                ]
             )
 
         case "endCollapseTransition":
@@ -166,9 +172,9 @@ function getHeightOfGroup<A>(
     group: Tag,
     onHeight: (height: number) => A,
     onError: A
-): Cmd.Cmd<A> {
-    return Cmd.map(
-        Cmd.getRectOf(toStringId(group)),
+): Task.Task<A> {
+    return Task.map(
+        Task.getRectOf(toStringId(group)),
         maybeRect =>
             maybeRect
                 .map(rect => onHeight(rect.height))
@@ -242,6 +248,46 @@ function tagOf(group: Tag): Tag {
 }
 
 function groupTagDecoder(): Decoder.Decoder<Tag> {
+    return Decoder.union9(
+        Decoder.object2(
+            'groupTag', Decoder.literal('year'),
+            'year', Decoder.number,
+        ),
+        Decoder.object(
+            'groupTag', Decoder.literal('lastYear'),
+        ),
+        Decoder.object2(
+            'groupTag', Decoder.literal('month'),
+            'month', Date.monthDecoder,
+        ),
+        Decoder.object(
+            'groupTag', Decoder.literal('lastMonth'),
+        ),
+        Decoder.object2(
+            'groupTag', Decoder.literal('weeksAgo'),
+            'x', Decoder.andThen(
+                Decoder.number,
+                n => n < 2 || n > 4
+                    ? Decoder.fail<2 | 3 | 4>('Invalid weeks ago')
+                    : Decoder.succeed<2 | 3 | 4>(n as 2 | 3 | 4)
+            )
+        ),
+        Decoder.object(
+            'groupTag', Decoder.literal('lastWeek'),
+        ),
+        Decoder.object(
+            'groupTag', Decoder.literal('thisWeek'),
+        ),
+        Decoder.object(
+            'groupTag', Decoder.literal('nextWeek'),
+        ),
+        Decoder.object(
+            'groupTag', Decoder.literal('inTheFuture'),
+        ),
+    )
+}
+
+function groupTagDecoderOld(): Decoder.Decoder<Tag> {
     return Decoder.andThen(
         Decoder.property("groupTag", Decoder.string),
         groupTag => {

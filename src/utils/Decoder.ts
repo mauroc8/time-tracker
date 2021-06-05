@@ -372,7 +372,9 @@ type TypeOfDecoderObject<
 
 type TypeEquality<A, B> = A extends B ? B extends A ? true : false : false
 
-/**
+/** I don't recommend this function because it gives terrible compiler errors.
+ * I leave it as a proof of concept that the convenience over `objectN` functions isn't worth it.
+ *
  * Expects an object with the shape:
  * 
  * ```ts
@@ -395,7 +397,7 @@ type TypeEquality<A, B> = A extends B ? B extends A ? true : false : false
  * }>
  * ```
 */
-export function object<
+export function objectPoc<
     Keys extends string,
     Object extends
         TypeEquality<Object, { [key in Keys]: Object[key] }> extends true
@@ -417,7 +419,7 @@ export function object<
         )
 }
 
-export function object1<
+export function object<
     KeyA extends string,
     A,
 >(
@@ -909,5 +911,38 @@ export function union8<
         decoderF,
         decoderG,
         decoderH,
+    )
+}
+
+export function union9<
+    A,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+>(
+    decoderA: Decoder<A>,
+    decoderB: Decoder<B>,
+    decoderC: Decoder<C>,
+    decoderD: Decoder<D>,
+    decoderE: Decoder<E>,
+    decoderF: Decoder<F>,
+    decoderG: Decoder<G>,
+    decoderH: Decoder<H>,
+    decoderI: Decoder<I>,
+): Decoder<A | B | C | D | E | F | G | H | I> {
+    return union8(
+        union2(decoderA, decoderB),
+        decoderC,
+        decoderD,
+        decoderE,
+        decoderF,
+        decoderG,
+        decoderH,
+        decoderI,
     )
 }

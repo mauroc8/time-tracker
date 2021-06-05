@@ -19,6 +19,12 @@ import * as Decoder from './utils/Decoder'
 export type Records =
     { tag: 'Records', array: Array<Record.Record> }
 
+export const decoder: Decoder.Decoder<Records> =
+    Decoder.object2(
+        'tag', Decoder.literal('Records'),
+        'array', Decoder.array(Record.decoder)
+    )
+
 export function mockRecords(today: Date.Date): Records {
     return {
         tag: 'Records',
@@ -74,12 +80,6 @@ export function mockRecords(today: Date.Date): Records {
         ]
     }
 }
-
-export const decoder: Decoder.Decoder<Records> =
-    Decoder.object2(
-        'tag', Decoder.literal('Records'),
-        'array', Decoder.array(Record.decoder)
-    )
 
 export function view<Context extends { today: Date.Date }>(
     records: Array<Record.Record>,

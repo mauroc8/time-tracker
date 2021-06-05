@@ -3,7 +3,7 @@ export interface Maybe<A> {
     withDefault: (value: A) => A
     map: <B>(func: (a: A) => B) => Maybe<B>
     andThen: <B>(func: (a: A) => Maybe<B>) => Maybe<B>
-    orElse: (_: () => A) => A
+    orElse: (_: () => Maybe<A>) => Maybe<A>
 }
 
 export function just<A>(value: A): Maybe<A> {
@@ -67,8 +67,8 @@ class Just<A> implements Maybe<A> {
         return func(this.value)
     }
 
-    orElse(_: () => A): A {
-        return this.value
+    orElse(_: () => Maybe<A>): Maybe<A> {
+        return this
     }
 
     toBool(): boolean {
@@ -93,8 +93,8 @@ class Nothing<A> implements Maybe<A> {
         return new Nothing()
     }
 
-    orElse(value: () => A): A {
-        return value()
+    orElse(f: () => Maybe<A>): Maybe<A> {
+        return f()
     }
 
     toBool(): boolean {

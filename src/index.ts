@@ -19,7 +19,7 @@ import * as  Component from './style/Component'
 import * as Date from './utils/Date'
 import * as Time from './utils/Time'
 
-import * as Cmd from './utils/Cmd'
+import * as Cmd from './utils/Task'
 
 import * as Decoder from './utils/Decoder'
 
@@ -40,19 +40,20 @@ export type State = {
     dateGroupState: DateGroup.State,
 }
 
-export const decoderAlt: Decoder.Decoder<State> =
-    Decoder.object({
-        records: Records.decoder,
-        today: Date.decoder,
-        dateGroupState: DateGroup.decoder,
-    })
-
 export const decoder: Decoder.Decoder<State> =
     Decoder.object3(
         'records', Records.decoder,
         'today', Date.decoder,
         'dateGroupState', DateGroup.decoder,
     )
+
+// A proof of concept that error messages using `objectPoc` are worse
+export const decoderProofOfConcept: Decoder.Decoder<State> =
+    Decoder.objectPoc({
+        records: Records.decoder,
+        today: Date.decoder,
+        dateGroupState: DateGroup.decoder,
+    })
 
 export function stateOf(state: State): State {
     return state
@@ -73,7 +74,7 @@ export function initialState(
             if (decodedStordedState.tag === 'ok') {
                 return Update.of(
                     { ...decodedStordedState.value, today },
-                    waitTilTomorrow(now)
+                    [ waitTilTomorrow(now) ]
                 )
             } else {
                 console.log(decodedStordedState)
@@ -83,12 +84,12 @@ export function initialState(
 
     return Update.of(
         newInitialState(today),
-        waitTilTomorrow(now)
+        [ waitTilTomorrow(now) ]
     )
 }
 
 /** Espera hasta la medianoche para actualizar el `today` */
-function waitTilTomorrow(now: Time.Time): Cmd.Cmd<Event> {
+function waitTilTomorrow(now: Time.Time): Cmd.Task<Event> {
     return Cmd.map(
         Cmd.waitMilliseconds(Time.minutesBeforeMidnight(now) * 60 * 1000),
         (date) => eventOf({ event: "gotNewDate", date })
@@ -132,7 +133,7 @@ function update(state: State, event: Event): Update.Update<State, Event> {
         case "gotNewDate":
             return Update.of(
                 stateOf({ ...state, today: Date.fromJavascriptDate(event.date) }),
-                waitTilTomorrow(Time.fromJavascriptDate(event.date))
+                [ waitTilTomorrow(Time.fromJavascriptDate(event.date)) ]
             )
         
         case "dateGroupEvent":
@@ -148,7 +149,7 @@ function update(state: State, event: Event): Update.Update<State, Event> {
 }
 
 function saveStateToLocalStorage(state: State): Update.Update<State, Event> {
-    return Update.of(state, Cmd.saveToLocalStorage('state', state))
+    return Update.of(state, [ Cmd.saveToLocalStorage('state', state) ])
 }
 
 // --- VIEW
@@ -217,7 +218,9 @@ if ($rootElement !== null) {
     let currentState = init.state
 
     requestAnimationFrame(() => {
-        init.cmd.execute(dispatch)
+        for (const cmd of init.cmds) {
+            cmd.execute(deferedDispatch)
+        }
     })
 
     let currentView = view(currentState)
@@ -232,15 +235,18 @@ if ($rootElement !== null) {
             patch($rootElement)
             currentState = updateResult.state
             currentView = updatedView
-            // El comando se ejecuta sincrónicamente, pero las llamadas a "dispatch"
-            // dentro del comando se ejecutan en el siguiente frame.
-            updateResult.cmd.execute(waitAFrameAndDispatch)
+            
+            for (const cmd of updateResult.cmds) {
+                cmd.execute(deferedDispatch)
+            }
         } catch (e) {
             console.error(e)
         }
     }
 
-    function waitAFrameAndDispatch(event: Event) {
+    /** All commands are executed sinchronously, but their "events" are dispatched in the next frame.
+    */
+    function deferedDispatch(event: Event) {
         requestAnimationFrame(() => dispatch(event))
     }
 

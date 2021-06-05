@@ -2,26 +2,36 @@ import * as Maybe from './Maybe'
 import * as Result from './Result'
 import * as Decoder from './Decoder'
 
-type Func<A, B> = (a: A) => B
+type Dispatch<A> = (a: A) => void
 
-export type Cmd<A> =
-    | { tag: "Cmd", execute: Func<Func<A, void>, void> }
-
-function of<A>(execute: Func<Func<A, void>, void>): Cmd<A> {
-    return { tag: "Cmd", execute }
+export type Task<A> = {
+    tag: "Task",
+    execute: (dispatch: Dispatch<A>) => void
 }
 
-export function map<A, B>(cmd: Cmd<A>, f: (a: A) => B): Cmd<B> {
+function of<A>(execute: (dispatch: Dispatch<A>) => void): Task<A> {
+    return { tag: "Task", execute }
+}
+
+export function succeed<A>(a: A): Task<A> {
     return of(
-        (dispatch: Func<B, void>) => {
+        (dispatch: Dispatch<A>) => {
+            dispatch(a)
+        }
+    )
+}
+
+export function map<A, B>(cmd: Task<A>, f: (a: A) => B): Task<B> {
+    return of(
+        (dispatch: Dispatch<B>) => {
             cmd.execute((a: A) => dispatch(f(a)))
         }
     )
 }
 
-export function andThen<A, B>(cmd: Cmd<A>, f: (a: A) => Cmd<B>): Cmd<B> {
+export function andThen<A, B>(cmd: Task<A>, f: (a: A) => Task<B>): Task<B> {
     return of(
-        (dispatch: Func<B, void>) => {
+        (dispatch: Dispatch<B>) => {
             cmd.execute((a: A) => {
                 f(a).execute(dispatch)
             })
@@ -29,34 +39,18 @@ export function andThen<A, B>(cmd: Cmd<A>, f: (a: A) => Cmd<B>): Cmd<B> {
     )
 }
 
-// Ejecuta secuencialmente.
-export function map2<A, B, C>(cmd: Cmd<A>, cmdB: Cmd<B>, f: (a: A, b: B) => C): Cmd<C> {
-    return of(
-        (dispatch: Func<C, void>) => {
-            cmd.execute((a: A) => {
-                cmdB.execute((b: B) => {
-                    dispatch(f(a, b))
-                })
-            })
-        }
+export function map2<A, B, C>(cmd: Task<A>, cmdB: Task<B>, f: (a: A, b: B) => C): Task<C> {
+    return andThen(
+        cmd,
+        a => map(cmdB, b => f(a, b))
     )
 }
 
-export function none<T>(): Cmd<T> {
+export function none<T>(): Task<T> {
     return of(() => {})
 }
 
-export function batch<T>(cmds: Array<Cmd<T>>): Cmd<T> {
-    return of(
-        (dispatch) => {
-            for (const cmd of cmds) {
-                cmd.execute(dispatch)
-            }
-        }
-    )
-}
-
-export function saveToLocalStorage<A>(key: string, value: unknown): Cmd<A> {
+export function saveToLocalStorage<A>(key: string, value: unknown): Task<A> {
     return of (
         (_) => {
             localStorage.setItem(key, JSON.stringify(value))
@@ -64,7 +58,7 @@ export function saveToLocalStorage<A>(key: string, value: unknown): Cmd<A> {
     )
 }
 
-export function getFromLocalStorage(key: string): Cmd<Maybe.Maybe<string>> {
+export function getFromLocalStorage(key: string): Task<Maybe.Maybe<string>> {
     return of(
         (dispatch) => {
             const stateString = localStorage.getItem(key)
@@ -78,7 +72,7 @@ export function getFromLocalStorage(key: string): Cmd<Maybe.Maybe<string>> {
     )
 }
 
-export function preventDefault<T>(event: Event): Cmd<T> {
+export function preventDefault<T>(event: Event): Task<T> {
     return of(
         (_) => {
             event.preventDefault()
@@ -86,7 +80,7 @@ export function preventDefault<T>(event: Event): Cmd<T> {
     )
 }
 
-export function waitMilliseconds(milliseconds: number): Cmd<globalThis.Date> {
+export function waitMilliseconds(milliseconds: number): Task<globalThis.Date> {
     return of(
         (dispatch) => {
             setTimeout(() => dispatch(new Date()), milliseconds)
@@ -96,7 +90,7 @@ export function waitMilliseconds(milliseconds: number): Cmd<globalThis.Date> {
 
 export function getRectOf(
     id: string
-) : Cmd<Maybe.Maybe<{ x: number, y: number, width: number, height: number }>> {
+) : Task<Maybe.Maybe<{ x: number, y: number, width: number, height: number }>> {
     return of(
         (dispatch) => {
             try {
@@ -112,7 +106,7 @@ export function getRectOf(
                             x: rect.x,
                             y: rect.y,
                             width: rect.width,
-                            height: rect.height
+                            height: rect.height,
                         })
                     )
                 }
