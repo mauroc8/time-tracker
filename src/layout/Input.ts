@@ -1,8 +1,16 @@
 import * as Html from '../vdom/Html'
-import * as Layout from '../layout/Layout'
-import './Component.css'
+import * as Layout from './Layout'
+import './Input.css'
 
-export function textInput<A, C>(
+export function onInput<A>(handler: (value: string) => A): Html.Attribute<A> {
+    return Html.on("input", event => handler((event.target as any).value));
+}
+
+export function onChange<A>(handler: (value: boolean) => A): Html.Attribute<A> {
+    return Html.on("change", event => handler((event.target as any).checked));
+}
+
+export function text<A, C>(
     attributes: Array<Layout.Attribute<A, C>>,
     args: {
         id: string,
@@ -11,10 +19,10 @@ export function textInput<A, C>(
         attributes: Array<Html.Attribute<A>>,
     }
 ): Layout.Layout<A, C> {
-    return Layout.columnWithSpacing(
-        14,
+    return Layout.column(
         "label",
         [
+            Layout.spacing(14),
             Html.attribute("for", args.id),
             Html.style("width", "100%"),
             Html.style("height", "100%"),

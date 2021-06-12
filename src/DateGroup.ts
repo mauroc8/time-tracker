@@ -493,15 +493,17 @@ export function view<Context extends { today: Date.Date }>(
     const viewStatus = getViewStatus(groupTag, state)
 
     return Layout.withContext(({ today }) =>
-        Layout.columnWithSpacing(
-            30,
+        Layout.column(
             "div",
-            [Html.class_("w-full")],
             [
-                Layout.rowWithSpacing(
-                    10,
+                Layout.spacing(30),
+                Html.class_("w-full")
+            ],
+            [
+                Layout.row(
                     "button",
                     [
+                        Layout.spacing(10),
                         Html.class_("w-full"),
                         Html.class_("date-group-collapse-button"),
                         Html.style("align-items", "baseline"),
@@ -528,10 +530,10 @@ export function view<Context extends { today: Date.Date }>(
                         Layout.node("span", [], []),
                     ]
                 ),
-                Layout.columnWithSpacing(
-                    30,
+                Layout.column(
                     "div",
                     [
+                        Layout.spacing(30),
                         Html.class_("w-full"),
                         Html.property("id", toStringId(groupTag)),
                         Html.style(

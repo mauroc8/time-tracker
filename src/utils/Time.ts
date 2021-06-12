@@ -72,6 +72,10 @@ export function difference(a: Time, b: Time): Time {
     return fromMinutes(Math.abs(toMinutes(a) - toMinutes(b)))
 }
 
+export function add(a: Time, b: Time): Time {
+    return fromMinutes(toMinutes(a) + toMinutes(b))
+}
+
 export const decoder: Decoder.Decoder<Time> =
     Decoder.map2(
         Decoder.property('hours', Decoder.number),

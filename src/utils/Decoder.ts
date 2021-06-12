@@ -759,6 +759,83 @@ export function object8<
     )
 }
 
+
+export function object9<
+    KeyA extends string,
+    A,
+    KeyB extends string,
+    B,
+    KeyC extends string,
+    C,
+    KeyD extends string,
+    D,
+    KeyE extends string,
+    E,
+    KeyF extends string,
+    F,
+    KeyG extends string,
+    G,
+    KeyH extends string,
+    H,
+    KeyI extends string,
+    I,
+>(
+    keyA: KeyA,
+    decoderA: Decoder<A>,
+    keyB: KeyB,
+    decoderB: Decoder<B>,
+    keyC: KeyC,
+    decoderC: Decoder<C>,
+    keyD: KeyD,
+    decoderD: Decoder<D>,
+    keyE: KeyE,
+    decoderE: Decoder<E>,
+    keyF: KeyF,
+    decoderF: Decoder<F>,
+    keyG: KeyG,
+    decoderG: Decoder<G>,
+    keyH: KeyH,
+    decoderH: Decoder<H>,
+    keyI: KeyI,
+    decoderI: Decoder<I>,
+): Decoder<
+    { [key in KeyA]: A }
+        & { [key in KeyB]: B }
+        & { [key in KeyC]: C }
+        & { [key in KeyD]: D }
+        & { [key in KeyE]: E }
+        & { [key in KeyF]: F }
+        & { [key in KeyG]: G }
+        & { [key in KeyH]: H }
+        & { [key in KeyI]: I }
+> {
+    return map9(
+        property<A>(keyA, decoderA),
+        property<B>(keyB, decoderB),
+        property<C>(keyC, decoderC),
+        property<D>(keyD, decoderD),
+        property<E>(keyE, decoderE),
+        property<F>(keyF, decoderF),
+        property<G>(keyG, decoderG),
+        property<H>(keyH, decoderH),
+        property<I>(keyI, decoderI),
+        (valueA, valueB, valueC, valueD, valueE, valueF, valueG, valueH, valueI) =>
+            ({
+                [keyA]: valueA,
+                [keyB]: valueB,
+                [keyC]: valueC,
+                [keyD]: valueD,
+                [keyE]: valueE,
+                [keyF]: valueF,
+                [keyG]: valueG,
+                [keyH]: valueH,
+                [keyI]: valueI,
+            } as any)
+    )
+}
+
+
+
 function union2<
     A,
     B,

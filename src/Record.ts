@@ -4,7 +4,7 @@ import * as Utils from './utils/Utils'
 import * as Update from './Update'
 import * as Levenshtein from './utils/Levenshtein'
 import * as Layout from './layout/Layout'
-import * as Component from './style/Component'
+import * as Input from './layout/Input'
 import * as Html from './vdom/Html'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
@@ -17,28 +17,47 @@ export type Id = {
     id: number,
 }
 
+const idDecoder: Decoder.Decoder<Id> =
+    Decoder.object2(
+        'tag', Decoder.literal('recordId'),
+        'id', Decoder.number,
+    )
+
 export function id(id: number): Id {
     return { tag: "recordId", id }
 }
 
 // RECORD ---
 
-
 export type Record = {
     id: Id,
     description: string,
-    taskInput: string,
+    task: string,
     startInput: string,
     startTime: Time.Time,
     endInput: string,
     endTime: Time.Time,
+    durationInput: string,
     date: Date.Date,
 }
+
+export const decoder: Decoder.Decoder<Record> =
+    Decoder.object9(
+        'id', idDecoder,
+        'description', Decoder.string,
+        'task', Decoder.string,
+        'startInput', Decoder.string,
+        'startTime', Time.decoder,
+        'endInput', Decoder.string,
+        'endTime', Time.decoder,
+        'durationInput',  Decoder.string,
+        'date', Date.decoder
+    )
 
 export function record(
     id: Id,
     description: string,
-    taskInput: string,
+    task: string,
     start: Time.Time,
     end: Time.Time,
     date: Date.Date
@@ -50,7 +69,8 @@ export function record(
         startTime: start,
         endInput: Time.toString(end),
         endTime: end,
-        taskInput,
+        durationInput: Time.toString(Time.difference(start, end)),
+        task: task,
         date,
     }
 }
@@ -59,15 +79,19 @@ export function hasId(id: Id, record: Record): boolean {
     return Utils.equals(id, record.id)
 }
 
-export function withDescription(description: string, record: Record): Record {
+export function getDuration(record: Record): Time.Time {
+    return Time.difference(record.startTime, record.endTime)
+}
+
+export function setDescription(description: string, record: Record): Record {
     return { ...record, description }
 }
 
-export function withTask(taskInput: string, record: Record): Record {
-    return { ...record, taskInput }
+export function setTask(task: string, record: Record): Record {
+    return { ...record, task }
 }
 
-export function withStart(startInput: string, record: Record): Record {
+export function setStartInput(startInput: string, record: Record): Record {
     return {
         ...record,
         startInput,
@@ -75,12 +99,50 @@ export function withStart(startInput: string, record: Record): Record {
     }
 }
 
-export function withEnd(endInput: string, record: Record): Record {
+export function setEndInput(endInput: string, record: Record): Record {
     return {
         ...record,
         endInput,
         endTime: Time.fromString(endInput).withDefault(record.endTime)
     }
+}
+
+export function setStartTime(startTime: Time.Time, record: Record): Record {
+    return {
+        ...record,
+        startTime,
+        startInput: Time.toString(startTime),
+    }
+}
+
+export function setEndTime(endTime: Time.Time, record: Record): Record {
+    return {
+        ...record,
+        endTime,
+        endInput: Time.toString(endTime),
+    }
+}
+
+export function setDurationInput(durationInput: string, record: Record): Record {
+    return Maybe.caseOf(
+        Time.fromString(durationInput),
+        durationTime => setDurationTime(durationTime, record),
+        () =>
+            ({
+                ...record,
+                durationInput,
+            })
+    )
+}
+
+export function setDurationTime(durationTime: Time.Time, record: Record): Record {
+    return setEndTime(
+        Time.add(record.startTime, durationTime),
+        {
+            ...record,
+            durationInput: Time.toString(durationTime),
+        }
+    )
 }
 
 export function compare(a: Record, b: Record): -1 | 0 | 1 {
@@ -93,20 +155,16 @@ export function compare(a: Record, b: Record): -1 | 0 | 1 {
     return dateComparison
 }
 
-/** If a date is mispelled or the task is invalid, reset the input value to the last valid value. */
-export function save(record: Record, today: Date.Date): Record {
-    return {
-        id: record.id,
-        description: record.description,
-        ...Time.fromString(record.startInput)
-            .map(startTime => ({ startTime, startInput: record.startInput }))
-            .withDefault({ startTime: record.startTime, startInput: Time.toString(record.startTime) }),
-        ...Time.fromString(record.endInput)
-            .map(endTime => ({ endTime, endInput: record.endInput }))
-            .withDefault({ endTime: record.endTime, endInput: Time.toString(record.endTime) }),
-        taskInput: record.taskInput,
-        date: today,
-    }
+/** Cleans user input data that isn't in sync with its typed version.
+*/
+export function cleanInputs(record: Record): Record {
+    return setDurationTime(
+        getDuration(record),
+        setStartTime(
+            record.startTime,
+            record
+        )
+    )
 }
 
 export function view<E, C>(
@@ -125,7 +183,7 @@ export function view<E, C>(
         "div",
         [],
         [
-            Component.textInput(
+            Input.text(
                 [
                     Html.style("flex-basis", "40%"),
                 ],
@@ -133,7 +191,7 @@ export function view<E, C>(
                     id: `record_${record.id.id}_description`,
                     label: Layout.column(
                         "div",
-                        [Html.paddingXY(8, 0)],
+                        [Layout.paddingXY(8, 0)],
                         [Layout.text('Descripción')]
                     ),
                     value: record.description,
@@ -141,7 +199,7 @@ export function view<E, C>(
                 }
             ),
             separator,
-            Component.textInput(
+            Input.text(
                 [
                     Html.style("flex-basis", "20%"),
                 ],
@@ -149,15 +207,15 @@ export function view<E, C>(
                     id: `record_${record.id.id}_task`,
                     label: Layout.column(
                         "div",
-                        [Html.paddingXY(8, 0)],
+                        [Layout.paddingXY(8, 0)],
                         [Layout.text('Tarea')]
                     ),
-                    value: record.taskInput,
+                    value: record.task,
                     attributes: [],
                 }
             ),
             separator,
-            Component.textInput(
+            Input.text(
                 [
                     Html.style("flex-basis", "10%"),
                     Html.style("text-align", "right"),
@@ -166,7 +224,7 @@ export function view<E, C>(
                     id: `record_${record.id.id}_start`,
                     label: Layout.column(
                         "div",
-                        [Html.paddingXY(8, 0)],
+                        [Layout.paddingXY(8, 0)],
                         [Layout.text('Inicio')]
                     ),
                     value: record.startInput,
@@ -174,7 +232,7 @@ export function view<E, C>(
                 }
             ),
             separator,
-            Component.textInput(
+            Input.text(
                 [
                     Html.style("flex-basis", "10%"),
                     Html.style("text-align", "right"),
@@ -183,7 +241,7 @@ export function view<E, C>(
                     id: `record_${record.id.id}_end`,
                     label: Layout.column(
                         "div",
-                        [Html.paddingXY(8, 0)],
+                        [Layout.paddingXY(8, 0)],
                         [Layout.text('Fin')]
                     ),
                     value: record.endInput,
@@ -191,7 +249,7 @@ export function view<E, C>(
                 }
             ),
             separator,
-            Component.textInput(
+            Input.text(
                 [
                     Html.style("flex-basis", "10%"),
                     Html.style("text-align", "right"),
@@ -200,7 +258,7 @@ export function view<E, C>(
                     id: `record_${record.id.id}_duration`,
                     label: Layout.column(
                         "div",
-                        [Html.paddingXY(8, 0)],
+                        [Layout.paddingXY(8, 0)],
                         [Layout.text('Duración')]
                     ),
                     value: Time.toString(Time.difference(record.endTime, record.startTime)),
@@ -208,10 +266,10 @@ export function view<E, C>(
                 }
             ),
             separator,
-            Layout.columnWithSpacing(
-                8,
+            Layout.column(
                 "div",
                 [
+                    Layout.spacing(8),
                     Html.style("width", "16px"),
                     Html.style("justify-content", "flex-start"),
                 ],
@@ -223,11 +281,13 @@ export function view<E, C>(
                     Layout.below(
                         "details",
                         [],
-                        Icon.wrapper(
-                            "summary",
-                            [],
-                            Icon.options()
-                        ),
+                        [
+                            Icon.wrapper(
+                                "summary",
+                                [],
+                                Icon.options()
+                            )
+                        ],
                         {
                             tagName: "div",
                             attributes: [ Html.style("right", "0") ],
@@ -251,21 +311,6 @@ export function mapWithId(records: Array<Record>, id: Id, fn: (record: Record) =
 export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
     return records.filter(record => !hasId(id, record))
 }
-
-export const decoder: Decoder.Decoder<Record> =
-    Decoder.object8(
-        'id', Decoder.object2(
-            'tag', Decoder.literal('recordId'),
-            'id', Decoder.number,
-        ),
-        'description', Decoder.string,
-        'startInput', Decoder.string,
-        'startTime', Time.decoder,
-        'endInput', Decoder.string,
-        'endTime', Time.decoder,
-        'taskInput', Decoder.string,
-        'date', Date.decoder
-    )
 
 export function search(query: string, records: Array<Record>): Array<Record> {
     if (query === "")

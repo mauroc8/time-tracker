@@ -114,11 +114,3 @@ function mapAttribute<A, B>(attribute: Attribute<A>, f: (a: A) => B): Attribute<
             return attribute
     }
 }
-
-export function padding<A>(x: number): Attribute<A> {
-    return style("padding", `${x}px`)
-}
-
-export function paddingXY<A>(x: number, y: number): Attribute<A> {
-    return style("padding", `${y}px ${x}px`)
-}

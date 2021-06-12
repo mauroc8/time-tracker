@@ -128,10 +128,11 @@ export function view<E, C>(
     tag: Tag,
     records: Array<Record.Record>,
 ): Layout.Layout<E, C> {
-    return Layout.columnWithSpacing(
-        30,
+    return Layout.column(
         "div",
-        [],
+        [
+            Layout.spacing(30),
+        ],
         [
             Layout.column(
                 "div",
@@ -139,16 +140,17 @@ export function view<E, C>(
                     Html.style("color", Color.toCssString(Color.accent)),
                     Html.style("font-size", "12px"),
                     Html.style("letter-spacing", "0.15em"),
-                    Html.paddingXY(8, 0),
+                    Layout.paddingXY(8, 0),
                 ],
                 [
                     Layout.text(toSpanishLabel(tag).toUpperCase()),
                 ]
             ),
-            Layout.columnWithSpacing(
-                50,
+            Layout.column(
                 "div",
-                [],
+                [
+                    Layout.spacing(50),
+                ],
                 records.map(record => Record.view(record))
             )
         ]

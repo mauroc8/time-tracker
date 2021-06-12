@@ -86,10 +86,12 @@ export function view<Context extends { today: Date.Date }>(
     dateGroupState: DateGroup.State,
 ): Layout.Layout<DateGroup.Event, Context> {
     return Layout.withContext(({ today }) =>
-        Layout.columnWithSpacing(
-            50,
+        Layout.column(
             "div",
-            [Html.class_("w-full")],
+            [
+                Layout.spacing(50),
+                Html.class_("w-full"),
+            ],
             records.length > 0
                 ? Array_.groupWhile(
                     records

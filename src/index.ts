@@ -14,7 +14,6 @@ import * as VirtualDom from './vdom/VirtualDom'
 import * as Layout from './layout/Layout'
 
 import * as Color from './style/Color'
-import * as  Component from './style/Component'
 
 import * as Date from './utils/Date'
 import * as Time from './utils/Time'
@@ -157,46 +156,46 @@ function saveStateToLocalStorage(state: State): Update.Update<State, Event> {
 export function view(state: State): Html.Html<Event> {
     return Layout.toHtml(
         { today: state.today },
-        "div",
-        [
-            Html.style("display", "flex"),
-            Html.style("flex-direction", "column"),
-            Html.style("align-items", "center"),
-        ],
-        [
-            Layout.node(
-                "style",
-                [],
-                [ Layout.text(`
+        Layout.column(
+            "div",
+            [
+                Layout.centerX(),
+            ],
+            [
+                Layout.node(
+                    "style",
+                    [],
+                    [ Layout.text(`
 body {
     background-color: ${Color.toCssString(Color.background)};
     border-top: 6px solid ${Color.toCssString(Color.accent)};
     color: ${Color.toCssString(Color.text)};
 }
-`)
-                ],
-            ),
-            Layout.columnWithSpacing(
-                50,
-                "div",
-                [
-                    Html.class_("w-full"),
-                    Html.style("max-width", (1024 + 40) + "px"),
-                    Html.paddingXY(0, 20),
-                ],
-                [
-                    Layout.space(0),
-                    Layout.map(
-                        Records.view(
-                            state.records.array,
-                            state.dateGroupState,
+    `)
+                    ],
+                ),
+                Layout.column(
+                    "div",
+                    [
+                        Layout.spacing(50),
+                        Html.class_("w-full"),
+                        Html.style("max-width", (1024 + 40) + "px"),
+                        Layout.paddingXY(0, 20),
+                    ],
+                    [
+                        Layout.space(0),
+                        Layout.map(
+                            Records.view(
+                                state.records.array,
+                                state.dateGroupState,
+                            ),
+                            dateGroupEvent
                         ),
-                        dateGroupEvent
-                    ),
-                    Layout.space(0),
-                ]
-            )
-        ]
+                        Layout.space(0),
+                    ]
+                )
+            ]
+        )
     )
 }
 
