@@ -13,7 +13,7 @@ import * as Time from './utils/Time'
 import * as Date from './utils/Date'
 
 export type Id = {
-    tag: "recordId",
+    tag: 'recordId',
     id: number,
 }
 
@@ -24,7 +24,7 @@ const idDecoder: Decoder.Decoder<Id> =
     )
 
 export function id(id: number): Id {
-    return { tag: "recordId", id }
+    return { tag: 'recordId', id }
 }
 
 // RECORD ---
@@ -170,27 +170,20 @@ export function cleanInputs(record: Record): Record {
 export function view<E, C>(
     record: Record,
 ): Layout.Layout<E, C> {
-
-    const separator = Layout.column<E, C>(
+    return Layout.row(
         'div',
         [
-            Html.style("flex-basis", "2%"),
+            Layout.spacing(17),
         ],
-        []
-    )
-
-    return Layout.row(
-        "div",
-        [],
         [
             Input.text(
                 [
-                    Html.style("flex-basis", "40%"),
+                    Layout.fillPortion(4),
                 ],
                 {
                     id: `record_${record.id.id}_description`,
                     label: Layout.column(
-                        "div",
+                        'div',
                         [Layout.paddingXY(8, 0)],
                         [Layout.text('Descripción')]
                     ),
@@ -198,15 +191,14 @@ export function view<E, C>(
                     attributes: [],
                 }
             ),
-            separator,
             Input.text(
                 [
-                    Html.style("flex-basis", "20%"),
+                    Layout.fillPortion(2),
                 ],
                 {
                     id: `record_${record.id.id}_task`,
                     label: Layout.column(
-                        "div",
+                        'div',
                         [Layout.paddingXY(8, 0)],
                         [Layout.text('Tarea')]
                     ),
@@ -214,16 +206,15 @@ export function view<E, C>(
                     attributes: [],
                 }
             ),
-            separator,
             Input.text(
                 [
-                    Html.style("flex-basis", "10%"),
-                    Html.style("text-align", "right"),
+                    Layout.fillPortion(1),
+                    Html.style('text-align', 'right'),
                 ],
                 {
                     id: `record_${record.id.id}_start`,
                     label: Layout.column(
-                        "div",
+                        'div',
                         [Layout.paddingXY(8, 0)],
                         [Layout.text('Inicio')]
                     ),
@@ -231,16 +222,15 @@ export function view<E, C>(
                     attributes: [],
                 }
             ),
-            separator,
             Input.text(
                 [
-                    Html.style("flex-basis", "10%"),
-                    Html.style("text-align", "right"),
+                    Layout.fillPortion(1),
+                    Html.style('text-align', 'right'),
                 ],
                 {
                     id: `record_${record.id.id}_end`,
                     label: Layout.column(
-                        "div",
+                        'div',
                         [Layout.paddingXY(8, 0)],
                         [Layout.text('Fin')]
                     ),
@@ -248,16 +238,15 @@ export function view<E, C>(
                     attributes: [],
                 }
             ),
-            separator,
             Input.text(
                 [
-                    Html.style("flex-basis", "10%"),
-                    Html.style("text-align", "right"),
+                    Layout.fillPortion(1),
+                    Html.style('text-align', 'right'),
                 ],
                 {
                     id: `record_${record.id.id}_duration`,
                     label: Layout.column(
-                        "div",
+                        'div',
                         [Layout.paddingXY(8, 0)],
                         [Layout.text('Duración')]
                     ),
@@ -265,13 +254,12 @@ export function view<E, C>(
                     attributes: [],
                 }
             ),
-            separator,
             Layout.column(
-                "div",
+                'div',
                 [
                     Layout.spacing(8),
-                    Html.style("width", "16px"),
-                    Html.style("justify-content", "flex-start"),
+                    Html.style('width', '16px'),
+                    Layout.startY(),
                 ],
                 [
                     Icon.button(
@@ -279,19 +267,21 @@ export function view<E, C>(
                         Icon.play()
                     ),
                     Layout.below(
-                        "details",
+                        'column',
+                        'details',
                         [],
                         [
                             Icon.wrapper(
-                                "summary",
+                                'summary',
                                 [],
                                 Icon.options()
                             )
                         ],
                         {
-                            tagName: "div",
-                            attributes: [ Html.style("right", "0") ],
-                            children: [ Layout.text("Hola") ]
+                            flexDirection: 'column',
+                            tagName: 'div',
+                            attributes: [ Html.style('right', '0') ],
+                            children: [ Layout.text('Hola') ]
                         }
                     )
                 ]
@@ -313,7 +303,7 @@ export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
 }
 
 export function search(query: string, records: Array<Record>): Array<Record> {
-    if (query === "")
+    if (query === '')
         return []
     else
         return records.map<[Record, number]>(record =>

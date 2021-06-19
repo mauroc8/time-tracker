@@ -9,21 +9,18 @@ export function wrapper<A, C>(
     attributes: Array<Layout.Attribute<A, C>>,
     icon: Html.Html<never>
 ): Layout.Layout<A, C> {
-    return Layout.node(
+    return Layout.row(
         htmlTag,
         [
-            Html.style("width", "16px"),
-            Html.style("height", "16px"),
+            Layout.centerX(),
+            Layout.centerY(),
+            Layout.widthPx(16),
+            Layout.heightPx(16),
             Html.style("border-radius", "50%"),
-            Html.style("display", "flex"),
-            Html.style("align-items", "center"),
-            Html.style("justify-content", "center"),
-            Html.style("background-color", Color.toCssString(Color.background)),
+            Layout.backgroundColor(Color.background),
             ...attributes
         ],
-        [
-            Layout.fromHtml(icon)
-        ]
+        [ icon ]
     )
 }
 
@@ -40,8 +37,8 @@ export function play<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "media-play.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )
@@ -52,8 +49,8 @@ export function delete_<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "trash.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )
@@ -64,8 +61,8 @@ export function options<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "ellipses.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )
@@ -76,8 +73,8 @@ export function chevronUp<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "chevron-top.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )
@@ -88,8 +85,8 @@ export function chevronDown<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "chevron-bottom.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )
@@ -100,8 +97,8 @@ export function chevronLeft<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "chevron-left.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )
@@ -112,8 +109,8 @@ export function chevronRight<A>(): Html.Html<A> {
         "img",
         [
             Html.attribute("src", "chevron-right.svg"),
-            Html.attribute("width", "8"),
-            Html.attribute("height", "8"),
+            Layout.widthPx(8),
+            Layout.heightPx(8),
         ],
         []
     )

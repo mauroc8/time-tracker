@@ -1,49 +1,49 @@
 import * as Html from '../vdom/Html'
 import * as Color from '../style/Color'
 
+import './Layout.css'
+
 // --- LAYOUT
 
-/** Helpers to create HTML.
+/** Helpers to create flexbox layouts. `Layout` is just Html using flexbox and optionally reading state from a context.
 */
 export type Layout<Event, Context> = {
     type: 'Layout',
-    build: (context: Context) => Html.Html<Event>
+    build: (context: Context) => Html.Html<Event>,
 }
-
-export function fromHtml<Event, Context>(
-    html: Html.Html<Event>,
-): Layout<Event, Context> {
-    return {
-        type: 'Layout',
-        build: _ => html
-    }
-}
+    | Html.Html<Event>
 
 export function toHtml<Event, Context>(
     context: Context,
     layout: Layout<Event, Context>,
 ): Html.Html<Event> {
-    return layout.build(context)
+    if (layout.type === 'Layout') {
+        return layout.build(context)
+    }
+    return layout
 }
 
 export function none<Event, Context>(): Layout<Event, Context> {
-    return fromHtml(Html.text(''))
+    return Html.text('')
 }
 
-export function node<Event, Context>(
+export function node<E, C>(
+    flexDirection: 'row' | 'column',
     htmlTag: string,
-    attributes: Array<Attribute<Event, Context>>,
-    children: Array<Layout<Event, Context>>,
-): Layout<Event, Context> {
+    attributes: Array<Attribute<E, C>>,
+    children: Array<Layout<E, C>>,
+): Layout<E, C> {
     return {
         type: 'Layout',
-        build:
-            context =>
-                Html.node(
-                    htmlTag,
-                    toHtmlAttributes(attributes, context),
-                    merge(children).build(context)
-                ),
+        build: (context: C) => Html.node(
+            htmlTag,
+            [
+                ...toHtmlAttributes(attributes, context, flexDirection),
+                Html.style('display', 'flex'),
+                Html.style('flex-direction', flexDirection),
+            ],
+            children.map(child => toHtml(context, child))
+        ),
     }
 }
 
@@ -53,6 +53,7 @@ export function column<E, C>(
     children: Array<Layout<E, C>>,
 ): Layout<E, C> {
     return node(
+        'column',
         htmlTag,
         [
             ...attributes,
@@ -69,6 +70,7 @@ export function row<E, C>(
     children: Array<Layout<E, C>>,
 ): Layout<E, C> {
     return node(
+        'row',
         htmlTag,
         [
             ...attributes,
@@ -80,35 +82,36 @@ export function row<E, C>(
 }
 
 export function text<E, C>(text: string): Layout<E, C> {
-    return fromHtml(Html.text(text))
+    return Html.text(text)
 }
 
 export function space<E, C>(size: number): Layout<E, C> {
-    return fromHtml(
-        Html.node(
-            'div',
-            [
-                Html.style('display', 'inline-block'),
-                Html.style('width', size + 'px'),
-                Html.style('height', size + 'px'),
-            ],
-            []
-        )
+    return Html.node(
+        'div',
+        [
+            Html.style('display', 'inline-block'),
+            Html.style('width', size + 'px'),
+            Html.style('height', size + 'px'),
+        ],
+        []
     )
 }
 
 /** Dibuja al nodo `below` 'flotando' debajo de `above`, como un menú o un tooltip. */
 export function below<E, C>(
+    flexDirection: 'row' | 'column',
     tagName: string,
     attributes: Array<Attribute<E, C>>,
     children: Array<Layout<E, C>>,
     below: {
+        flexDirection: 'row' | 'column',
         tagName: string,
         attributes: Array<Attribute<E, C>>,
         children: Array<Layout<E, C>>,
     }
 ): Layout<E, C> {
     return node<E, C>(
+        flexDirection,
         tagName,
         [
             ...attributes,
@@ -117,6 +120,7 @@ export function below<E, C>(
         [
             ...children,
             node(
+                below.flexDirection,
                 below.tagName,
                 [
                     ...below.attributes,
@@ -129,11 +133,11 @@ export function below<E, C>(
     )
 }
 
-export function withContext<E, Context>(useContext: (context: Context) => Layout<E, Context>): Layout<E, Context> {
+export function usingContext<E, Context>(useContext: (context: Context) => Layout<E, Context>): Layout<E, Context> {
     return {
         type: 'Layout',
         build: context => {
-            return useContext(context).build(context)
+            return toHtml(context, useContext(context))
         }
     }
 }
@@ -141,18 +145,19 @@ export function withContext<E, Context>(useContext: (context: Context) => Layout
 export function map<A, B, C>(layout: Layout<A, C>, f: (a: A) => B): Layout<B, C> {
     return {
         type: 'Layout',
-        build: context => Html.map(layout.build(context), f)
+        build: context => Html.map(toHtml(context, layout), f)
     }
 }
 
 // --- ATTRIBUTES
 
 /** Layouts can receive the same attributes from the `Html` module, and also a
- * `Layout.attributeWithContext` that uses the context to create an `Html.Attribute`.
+ * `Layout.attributeUsingContext` that uses the context to create an `Html.Attribute`.
  */
 export type Attribute<Event, Context> =
     | Html.Attribute<Event>
-    | { tag: 'attributeWithContext', htmlAttribute: (context: Context) => Html.Attribute<Event> }
+    | { tag: 'attributeUsingContext', htmlAttribute: (context: Context) => Html.Attribute<Event> }
+    | { tag: 'attributeUsingFlexDirection', htmlAttribute: (flexDirection: 'row' | 'column') => Html.Attribute<Event> }
 
 /** Use the current context to create a Html attribute.
  * For example, if the context is the color scheme:
@@ -170,24 +175,36 @@ export type Attribute<Event, Context> =
  * )
  * ```
 */
-export function attributeWithContext<E, Context>(
+export function attributeUsingContext<E, Context>(
     htmlAttribute: (context: Context) => Html.Attribute<E>
 ): Attribute<E, Context> {
     return {
-        tag: 'attributeWithContext',
+        tag: 'attributeUsingContext',
         htmlAttribute
     }
 }
 
-function toHtmlAttribute<E, C>(attribute: Attribute<E, C>, context: C): Html.Attribute<E> {
-    if (attribute.tag === 'attributeWithContext') {
+function attributeUsingFlexDirection<E, C>(
+    htmlAttribute: (flexDirection: 'row' | 'column') => Html.Attribute<E>
+): Attribute<E, C> {
+    return {
+        tag: 'attributeUsingFlexDirection',
+        htmlAttribute
+    }
+}
+
+function toHtmlAttribute<E, C>(attribute: Attribute<E, C>, context: C, flexDirection: 'row' | 'column'): Html.Attribute<E> {
+    if (attribute.tag === 'attributeUsingContext') {
         return attribute.htmlAttribute(context)
+    }
+    if (attribute.tag === 'attributeUsingFlexDirection') {
+        return attribute.htmlAttribute(flexDirection)
     }
     return attribute
 }
 
-function toHtmlAttributes<E, C>(attributes: Array<Attribute<E, C>>, context: C): Array<Html.Attribute<E>> {
-    return attributes.map(attr => toHtmlAttribute(attr, context))
+function toHtmlAttributes<E, C>(attributes: Array<Attribute<E, C>>, context: C, flexDirection: 'row' | 'column'): Array<Html.Attribute<E>> {
+    return attributes.map(attr => toHtmlAttribute(attr, context, flexDirection))
 }
 
 // --- MERGED LAYOUTS (helper)
@@ -200,7 +217,7 @@ type MergedLayouts<Event, Context> = {
 function merge<E, C>(layouts: Array<Layout<E, C>>): MergedLayouts<E, C> {
     return {
         type: 'MergedLayouts',
-        build: context => layouts.map(layout => layout.build(context)),
+        build: context => layouts.map(layout => toHtml(context, layout)),
     }
 }
 
@@ -218,26 +235,103 @@ export function paddingXY<A>(x: number, y: number): Html.Attribute<A> {
     return Html.style('padding', `${y}px ${x}px`)
 }
 
-export function columnCenterX<A>(): Html.Attribute<A> {
-    return Html.style('align-items', 'center');
+export function centerX<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.style('align-items', 'center')
+            : Html.style('justify-content', 'center')
+    )
 }
 
-export function rowCenterY<A>(): Html.Attribute<A> {
-    return Html.style('align-items', 'center');
+export function centerY<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.style('justify-content', 'center')
+            : Html.style('align-items', 'center')
+    )
+}
+
+export function endX<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.style('align-items', 'end')
+            : Html.style('justify-content', 'flex-end')
+    )
+}
+
+export function endY<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.style('justify-content', 'flex-end')
+            : Html.style('align-items', 'end')
+    )
+}
+
+export function startX<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.style('align-items', 'start')
+            : Html.style('justify-content', 'flex-start')
+    )
+}
+
+export function startY<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.style('justify-content', 'flex-start')
+            : Html.style('align-items', 'start')
+    )
+}
+
+export function baselineY<E, C>(): Attribute<E, C> {
+    return attributeUsingFlexDirection(flexDirection =>
+        flexDirection === 'column'
+            ? Html.class_('')
+            : Html.style('align-items', 'baseline')
+    )
 }
 
 export function color<A>(color: Color.Color): Html.Attribute<A> {
-    return Html.style('color', Color.toCssString(color));
+    return Html.style('color', Color.toCssString(color))
 }
 
 export function backgroundColor<A>(color: Color.Color): Html.Attribute<A> {
-    return Html.style('background-color', Color.toCssString(color));
+    return Html.style('background-color', Color.toCssString(color))
 }
 
 export function borderColor<A>(color: Color.Color): Html.Attribute<A> {
-    return Html.style('border-color', Color.toCssString(color));
+    return Html.style('border-color', Color.toCssString(color))
 }
 
 export function borderWidth<A>(width: number): Html.Attribute<A> {
-    return Html.style('border-width', `${Math.floor(width)}px`);
+    return Html.style('border-width', `${Math.floor(width)}px`)
+}
+
+export function fillPortion<A>(grow: number): Html.Attribute<A> {
+    return Html.style('flex-grow', `${grow}`)
+}
+
+export function fullWidth<A>(): Html.Attribute<A> {
+    return Html.class_('w-full')
+}
+
+export function inlineText<A>(text: string): Html.Html<A> {
+    return Html.node(
+        "div",
+        [
+            Html.style("display", "inline-flex"),
+            Html.style("white-space", "nowrap"),
+        ],
+        [
+            Html.text(text),
+        ]
+    )
+}
+
+export function widthPx<A>(px: number): Html.Attribute<A> {
+    return Html.style('width', `${px}px`)
+}
+
+export function heightPx<A>(px: number): Html.Attribute<A> {
+    return Html.style('height', `${px}px`)
 }

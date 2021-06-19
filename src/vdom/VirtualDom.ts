@@ -2,23 +2,20 @@ import * as Html from './Html'
 
 import * as Utils from '../utils/Utils'
 import * as Maybe from '../utils/Maybe'
+import * as Result from '../utils/Result'
 import * as Array_ from '../utils/Array'
+import * as Decoder from '../utils/Decoder'
 
 export function diff<T>(
     oldVDom: Html.Html<T>,
     newVDom: Html.Html<T>,
     dispatch: (event: T) => void,
 ): ($node: Element | Text) => Element | Text {
-
     if (oldVDom.nodeType === "text"
         || newVDom.nodeType === "text"
         || oldVDom.tagName !== newVDom.tagName
     ) {
-        return $node => {
-            const $newNode = Html.toElement(newVDom, dispatch)
-            $node.replaceWith($newNode)
-            return $newNode
-        }
+        return replace(newVDom, dispatch)
     } else {
         const patchAttributes = diffAttributes(oldVDom.attributes, newVDom.attributes, dispatch)
         const patchChildren = diffChildren(oldVDom.children, newVDom.children, dispatch)
@@ -29,6 +26,17 @@ export function diff<T>(
 
             return $node
         }
+    }
+}
+
+function replace<T>(
+    newVDom: Html.Html<T>,
+    dispatch: (event: T) => void,
+) {
+    return ($node: Element | Text) => {
+        const $newNode = Html.toElement(newVDom, dispatch)
+        $node.replaceWith($newNode)
+        return $newNode
     }
 }
 
@@ -109,29 +117,31 @@ function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boole
 
 function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
     if ($node instanceof Text) {
-        // Text nodes don't have attributes AFAIK
+        // Text nodes don't have attributes
         return
     }
 
-    switch (attr.tag) {
-        case "attribute":
-            $node.removeAttribute(attr.name)
-            return
-        case "property":
-            ($node as any)[attr.name] = undefined
-            return
-        case "eventHandler":
-            ($node as any)[`on${attr.eventName}`] = undefined
-            return
-        case "style":
-            ($node as any).style[attr.property] = ""
-            return
-        case "class":
-            try {
+    try {
+        switch (attr.tag) {
+            case "attribute":
+                $node.removeAttribute(attr.name)
+                return
+            case "property":
+                ($node as any)[attr.name] = undefined
+                return
+            case "eventHandler":
+                ($node as any)[`on${attr.eventName}`] = undefined
+                return
+            case "style":
+                ($node as any).style[attr.property] = ""
+                return
+            case "class":
                 $node.classList.remove(attr.value)
-            } catch (e) {
-                // ¯\_(ツ)_/¯
-            }
+                return
+        }
+    } catch (e) {
+        // ¯\_(ツ)_/¯
+        return
     }
 }
 
@@ -145,8 +155,8 @@ function diffChildren<T>(
 ): ($parent: Element | Text) => void {
     return $parent => {
         if ($parent instanceof Element) {
-            /** We need the $parent to calculate the patches because we need to save childNodes[i]
-             * before removing elements, which could alter the indexing.
+            /** We need to calculate all the patches and then apply them because we could alter the indexes
+             * when applying some patch.
              */
             const patches = getChildrenPatches(oldChildren, newChildren, dispatch, $parent)
             patches.forEach(patch => patch())

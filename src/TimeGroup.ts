@@ -45,11 +45,6 @@ export function fromRecords(
 
     // Como `records` es un arreglo no-vacío, `groupWhile` va a devolver
     // un arreglo no-vacío.
-
-    if (timeGroups[0] === undefined) {
-        throw "error: Array_.groupWhile should have returned a nonempty array since its input was a nonempty array"
-    }
-
     return timeGroups as [TimeGroup, ...Array<TimeGroup>]
 }
 
@@ -137,13 +132,13 @@ export function view<E, C>(
             Layout.column(
                 "div",
                 [
-                    Html.style("color", Color.toCssString(Color.accent)),
+                    Layout.color(Color.accent),
                     Html.style("font-size", "12px"),
                     Html.style("letter-spacing", "0.15em"),
                     Layout.paddingXY(8, 0),
                 ],
                 [
-                    Layout.text(toSpanishLabel(tag).toUpperCase()),
+                    Layout.inlineText(toSpanishLabel(tag).toUpperCase()),
                 ]
             ),
             Layout.column(

@@ -46,14 +46,6 @@ export const decoder: Decoder.Decoder<State> =
         'dateGroupState', DateGroup.decoder,
     )
 
-// A proof of concept that error messages using `objectPoc` are worse
-export const decoderProofOfConcept: Decoder.Decoder<State> =
-    Decoder.objectPoc({
-        records: Records.decoder,
-        today: Date.decoder,
-        dateGroupState: DateGroup.decoder,
-    })
-
 export function stateOf(state: State): State {
     return state
 }
@@ -91,7 +83,7 @@ export function initialState(
 function waitTilTomorrow(now: Time.Time): Cmd.Task<Event> {
     return Cmd.map(
         Cmd.waitMilliseconds(Time.minutesBeforeMidnight(now) * 60 * 1000),
-        (date) => eventOf({ event: "gotNewDate", date })
+        (date) => eventOf({ event: 'gotNewDate', date })
     )
 }
 
@@ -109,33 +101,33 @@ function newInitialState(today: Date.Date): State {
  */
  export type Dispatch = (event: Event) => void
 
- /** Event is what's typically called an "action" in Redux
+ /** Event is what's typically called an 'action' in Redux
  */
  export type Event =
-     | { event: "none" }
-     | { event: "gotNewDate", date: globalThis.Date }
-     | { event: "dateGroupEvent", dateGroupEvent: DateGroup.Event }
+     | { event: 'none' }
+     | { event: 'gotNewDate', date: globalThis.Date }
+     | { event: 'dateGroupEvent', dateGroupEvent: DateGroup.Event }
 
 function eventOf(event: Event): Event {
     return event
 }
 
 function dateGroupEvent(dateGroupEvent: DateGroup.Event): Event {
-    return { event: "dateGroupEvent", dateGroupEvent }
+    return { event: 'dateGroupEvent', dateGroupEvent }
 }
 
 function update(state: State, event: Event): Update.Update<State, Event> {
     switch (event.event) {
-        case "none":
+        case 'none':
             return Update.pure(state)
 
-        case "gotNewDate":
+        case 'gotNewDate':
             return Update.of(
                 stateOf({ ...state, today: Date.fromJavascriptDate(event.date) }),
                 [ waitTilTomorrow(Time.fromJavascriptDate(event.date)) ]
             )
         
-        case "dateGroupEvent":
+        case 'dateGroupEvent':
             return Update.andThen(
                 Update.mapBoth(
                     DateGroup.update(state.dateGroupState, event.dateGroupEvent),
@@ -157,15 +149,15 @@ export function view(state: State): Html.Html<Event> {
     return Layout.toHtml(
         { today: state.today },
         Layout.column(
-            "div",
+            'div',
             [
                 Layout.centerX(),
             ],
             [
-                Layout.node(
-                    "style",
+                Html.node(
+                    'style',
                     [],
-                    [ Layout.text(`
+                    [ Html.text(`
 body {
     background-color: ${Color.toCssString(Color.background)};
     border-top: 6px solid ${Color.toCssString(Color.accent)};
@@ -175,12 +167,12 @@ body {
                     ],
                 ),
                 Layout.column(
-                    "div",
+                    'div',
                     [
                         Layout.spacing(50),
-                        Html.class_("w-full"),
-                        Html.style("max-width", (1024 + 40) + "px"),
                         Layout.paddingXY(0, 20),
+                        Layout.fullWidth(),
+                        Html.style('max-width', (1024 + 40) + 'px'),
                     ],
                     [
                         Layout.space(0),
@@ -205,7 +197,7 @@ body {
 let $rootElement = document.getElementById('root') as Element | Text
 
 /** Flags refer to some external state that is passed to app initialization */
-const storedState = localStorage.getItem("state")
+const storedState = localStorage.getItem('state')
 
 if ($rootElement !== null) {
     const init = initialState(
@@ -243,7 +235,7 @@ if ($rootElement !== null) {
         }
     }
 
-    /** All commands are executed sinchronously, but their "events" are dispatched in the next frame.
+    /** All commands are executed sinchronously, but their events are dispatched in the next frame.
     */
     function deferedDispatch(event: Event) {
         requestAnimationFrame(() => dispatch(event))

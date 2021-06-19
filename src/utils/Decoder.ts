@@ -359,66 +359,6 @@ export function maybe<A>(decoder_: Decoder<A>): Decoder<Maybe.Maybe<A>> {
     )
 }
 
-type TypeOfDecoderObject<
-    Keys extends string,
-    Object extends { [key in Keys]: Object[key] }
-> =
-    {
-        [key in Keys]:
-            Object[key] extends infer A
-                ? Decoder<A>
-                : never
-    }
-
-type TypeEquality<A, B> = A extends B ? B extends A ? true : false : false
-
-/** I don't recommend this function because it gives terrible compiler errors.
- * I leave it as a proof of concept that the convenience over `objectN` functions isn't worth it.
- *
- * Expects an object with the shape:
- * 
- * ```ts
- * {
- *   [keyA]: Decoder<A>,
- *   [keyB]: Decoder<B>,
- *   ...
- * }
- * ```
- * 
- * where `keyA`, `keyB`, ... can be any string.
- * 
- * And returns a decoder for an object with the shape:
- * 
- * ```ts
- * Decoder<{
- *   [keyA]: A,
- *   [keyB]: B,
- *   ...
- * }>
- * ```
-*/
-export function objectPoc<
-    Keys extends string,
-    Object extends
-        TypeEquality<Object, { [key in Keys]: Object[key] }> extends true
-            ? { [key in Keys]: Object[key] }
-            : never
-    ,
->(
-    object: TypeOfDecoderObject<Keys, Object>
-): Decoder<Object> {
-    return Object.entries(object)
-        .reduce(
-            (decoder: Decoder<any>, [key, value]) =>
-                map2(
-                    decoder,
-                    property(key, value as Decoder<unknown>),
-                    (record, decodedValue) => ({ ...record, [key]: decodedValue })
-                ),
-            succeed<any>({})
-        )
-}
-
 export function object<
     KeyA extends string,
     A,
@@ -882,10 +822,9 @@ export function union4<
     decoderC: Decoder<C>,
     decoderD: Decoder<D>,
 ): Decoder<A | B | C | D> {
-    return union3(
+    return union2(
         union2(decoderA, decoderB),
-        decoderC,
-        decoderD,
+        union2(decoderC, decoderD),
     )
 }
 
@@ -902,11 +841,9 @@ export function union5<
     decoderD: Decoder<D>,
     decoderE: Decoder<E>,
 ): Decoder<A | B | C | D | E> {
-    return union4(
+    return union2(
         union2(decoderA, decoderB),
-        decoderC,
-        decoderD,
-        decoderE,
+        union3(decoderC, decoderD, decoderE),
     )
 }
 
@@ -925,12 +862,9 @@ export function union6<
     decoderE: Decoder<E>,
     decoderF: Decoder<F>,
 ): Decoder<A | B | C | D | E | F> {
-    return union5(
-        union2(decoderA, decoderB),
-        decoderC,
-        decoderD,
-        decoderE,
-        decoderF,
+    return union2(
+        union3(decoderA, decoderB, decoderC),
+        union3(decoderD, decoderE, decoderF),
     )
 }
 
@@ -951,13 +885,9 @@ export function union7<
     decoderF: Decoder<F>,
     decoderG: Decoder<G>,
 ): Decoder<A | B | C | D | E | F | G> {
-    return union6(
-        union2(decoderA, decoderB),
-        decoderC,
-        decoderD,
-        decoderE,
-        decoderF,
-        decoderG,
+    return union2(
+        union3(decoderA, decoderB, decoderC),
+        union4(decoderD, decoderE, decoderF, decoderG),
     )
 }
 
@@ -980,14 +910,9 @@ export function union8<
     decoderG: Decoder<G>,
     decoderH: Decoder<H>,
 ): Decoder<A | B | C | D | E | F | G | H> {
-    return union7(
-        union2(decoderA, decoderB),
-        decoderC,
-        decoderD,
-        decoderE,
-        decoderF,
-        decoderG,
-        decoderH,
+    return union2(
+        union4(decoderA, decoderB, decoderC, decoderD),
+        union4(decoderE, decoderF, decoderG, decoderH),
     )
 }
 
@@ -1012,14 +937,8 @@ export function union9<
     decoderH: Decoder<H>,
     decoderI: Decoder<I>,
 ): Decoder<A | B | C | D | E | F | G | H | I> {
-    return union8(
-        union2(decoderA, decoderB),
-        decoderC,
-        decoderD,
-        decoderE,
-        decoderF,
-        decoderG,
-        decoderH,
-        decoderI,
+    return union2(
+        union4(decoderA, decoderB, decoderC, decoderD),
+        union5(decoderE, decoderF, decoderG, decoderH, decoderI),
     )
 }
