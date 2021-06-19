@@ -36,6 +36,13 @@ export function fromUndefined<A>(a: A | undefined): Maybe<A> {
         return just(a)
 }
 
+export function fromNullable<A>(a: A | null): Maybe<A> {
+    if (a === null)
+        return nothing()
+    else
+        return just(a)
+}
+
 export function filter<A>(maybe: Maybe<A>, f: (a: A) => boolean): Maybe<A> {
     return maybe.andThen(a => f(a) ? just(a) : nothing())
 }

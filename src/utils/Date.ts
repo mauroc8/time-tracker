@@ -4,6 +4,10 @@ import * as Decoder from './Decoder'
 export type Date =
     { year: number, month: Month, day: number }
 
+/** The type of Javascript's window.Date. It can be converted to both a `Date` and a `Time` */
+export type Javascript =
+    globalThis.Date
+
 export function date(year: number, month: number, day: number): Date {
     return {
         year: Math.min(Math.max(1990, Math.floor(year)), 2100),
@@ -12,21 +16,26 @@ export function date(year: number, month: number, day: number): Date {
     }
 }
 
-/** This is different to how Javascript's Date defines months */
+/** Warn: This is different to how Javascript's Date defines months
+*/
 export type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
 
 function monthOf(number: number): Month {
     return Math.min(Math.max(1, Math.floor(number)), 12) as Month
 }
 
-export function toJavascriptDate(date: Date): globalThis.Date {
-    return new window.Date(date.year, date.month - 1, date.day)
+export function toJavascript(date: Date): Javascript {
+    return new window.Date(
+        date.year,
+        date.month - 1,
+        date.day
+    )
 }
 
-export function fromJavascriptDate(javascriptDate: globalThis.Date): Date {
+export function fromJavascript(javascriptDate: Javascript): Date {
     return date(
         javascriptDate.getFullYear(),
-        1 + javascriptDate.getMonth(),
+        javascriptDate.getMonth() + 1,
         javascriptDate.getDate()
     )
 }
@@ -78,7 +87,7 @@ export const monthDecoder: Decoder.Decoder<Month> =
 // https://weeknumber.net/how-to/javascript
 /** Returns the ISO week of the date. */
 export function isoWeek(x: Date): number {
-    var date = toJavascriptDate(x)
+    var date = toJavascript(x)
     // Thursday in current week decides the year.
     date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7)
     // January 4 is always in week 1.
@@ -134,7 +143,7 @@ export function weekdayToSpanishLabel(weekday: Weekday): string {
 }
 
 export function getWeekday(date: Date): Weekday {
-    switch (toJavascriptDate(date).getDay()) {
+    switch (toJavascript(date).getDay()) {
         case 0: return "Domingo"
         case 1: return "Lunes"
         case 2: return "Martes"

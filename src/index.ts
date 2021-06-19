@@ -21,8 +21,7 @@ startRuntime(
     $rootElement,
     Main.init(
         localStorage.getItem('state'),
-        Date.fromJavascriptDate(new window.Date()),
-        Time.fromJavascriptDate(new window.Date())
+        new window.Date(),
     ),
     Main.view,
     Main.update

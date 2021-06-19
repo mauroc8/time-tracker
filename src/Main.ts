@@ -12,12 +12,13 @@ import * as Color from './style/Color'
 import * as Date from './utils/Date'
 import * as Time from './utils/Time'
 
-import * as Cmd from './utils/Task'
+import * as Task from './utils/Task'
 
 import * as Decoder from './utils/Decoder'
 
 import * as Utils from './utils/Utils'
 import * as Maybe from './utils/Maybe'
+import * as Result from './utils/Result'
 
 import * as DateGroup from './DateGroup'
 
@@ -43,39 +44,56 @@ export const decoder: Decoder.Decoder<State> =
 
 export function init(
     localStorage: string | null,
-    today: Date.Date,
-    now: Time.Time
+    dateTime: Date.Javascript,
 ): Update.Update<State, Event.Event> {
-    if (localStorage !== null) {
-        try {
-            const decodedStordedState = Decoder.decode(
-                JSON.parse(localStorage),
-                decoder
-            )
+    const today = Date.fromJavascript(dateTime)
+    const now = Time.fromJavascript(dateTime)
 
-            if (decodedStordedState.tag === 'ok') {
-                return Update.of(
-                    { ...decodedStordedState.value, today },
-                    [ waitUntilTomorrow(now) ]
-                )
-            } else {
-                console.info('localStorage decode error', decodedStordedState.error)
-            }
-        } catch (e) {
-            console.info('localStorage parse exception', e)
-        }
-    }
-
-    return Update.of(
-        newInitialState(today),
-        [ waitUntilTomorrow(now) ]
+    return Update.addTask(
+        Maybe.fromNullable(localStorage)
+            .map(localStorage => decodeLocalStorage<Event.Event>(localStorage, today))
+            .withDefault(Update.pure(newInitialState(today))),
+        getNewDate(now),        
     )
 }
 
+function decodeLocalStorage<Evt>(
+    localStorage: string,
+    today: Date.Date,
+): Update.Update<State, Evt> {
+    return Utils.jsonParse(localStorage)
+        .mapError(errorWithMessage('localStorage parse error'))
+        .andThen(json =>
+            Decoder.decode(json, decoder)
+                .mapError(Decoder.errorToString)
+                .mapError(errorWithMessage('localStorage decode error'))
+        )
+        .match(
+            state => Update.pure({ ...state, today }),
+            ({ message, error }) =>
+                Update.of(
+                    newInitialState(today),
+                    [
+                        Task.logInfo(message),
+                        Task.logError(error),
+                    ]
+                )
+        )
+}
+
+function errorWithMessage(message: string): (error: unknown) => { message: string, error: unknown } {
+    return error => ({ message, error })
+}
+
+/** Devuelve la cantidad de minutos que faltan para que termine el día. */
+function minutesBeforeMidnight(time: Time.Time): number {
+    return Time.toMinutes(Time.time(23, 59)) - Time.toMinutes(time) + 1
+}
+
 /** Re-fetch the current date in order to update the `today` in our state. */
-function waitUntilTomorrow(now: Time.Time): Cmd.Task<Event.Event> {
-    return Cmd.map(
-        Cmd.waitMilliseconds(Time.minutesBeforeMidnight(now) * 60 * 1000),
+function getNewDate(now: Time.Time): Task.Task<Event.Event> {
+    return Task.map(
+        Task.waitMilliseconds(minutesBeforeMidnight(now) * 60 * 1000),
         Event.gotNewDate
     )
 }
@@ -91,14 +109,14 @@ function newInitialState(today: Date.Date): State {
 // --- UPDATE
 
 export function update(state: State, event: Event.Event): Update.Update<State, Event.Event> {
-    switch (event.eventName) {
+    switch (event.name) {
         case 'none':
             return Update.pure(state)
 
         case 'gotNewDate':
             return Update.of(
-                { ...state, today: Date.fromJavascriptDate(event.date) },
-                [ waitUntilTomorrow(Time.fromJavascriptDate(event.date)) ]
+                { ...state, today: Date.fromJavascript(event.date) },
+                [ getNewDate(Time.fromJavascript(event.date)) ]
             )
         
         case 'dateGroupEvent':
@@ -114,7 +132,7 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
 }
 
 function saveStateToLocalStorage(state: State): Update.Update<State, Event.Event> {
-    return Update.of(state, [ Cmd.saveToLocalStorage('state', state) ])
+    return Update.of(state, [ Task.saveToLocalStorage('state', state) ])
 }
 
 // --- VIEW

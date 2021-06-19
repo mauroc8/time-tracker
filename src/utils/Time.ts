@@ -1,5 +1,6 @@
 import * as Maybe from './Maybe'
 import * as Decoder from './Decoder'
+import * as Date from './Date'
 
 export type Time =
     { hours: number, minutes: number }
@@ -10,6 +11,17 @@ export function time(hours: number, minutes: number): Time {
         minutes: Math.min(Math.max(0, Math.floor(minutes)), 59)
     }
 }
+
+export function fromJavascript(date: Date.Javascript): Time {
+    return time(date.getHours(), date.getMinutes())
+}
+
+export const decoder: Decoder.Decoder<Time> =
+    Decoder.map2(
+        Decoder.property('hours', Decoder.number),
+        Decoder.property('minutes', Decoder.number),
+        time
+    )
 
 export function fromString(input: string): Maybe.Maybe<Time> {
     const matches = input.match(/(\d\d?)[:\- ]*(\d\d?)?/)
@@ -58,11 +70,11 @@ export function toString(time: Time): string {
 }
 
 /** Minutos negativos se convierten en el tiempo 00:00 */
-function fromMinutes(minutes: number): Time {
+export function fromMinutes(minutes: number): Time {
     return time(minutes / 60, minutes % 60)
 }
 
-function toMinutes(time: Time): number {
+export function toMinutes(time: Time): number {
     return time.hours * 60 + time.minutes
 }
 
@@ -72,20 +84,4 @@ export function difference(a: Time, b: Time): Time {
 
 export function add(a: Time, b: Time): Time {
     return fromMinutes(toMinutes(a) + toMinutes(b))
-}
-
-export const decoder: Decoder.Decoder<Time> =
-    Decoder.map2(
-        Decoder.property('hours', Decoder.number),
-        Decoder.property('minutes', Decoder.number),
-        time
-    )
-
-export function fromJavascriptDate(date: globalThis.Date): Time {
-    return time(date.getHours(), date.getMinutes())
-}
-
-/** Devuelve la cantidad de minutos que faltan para que termine el día. */
-export function minutesBeforeMidnight(time: Time): number {
-    return (23 - time.hours) * 60 + (60 - time.minutes)
 }

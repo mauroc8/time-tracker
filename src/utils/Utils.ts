@@ -1,3 +1,4 @@
+import * as Result from "./Result"
 
 export function upperCaseFirst(string: string): string {
     return string[0].toUpperCase() + string.substring(1)
@@ -113,3 +114,10 @@ export function isObject(a: unknown): a is { [key: string]: unknown } {
     return typeof a === 'object' && a !== null
 }
 
+export function jsonParse(json: string): Result.Result<unknown, unknown> {
+    try {
+        return Result.ok(JSON.parse(json))
+    } catch (error: unknown) {
+        return Result.error(error)
+    }
+}

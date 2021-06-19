@@ -1,6 +1,6 @@
 import * as Maybe from './Maybe'
 import * as Result from './Result'
-import * as Decoder from './Decoder'
+import * as Date from './Date'
 
 type Dispatch<A> = (a: A) => void
 
@@ -80,10 +80,10 @@ export function preventDefault<T>(event: Event): Task<T> {
     )
 }
 
-export function waitMilliseconds(milliseconds: number): Task<globalThis.Date> {
+export function waitMilliseconds(milliseconds: number): Task<Date.Javascript> {
     return of(
         (dispatch) => {
-            setTimeout(() => dispatch(new Date()), milliseconds)
+            setTimeout(() => dispatch(new window.Date()), milliseconds)
         }
     )
 }
@@ -116,4 +116,16 @@ export function getRectOf(
             }
         }
     )
+}
+
+export function logInfo<A>(message: string): Task<A> {
+    return of(_ => {
+        console.info(message)
+    })
+}
+
+export function logError<A, E>(error: E): Task<A> {
+    return of(_ => {
+        console.error(error)
+    })
 }

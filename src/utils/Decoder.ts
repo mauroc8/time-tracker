@@ -122,18 +122,32 @@ export function errorToString(error: Error): string {
         case 'expectingNumber':
             return 'Expecting a number'
         case 'expectingLiteral':
-            return `Expecting the literal value '${error.literal}'`
+            return `Expecting the literal ${JSON.stringify(error.literal)}`
         case 'expectingArray':
             return 'Expecting an array'
         case 'atArrayIndex':
-            return `${errorToString(error.error)} at array index ${error.index}`
+            return `${errorToString(error.error)} in <array>[${error.index}]`
         case 'expectingObject':
             return 'Expecting an object'
         case 'atObjectProperty':
-            return `${errorToString(error.error)} at object property '${error.propertyName}'`
+            const [properties, error_] = joinConsecutivePropertyAccessErrors(error.propertyName, error.error)
+            return `${errorToString(error_)} in <object>.${properties.join('.')}`
         case 'message':
             return error.message
     }
+}
+
+function joinConsecutivePropertyAccessErrors(property: string, error: Error): [Array<string>, Error] {
+    if (error.tag === 'atObjectProperty') {
+        const [properties, error_] = joinConsecutivePropertyAccessErrors(error.propertyName, error.error)
+
+        return [
+            [property, ...properties],
+            error_
+        ]
+    }
+
+    return [[property], error]
 }
 
 export function map<A, B>(decoder_: Decoder<A>, mapFunction: (a: A) => B): Decoder<B> {

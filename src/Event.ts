@@ -1,4 +1,5 @@
 import * as DateGroup from './DateGroup'
+import * as Date from './utils/Date'
 
 /** Actions, messages, or events that our application receives.
  * This covers all of our application input. Each Event is handled explicitly in the
@@ -6,18 +7,18 @@ import * as DateGroup from './DateGroup'
 */
 
 export type Event =
-    | { eventName: 'none' }
-    | { eventName: 'gotNewDate', date: globalThis.Date }
-    | { eventName: 'dateGroupEvent', event: DateGroup.Event }
+    | { name: 'none' }
+    | { name: 'gotNewDate', date: Date.Javascript }
+    | { name: 'dateGroupEvent', event: DateGroup.Event }
 
 export function none(): Event {
-    return { eventName: 'none' }
+    return { name: 'none' }
 }
 
-export function gotNewDate(date: globalThis.Date): Event {
-    return { eventName: 'gotNewDate', date }
+export function gotNewDate(date: Date.Javascript): Event {
+    return { name: 'gotNewDate', date }
 }
 
 export function dateGroupEvent(event: DateGroup.Event): Event {
-    return { eventName: 'dateGroupEvent', event }
+    return { name: 'dateGroupEvent', event }
 }
