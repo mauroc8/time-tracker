@@ -1,4 +1,5 @@
 import * as Maybe from './Maybe'
+import * as Utils from './Utils'
 
 export function append<A>(array: Array<A>, element: A): Array<A> {
     return [ ...array, element ]
@@ -7,7 +8,7 @@ export function append<A>(array: Array<A>, element: A): Array<A> {
 export function intersperse<A>(array: Array<A>, element: A): Array<A> {
     return array.reduce(
         (accum, value) => [...accum, element, value],
-        ([] as Array<A>)
+        Utils.id<Array<A>>([])
     ).slice(1)
 }
 

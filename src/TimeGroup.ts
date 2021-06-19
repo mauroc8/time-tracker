@@ -1,7 +1,7 @@
 
 import * as Date from './utils/Date'
 import * as Record from './Record'
-import * as Array_ from './utils/Array'
+import * as NonemptyArray from './utils/NonemptyArray'
 import * as Utils from './utils/Utils'
 import * as Layout from './layout/Layout'
 import * as Html from './vdom/Html'
@@ -15,11 +15,11 @@ import * as Color from './style/Color'
 export type TimeGroup = {
     kind: "TimeGroup",
     tag: Tag,
-    records: [Record.Record, ...Array<Record.Record>],
+    records: NonemptyArray.NonemptyArray<Record.Record>,
 }
 
 function timeGroupOf(
-    records: [Record.Record, ...Array<Record.Record>],
+    records: NonemptyArray.NonemptyArray<Record.Record>,
     today: Date.Date
 ): TimeGroup {
     return {
@@ -30,23 +30,22 @@ function timeGroupOf(
 }
 
 export function fromRecords(
-    records: [Record.Record, ...Array<Record.Record>],
+    records: NonemptyArray.NonemptyArray<Record.Record>,
     today: Date.Date
-): [TimeGroup, ...Array<TimeGroup>] {
-    const timeGroups = Array_.groupWhile(
-        records,
-        (a, b) =>
-        Utils.equals(
-            fromDate({ today, time: a.date }),
-            fromDate({ today, time: b.date })
+): NonemptyArray.NonemptyArray<TimeGroup> {
+    return NonemptyArray.map(
+        NonemptyArray.groupWhile(
+            records,
+            (a, b) =>
+            Utils.equals(
+                fromDate({ today, time: a.date }),
+                fromDate({ today, time: b.date })
+            ),
         ),
+        records_ => timeGroupOf(records_, today)
     )
-        .map(records_ => timeGroupOf(records_, today))
-
-    // Como `records` es un arreglo no-vacío, `groupWhile` va a devolver
-    // un arreglo no-vacío.
-    return timeGroups as [TimeGroup, ...Array<TimeGroup>]
 }
+
 
 // --- TAG
 

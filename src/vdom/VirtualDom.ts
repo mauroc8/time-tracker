@@ -29,12 +29,60 @@ export function diff<T>(
     }
 }
 
+export function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void): Element | Text {
+    switch (html.nodeType) {
+        case 'node':
+            const element = document.createElement(html.tagName)
+
+            for (let attribute of html.attributes)
+                toDomAttribute(attribute, dispatch, element)
+
+            for (let child of html.children)
+                element.appendChild(render(child, dispatch))
+
+            return element
+
+        case 'text':
+            return document.createTextNode(html.text)
+    }
+}
+
+function toDomAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {
+    switch (attribute.tag) {
+        case 'attribute':
+            $element.setAttribute(attribute.name, attribute.value)
+            return
+
+        case 'property':
+            ($element as any)[attribute.name] = attribute.value
+            return
+
+        case 'eventHandler':
+            ($element as any)[`on${attribute.eventName}`] = (event: Event) =>
+                dispatch(attribute.handler(event))
+
+            return
+
+        case 'style':
+            ($element as any).style[attribute.property] = attribute.value
+            return
+
+        case 'class':
+            try {
+                $element.classList.add(attribute.value)
+            } catch (e) {
+                // ¯\_(ツ)_/¯
+            }
+            return
+    }
+}
+
 function replace<T>(
     newVDom: Html.Html<T>,
     dispatch: (event: T) => void,
 ) {
     return ($node: Element | Text) => {
-        const $newNode = Html.toElement(newVDom, dispatch)
+        const $newNode = render(newVDom, dispatch)
         $node.replaceWith($newNode)
         return $newNode
     }
@@ -80,14 +128,14 @@ function diffAttributes<T>(
         (oldAttr, newAttr, i) => ($node: Element) => {
             if (!attributeEquality(oldAttr, newAttr)) {
                 removeAttribute(oldAttr, $node)
-                Html.toDomAttribute(newAttr, dispatch, $node)
+                toDomAttribute(newAttr, dispatch, $node)
             }
         },
         (oldAttr, i) => $node => {
             removeAttribute(oldAttr, $node)
         },
         (newAttr, i) => $node => {
-            Html.toDomAttribute(newAttr, dispatch, $node)
+            toDomAttribute(newAttr, dispatch, $node)
         }
     )
 
@@ -191,7 +239,7 @@ function getChildrenPatches<T>(
             }
         },
         (newChild, i) => () => {
-            $parent.appendChild(Html.toElement(newChild, dispatch))
+            $parent.appendChild(render(newChild, dispatch))
         }
     )
 }

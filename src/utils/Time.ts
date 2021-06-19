@@ -1,8 +1,6 @@
 import * as Maybe from './Maybe'
 import * as Decoder from './Decoder'
 
-
-
 export type Time =
     { hours: number, minutes: number }
 

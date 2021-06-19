@@ -1,6 +1,3 @@
-import * as Maybe from './Maybe'
-import * as Array_ from './Array'
-import * as Pair from './Pair'
 
 export function upperCaseFirst(string: string): string {
     return string[0].toUpperCase() + string.substring(1)
@@ -13,22 +10,12 @@ export function assertNever(never: never): void {
 /** Structural equality */
 export function equals<A>(a: A, b: A): boolean {
     if (a instanceof Array && b instanceof Array) {
-        return a.every((x, i) => equals(x, b[i]))
+        return a.length === b.length && a.every((x, i) => equals(x, b[i]))
     }
 
-    if (typeof a === 'object' && typeof b === 'object') {
-        if (a === null || b === null) {
-            return a === b
-        }
-
-        for (const [key, value] of Object.entries(a)) {
-            if (
-                !(key in b)
-                    || !equals(
-                        value,
-                        (b as unknown as { [property: string]: unknown })[key]
-                    )
-            ) {
+    if (isObject(a) && isObject(b)) {
+        for (const key of Object.keys(a)) {
+            if (!(key in b) || !equals(a[key], b[key])) {
                 return false
             }
         }
@@ -40,6 +27,12 @@ export function equals<A>(a: A, b: A): boolean {
         }
 
         return true
+    }
+
+    // NaN values are not equal between themselves or each other.
+    // Without this, `equals(NaN, NaN)` would return `false`.
+    if (a !== a && b !== b) {
+        return true;
     }
 
     return a === b
@@ -95,3 +88,28 @@ export function pipe3<A, B, C, D>(
 ): D {
     return h(g(f(a)))
 }
+
+/** Understand some type as a literal.
+ * 
+ * ```ts
+ * let foo = 'bar'
+ * > foo : string
+ * let foo = literal('bar')
+ * > foo : 'bar'
+ * ```
+*/
+export function literal<A extends string | number | null | undefined | boolean>(a: A): A {
+    return a
+}
+
+/** Take a value and return the same value. This functions gives me the possibility to
+ * annotate the type I intend the value to be and thus avoid an unsafe cast.
+*/
+export function id<A>(a: A): A {
+    return a
+}
+
+export function isObject(a: unknown): a is { [key: string]: unknown } {
+    return typeof a === 'object' && a !== null
+}
+

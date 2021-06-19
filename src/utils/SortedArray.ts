@@ -34,21 +34,3 @@ export function filter<A>(sorted: SortedArray<A>, fn: (a: A) => boolean, compare
 export function map<A, B>(sorted: SortedArray<A>, fn: (a: A) => B, compare: Compare<B>): SortedArray<B> {
     return fromArray(sorted.array.map(fn), compare)
 }
-
-export function decodeJson<A>(
-    json: unknown,
-    decodeElement: (json: unknown) => Maybe.Maybe<A>,
-    compare: Compare<A>,
-): Maybe.Maybe<SortedArray<A>> {
-    if (typeof json === 'object' && json !== null) {
-        const json_ =
-            json as { tag?: unknown, array?: unknown }
-
-
-        if (json_.tag === "SortedArray") {
-            return Array_.decodeJson(json_.array, decodeElement)
-                .map(array => fromArray(array, compare))
-        }
-    }
-    return Maybe.nothing()
-}

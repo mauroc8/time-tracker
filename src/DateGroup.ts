@@ -267,9 +267,9 @@ function groupTagDecoder(): Decoder.Decoder<Tag> {
             'groupTag', Decoder.literal('weeksAgo'),
             'x', Decoder.andThen(
                 Decoder.number,
-                n => n < 2 || n > 4
-                    ? Decoder.fail<2 | 3 | 4>('Invalid weeks ago')
-                    : Decoder.succeed<2 | 3 | 4>(n as 2 | 3 | 4)
+                n => n === 2 || n === 3 || n === 4
+                    ? Decoder.succeed<2 | 3 | 4>(n)
+                    : Decoder.fail<2 | 3 | 4>('Invalid weeks ago')
             )
         ),
         Decoder.object(

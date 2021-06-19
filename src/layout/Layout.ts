@@ -166,8 +166,8 @@ export type Attribute<Event, Context> =
  * Layout.column(
  *   'div',
  *   [
- *     Layout.useContext(colorScheme => Html.style('color', colorScheme.textColor)),
- *     Layout.useContext(colorScheme => Html.style('background-color', colorScheme.backgroundColor)),
+ *     Layout.useContext(colorScheme => Layout.color(colorScheme.textColor)),
+ *     Layout.useContext(colorScheme => Layout.backgroundColor(colorScheme.backgroundColor)),
  *   ],
  *   [
  *     Layout.text('Hello world'),

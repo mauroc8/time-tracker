@@ -71,8 +71,8 @@ export function array<A>(elementDecoder: Decoder<A>): Decoder<Array<A>> {
 export function property<A>(propertyName: string, propertyDecoder: Decoder<A>): Decoder<A> {
     return decoder(
         (a: unknown) =>
-            typeof a === 'object' && a !== null
-                ? decode((a as any)[propertyName], propertyDecoder)
+            Utils.isObject(a)
+                ? decode(a[propertyName], propertyDecoder)
                     .mapError<Error>(error => ({ tag: 'atObjectProperty', propertyName, error }))
                 : Result.error<A, Error>({ tag: 'expectingObject' })
     )
