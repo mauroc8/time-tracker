@@ -93,7 +93,7 @@ export function oneOf<A>(decoder_: Decoder<A>, ...decoders: Array<Decoder<A>>): 
         (a: unknown) =>
             decoders.reduce(
                 (previousResult, currentDecoder) =>
-                    previousResult.match(
+                    previousResult.caseOf(
                         a => Result.ok(a),
                         _ => decode(a, currentDecoder)
                     ),

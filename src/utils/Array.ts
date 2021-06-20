@@ -91,3 +91,13 @@ export function decodeJson<A>(
     }
     return Maybe.nothing()
 }
+
+export function toDictionary<A>(
+    keyedArray: Array<A>,
+    getKey: (a: A, i: number) => string,
+): { [key: string]: A } {
+    return keyedArray.reduce(
+        (dict, a, i) => ({ ...dict, [getKey(a, i)]: a }),
+        {}
+    )
+}

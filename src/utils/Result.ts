@@ -5,7 +5,7 @@ type ResultInterface<A, E> = {
     andThen: <B>(fn: (a: A) => Result<B, E>) => Result<B, E>,
     mapError: <F>(fn: (e: E) => F) => Result<A, F>,
     withDefault: (default_: A) => A,
-    match: <B>(mapValue: (a: A) => B, mapError: (e: E) => B) => B,
+    caseOf: <B>(mapValue: (a: A) => B, mapError: (e: E) => B) => B,
     orElse: <F>(fn: (e: E) => Result<A, F>) => Result<A, F>,
 }
 
@@ -21,7 +21,7 @@ export function ok<A, E>(value: A): Result<A, E> {
         andThen: fn => fn(value),
         mapError: _ => ok(value),
         withDefault: _ => value,
-        match: (fn, _) => fn(value),
+        caseOf: (fn, _) => fn(value),
         orElse: _ => ok(value)
     }
 }
@@ -34,7 +34,7 @@ export function error<A, E>(err: E): Result<A, E> {
         andThen: _ => error(err),
         mapError: fn => error(fn(err)),
         withDefault: default_ => default_,
-        match: (_, fn) => fn(err),
+        caseOf: (_, fn) => fn(err),
         orElse: fn => fn(err),
     }
 }

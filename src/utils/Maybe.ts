@@ -1,9 +1,10 @@
 export interface Maybe<A> {
     tag: "just" | "nothing"
-    withDefault: (value: A) => A
-    map: <B>(func: (a: A) => B) => Maybe<B>
-    andThen: <B>(func: (a: A) => Maybe<B>) => Maybe<B>
-    orElse: (_: () => Maybe<A>) => Maybe<A>
+    withDefault(value: A): A
+    map<B>(func: (a: A) => B): Maybe<B>
+    andThen<B>(func: (a: A) => Maybe<B>): Maybe<B>
+    orElse(_: () => Maybe<A>): Maybe<A>
+    caseOf<B>(ifJust: (a: A) => B, ifNothing: () => B): B
 }
 
 export function just<A>(value: A): Maybe<A> {
@@ -62,6 +63,10 @@ class Just<A> implements Maybe<A> {
         this.value = value
     }
 
+    caseOf<B>(ifJust: (a: A) => B, _: () => B): B {
+        return ifJust(this.value)
+    }
+
     withDefault(_: A): A {
         return this.value
     }
@@ -87,6 +92,10 @@ class Nothing<A> implements Maybe<A> {
     public tag: "nothing" = "nothing"
 
     constructor() { }
+
+    caseOf<B>(_: (a: A) => B, ifNothing: () => B): B {
+        return ifNothing()
+    }
 
     withDefault(value: A): A {
         return value

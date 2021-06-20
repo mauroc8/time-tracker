@@ -1,7 +1,9 @@
 import * as Utils from '../utils/Utils'
+import * as Pair from '../utils/Pair'
 
 export type Html<Evt> =
     | { type: 'Html', nodeType: 'node', tagName: string, attributes: Array<Attribute<Evt>>, children: Array<Html<Evt>> }
+    | { type: 'Html', nodeType: 'keyed', tagName: string, attributes: Array<Attribute<Evt>>, children: Array<[string, Html<Evt>]> }
     | { type: 'Html', nodeType: 'text', text: string }
 
 export function node<Evt>(
@@ -10,6 +12,14 @@ export function node<Evt>(
     children: Array<Html<Evt>>
 ): Html<Evt> {
     return { type: 'Html', nodeType: 'node', tagName, attributes, children }
+}
+
+export function keyed<Evt>(
+    tagName: string,
+    attributes: Array<Attribute<Evt>>,
+    children: Array<[string, Html<Evt>]>
+): Html<Evt> {
+    return { type: 'Html', nodeType: 'keyed', tagName, attributes, children }
 }
 
 export function text<Evt>(text: string): Html<Evt> {
@@ -24,8 +34,16 @@ export function map<A, B>(html: Html<A>, f: (a: A) => B): Html<B> {
                 html.attributes.map(attr => mapAttribute(attr, f)),
                 html.children.map(child => map(child, f))
             )
+
         case 'text':
             return html
+
+        case 'keyed':
+            return keyed(
+                html.tagName,
+                html.attributes.map(attr => mapAttribute(attr, f)),
+                html.children.map(([key, child]) => Pair.pair(key, map(child, f)))
+            )
     }
 }
 

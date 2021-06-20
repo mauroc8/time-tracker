@@ -47,6 +47,26 @@ export function node<E, C>(
     }
 }
 
+export function keyed<E, C>(
+    flexDirection: 'row' | 'column',
+    htmlTag: string,
+    attributes: Array<Attribute<E, C>>,
+    children: Array<[string, Layout<E, C>]>,
+): Layout<E, C> {
+    return {
+        type: 'Layout',
+        build: (context: C) => Html.keyed(
+            htmlTag,
+            [
+                ...toHtmlAttributes(attributes, context, flexDirection),
+                Html.style('display', 'flex'),
+                Html.style('flex-direction', flexDirection),
+            ],
+            children.map(([key, child]) => [key, toHtml(context, child)])
+        )
+    }
+}
+
 export function column<E, C>(
     htmlTag: string,
     attributes: Array<Attribute<E, C>>,

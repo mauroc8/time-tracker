@@ -6,6 +6,7 @@ import * as Utils from './utils/Utils'
 import * as Layout from './layout/Layout'
 import * as Html from './vdom/Html'
 import * as Color from './style/Color'
+import { pair } from './utils/Pair'
 
 // --- TIME GROUP
 
@@ -13,7 +14,7 @@ import * as Color from './style/Color'
  * por su tiempo de inicio.
 */
 export type TimeGroup = {
-    kind: "TimeGroup",
+    kind: 'TimeGroup',
     tag: Tag,
     records: NonemptyArray.NonemptyArray<Record.Record>,
 }
@@ -23,7 +24,7 @@ function timeGroupOf(
     today: Date.Date
 ): TimeGroup {
     return {
-        kind: "TimeGroup",
+        kind: 'TimeGroup',
         tag: fromDate({ today, time: records[0].date }),
         records,
     }
@@ -51,12 +52,12 @@ export function fromRecords(
 
 
 export type Tag =
-    | { dayTag: "distantDate", weekday: Date.Weekday, day: number, month: Date.Month, year: number }
-    | { dayTag: "thisYearsDate", weekday: Date.Weekday, day: number, month: Date.Month }
-    | { dayTag: "earlierThisWeek", weekday: Date.Weekday }
-    | { dayTag: "yesterday" }
-    | { dayTag: "today" }
-    | { dayTag: "tomorrow" }
+    | { dayTag: 'distantDate', weekday: Date.Weekday, day: number, month: Date.Month, year: number }
+    | { dayTag: 'thisYearsDate', weekday: Date.Weekday, day: number, month: Date.Month }
+    | { dayTag: 'earlierThisWeek', weekday: Date.Weekday }
+    | { dayTag: 'yesterday' }
+    | { dayTag: 'today' }
+    | { dayTag: 'tomorrow' }
 
 
 export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
@@ -64,7 +65,7 @@ export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
 
     if (time.year !== today.year) {
         return {
-            dayTag: "distantDate",
+            dayTag: 'distantDate',
             weekday: Date.getWeekday(time),
             day: time.day,
             month: time.month,
@@ -72,16 +73,16 @@ export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
         }
     } else if (time.month === today.month) {
         if (time.day === today.day - 1) {
-            return { dayTag: "yesterday" }
+            return { dayTag: 'yesterday' }
         } else if (time.day === today.day) {
-            return { dayTag: "today" }
+            return { dayTag: 'today' }
         } else if (time.day === today.day + 1) {
-            return { dayTag: "tomorrow" }
+            return { dayTag: 'tomorrow' }
         } else if (time.day < today.day && Date.isoWeek(time) === Date.isoWeek(today)) {
-            return { dayTag: "earlierThisWeek", weekday: Date.getWeekday(time) }
+            return { dayTag: 'earlierThisWeek', weekday: Date.getWeekday(time) }
         } else {
             return {
-                dayTag: "thisYearsDate",
+                dayTag: 'thisYearsDate',
                 weekday: Date.getWeekday(time),
                 day: time.day,
                 month: time.month,
@@ -89,7 +90,7 @@ export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
         }
     } else {
         return {
-            dayTag: "thisYearsDate",
+            dayTag: 'thisYearsDate',
             weekday: Date.getWeekday(time),
             day: time.day,
             month: time.month,
@@ -99,18 +100,18 @@ export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
 
 export function toSpanishLabel(day: Tag): string {
     switch (day.dayTag) {
-        case "distantDate":
+        case 'distantDate':
             return `${Date.weekdayToSpanishLabel(day.weekday)} ${day.day} de ${Date.monthToSpanishLabel(day.month)}, ${day.year}`
-        case "thisYearsDate":
+        case 'thisYearsDate':
             return `${Date.weekdayToSpanishLabel(day.weekday)} ${day.day} de ${Date.monthToSpanishLabel(day.month)}`
-        case "earlierThisWeek":
+        case 'earlierThisWeek':
             return Date.weekdayToSpanishLabel(day.weekday)
-        case "today":
-            return "Hoy"
-        case "tomorrow":
-            return "Mañana"
-        case "yesterday":
-            return "Ayer"
+        case 'today':
+            return 'Hoy'
+        case 'tomorrow':
+            return 'Mañana'
+        case 'yesterday':
+            return 'Ayer'
     }
 }
 
@@ -127,37 +128,41 @@ export function view<E, C>(
     }
 ): Layout.Layout<E, C> {
     return Layout.column(
-        "div",
+        'div',
         [
             Layout.spacing(30),
         ],
         [
             Layout.column(
-                "div",
+                'div',
                 [
                     Layout.color(Color.accent),
-                    Html.style("font-size", "12px"),
-                    Html.style("letter-spacing", "0.15em"),
+                    Html.style('font-size', '12px'),
+                    Html.style('letter-spacing', '0.15em'),
                     Layout.paddingXY(8, 0),
                 ],
                 [
                     Layout.inlineText(toSpanishLabel(tag).toUpperCase()),
                 ]
             ),
-            Layout.column(
-                "div",
+            Layout.keyed(
+                'column',
+                'div',
                 [
                     Layout.spacing(50),
                 ],
                 records.map(record =>
-                    Record.view(
-                        record,
-                        {
-                            onChange: (onInput, value) => options.onChange(record.id, onInput, value),
-                            onInput: (onInput, value) => options.onInput(record.id, onInput, value),
-                            onPlay: options.onPlay(record.id),
-                            onDelete: options.onDelete(record.id),
-                        }
+                    pair(
+                        String(record.id.id),
+                        Record.view(
+                            record,
+                            {
+                                onChange: (onInput, value) => options.onChange(record.id, onInput, value),
+                                onInput: (onInput, value) => options.onInput(record.id, onInput, value),
+                                onPlay: options.onPlay(record.id),
+                                onDelete: options.onDelete(record.id),
+                            }
+                        )
                     )
                 )
             )

@@ -2,10 +2,7 @@ import { Update } from "./Update"
 import { Html } from "./vdom/Html"
 import { diff, render } from "./vdom/VirtualDom"
 
-export function startRuntime<
-    State,
-    Event,
->(
+export function startRuntime<State, Event>(
     $root: Element,
     init: Update<State, Event>,
     view: (state: State) => Html<Event>,

@@ -1,10 +1,32 @@
 import * as Task from './utils/Task'
 
-export type Update<A, B> =
-    { tag: 'Update', state: A, cmds: Array<Task.Task<B>> }
+export type Update<A, E> =
+    {
+        tag: 'Update',
+        state: A,
+        cmds: Array<Task.Task<E>>
+    }
+        & UpdatePrototype<A, E>
+
+interface UpdatePrototype<A, E> {
+    map<B>(f: (a: A) => B): Update<B, E>
+    andThen<B>(f: (a: A) => Update<B, E>): Update<B, E>
+    mapTasks<F>(f: (x: E) => F): Update<A, F>
+    mapBoth<B, F>(f: (a: A) => B, g: (x: E) => F): Update<B, F>
+    addTask(task: Task.Task<E>): Update<A, E>
+}
 
 export function of<A, B>(state: A, cmds: Array<Task.Task<B>>): Update<A, B> {
-    return { tag: 'Update', state, cmds }
+    return {
+        tag: 'Update',
+        state,
+        cmds,
+        map: function (f) { return map(this, f) },
+        andThen: function (f) { return andThen(this, f) },
+        mapTasks: function(f) { return mapTasks(this, f) },
+        mapBoth: function (f, g) { return mapBoth(this, f, g) },
+        addTask: function (t) { return addTask(this, t) },
+    }
 }
 
 export function pure<A, B>(state: A): Update<A, B> {

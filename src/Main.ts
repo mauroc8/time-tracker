@@ -68,8 +68,10 @@ function decodeLocalStorage<Evt>(
                 .mapError(Decoder.errorToString)
                 .mapError(errorWithMessage('localStorage decode error'))
         )
-        .match(
-            state => Update.pure({ ...state, today }),
+        .caseOf(
+            state =>
+                Update.pure({ ...state, today }),
+
             ({ message, error }) =>
                 Update.of(
                     newInitialState(today),
@@ -120,14 +122,12 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
             )
 
         case 'dateGroupEvent':
-            return Update.andThen(
-                Update.mapBoth(
-                    DateGroup.update(state.dateGroupState, event.event),
-                    dateGroupState => ({ ...state, dateGroupState }),
-                    Event.dateGroupEvent
-                ),
-                saveStateToLocalStorage
-            )
+            return DateGroup.update(state.dateGroupState, event.event)
+                    .mapBoth(
+                        dateGroupState => ({ ...state, dateGroupState }),
+                        Event.dateGroupEvent
+                    )
+                    .andThen(saveStateToLocalStorage)
 
         case 'onRecordPlay':
             return Update.pure(state)

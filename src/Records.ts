@@ -147,6 +147,7 @@ export function view<E, Context extends { today: Date.Date }>(
             records.length > 0
                 ? Array_.groupWhile(
                     records
+                        .slice()
                         .sort(Record.compare)
                         .reverse(),
                     (a, b) =>
