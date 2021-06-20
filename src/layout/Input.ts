@@ -3,42 +3,44 @@ import * as Layout from './Layout'
 import './Input.css'
 
 export function onInput<A>(handler: (value: string) => A): Html.Attribute<A> {
-    return Html.on("input", event => handler((event.target as any).value));
+    return Html.on('input', event => handler((event.target as any).value));
 }
 
-export function onChange<A>(handler: (value: boolean) => A): Html.Attribute<A> {
-    return Html.on("change", event => handler((event.target as any).checked));
+export function onChange<A>(handler: (value: string) => A): Html.Attribute<A> {
+    return Html.on('change', event => handler((event.target as any).value));
 }
 
 export function text<A, C>(
+    flexDirection: 'row' | 'column',
     attributes: Array<Layout.Attribute<A, C>>,
-    args: {
+    options: {
         id: string,
         label: Layout.Layout<A, C>,
         value: string,
         attributes: Array<Html.Attribute<A>>,
     }
 ): Layout.Layout<A, C> {
-    return Layout.column(
-        "label",
+    return Layout.node(
+        flexDirection,
+        'label',
         [
             Layout.spacing(14),
-            Html.attribute("for", args.id),
-            Html.style("width", "100%"),
-            Html.style("height", "100%"),
+            Html.attribute('for', options.id),
+            Html.style('width', '100%'),
+            Html.style('height', '100%'),
             ...attributes,
         ],
         [
-            args.label,
+            options.label,
             Layout.column(
-                "input",
+                'input',
                 [
-                    Html.attribute("id", args.id),
-                    Html.attribute("value", args.value),
-                    Html.style("width", "100%"),
-                    Html.style("height", "100%"),
-                    Html.style("border-radius", "5px"),
-                    ...args.attributes,
+                    Html.property('id', options.id),
+                    Html.property('value', options.value),
+                    Html.style('width', '100%'),
+                    Html.style('height', '100%'),
+                    Html.style('border-radius', '5px'),
+                    ...options.attributes,
                 ],
                 []
             )
@@ -54,9 +56,9 @@ export function button<A, C>(
     }
 ): Layout.Layout<A, C> {
     return Layout.column(
-        "button",
+        'button',
         [
-            Html.on("click", args.onClick),
+            Html.on('click', args.onClick),
             ...attributes
         ],
         [args.label]

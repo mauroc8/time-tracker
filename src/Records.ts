@@ -25,6 +25,51 @@ export const decoder: Decoder.Decoder<Records> =
         'array', Decoder.array(Record.decoder)
     )
 
+function update(
+    records: Records,
+    id: Record.Id,
+    fn: (record: Record.Record) => Record.Record,
+): Records {
+    return {
+        tag: 'Records',
+        array: records.array.map(record =>
+            Utils.equals(id, record.id)
+                ? fn(record)
+                : record
+        )
+    }
+}
+
+export function updateInput(
+    records: Records,
+    id: Record.Id,
+    input: Record.InputName,
+    value: string
+): Records {
+    return update(records, id, record => Record.updateInput(record, input, value))
+}
+
+export function changeInput(
+    records: Records,
+    id: Record.Id,
+    input: Record.InputName,
+    value: string
+): Records {
+    return update(records, id, record => Record.cleanInputs(Record.changeInput(record, input, value)))
+}
+
+export function delete_(
+    records: Records,
+    id: Record.Id
+): Records {
+    return {
+        tag: 'Records',
+        array: records.array.filter(record =>
+            !Utils.equals(id, record.id)
+        )
+    }
+}
+
 export function mockRecords(today: Date.Date): Records {
     return {
         tag: 'Records',
@@ -81,10 +126,17 @@ export function mockRecords(today: Date.Date): Records {
     }
 }
 
-export function view<Context extends { today: Date.Date }>(
+export function view<E, Context extends { today: Date.Date }>(
     records: Array<Record.Record>,
     dateGroupState: DateGroup.State,
-): Layout.Layout<DateGroup.Event, Context> {
+    options: {
+        onGroupEvent: (evt: DateGroup.Event) => E,
+        onChange: (id: Record.Id, input: Record.InputName, value: string) => E,
+        onInput: (id: Record.Id, input: Record.InputName, value: string) => E,
+        onPlay: (id: Record.Id) => E,
+        onDelete: (id: Record.Id) => E,
+    },
+): Layout.Layout<E, Context> {
     return Layout.usingContext(({ today }) =>
         Layout.column(
             "div",
@@ -109,7 +161,8 @@ export function view<Context extends { today: Date.Date }>(
                         return DateGroup.view(
                             groupTag,
                             groupRecords,
-                            dateGroupState
+                            dateGroupState,
+                            options,
                         )
                     })
                 : [Layout.text("No hay ninguna entrada todavía")]

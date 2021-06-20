@@ -90,3 +90,5 @@ export function hsl(h: 0 | number | 360, s: 0 | number | 1, l: 0 | number | 1): 
 export const text = hsl(0, 0, 0.57)
 export const background = hsl(0, 0, 0.08)
 export const accent = hex('7F8BF8')
+export const accent70 = hex('414cb5')
+export const accent50 = hex('2d3582')

@@ -299,16 +299,16 @@ export function backgroundColor<A>(color: Color.Color): Html.Attribute<A> {
     return Html.style('background-color', Color.toCssString(color))
 }
 
-export function borderColor<A>(color: Color.Color): Html.Attribute<A> {
-    return Html.style('border-color', Color.toCssString(color))
+export function border<A>(width: number, color: Color.Color): Html.Attribute<A> {
+    return Html.style('border', `${Math.floor(width)}px solid ${Color.toCssString(color)}`)
 }
 
-export function borderWidth<A>(width: number): Html.Attribute<A> {
-    return Html.style('border-width', `${Math.floor(width)}px`)
-}
-
-export function fillPortion<A>(grow: number): Html.Attribute<A> {
+export function grow<A>(grow: number): Html.Attribute<A> {
     return Html.style('flex-grow', `${grow}`)
+}
+
+export function shrink<A>(shrink: number): Html.Attribute<A> {
+    return Html.style('flex-shrink', `${shrink}`)
 }
 
 export function fullWidth<A>(): Html.Attribute<A> {

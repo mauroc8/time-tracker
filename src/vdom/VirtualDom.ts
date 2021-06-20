@@ -11,8 +11,8 @@ export function diff<T>(
     newVDom: Html.Html<T>,
     dispatch: (event: T) => void,
 ): ($node: Element | Text) => Element | Text {
-    if (oldVDom.nodeType === "text"
-        || newVDom.nodeType === "text"
+    if (oldVDom.nodeType === 'text'
+        || newVDom.nodeType === 'text'
         || oldVDom.tagName !== newVDom.tagName
     ) {
         return replace(newVDom, dispatch)
@@ -127,8 +127,7 @@ function diffAttributes<T>(
         newAttributes,
         (oldAttr, newAttr, i) => ($node: Element) => {
             if (!attributeEquality(oldAttr, newAttr)) {
-                removeAttribute(oldAttr, $node)
-                toDomAttribute(newAttr, dispatch, $node)
+                replaceAttribute(oldAttr, newAttr, dispatch, $node)
             }
         },
         (oldAttr, i) => $node => {
@@ -145,18 +144,38 @@ function diffAttributes<T>(
     }
 }
 
+function replaceAttribute<A>(
+    oldAttr: Html.Attribute<A>,
+    newAttr: Html.Attribute<A>,
+    dispatch: (event: A) => void,
+    $node: Element
+) {
+    /** Handle this special case for input.value and similar. */
+    if (oldAttr.tag === 'property' && newAttr.tag === 'property') {
+        if (oldAttr.name === newAttr.name) {
+            if (($node as any)[newAttr.name] !== newAttr.value) {
+                ($node as any)[newAttr.name] = newAttr.value;
+            }
+            return
+        }
+    }
+
+    removeAttribute(oldAttr, $node)
+    toDomAttribute(newAttr, dispatch, $node)
+}
+
 function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boolean {
-    if (a.tag === "attribute" && b.tag === "attribute") {
+    if (a.tag === 'attribute' && b.tag === 'attribute') {
         return a.name === b.name && a.value === b.value
-    } else if (a.tag === "property" && b.tag === "property") {
+    } else if (a.tag === 'property' && b.tag === 'property') {
         return a.name === b.name && Utils.equals(a.value, b.value)
-    } else if (a.tag === "eventHandler" && b.tag === "eventHandler") {
+    } else if (a.tag === 'eventHandler' && b.tag === 'eventHandler') {
         // The function comparison will most likely always return false
         // a smarter implementation could optimize this case somehow.
         return a.eventName === b.eventName && a.handler === b.handler
-    } else if (a.tag === "style" && b.tag === "style") {
+    } else if (a.tag === 'style' && b.tag === 'style') {
         return a.property === b.property && a.value === b.value
-    } else if (a.tag === "class" && b.tag === "class") {
+    } else if (a.tag === 'class' && b.tag === 'class') {
         return a.value === b.value
     }
 
@@ -171,19 +190,19 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
 
     try {
         switch (attr.tag) {
-            case "attribute":
+            case 'attribute':
                 $node.removeAttribute(attr.name)
                 return
-            case "property":
+            case 'property':
                 ($node as any)[attr.name] = undefined
                 return
-            case "eventHandler":
+            case 'eventHandler':
                 ($node as any)[`on${attr.eventName}`] = undefined
                 return
-            case "style":
-                ($node as any).style[attr.property] = ""
+            case 'style':
+                ($node as any).style[attr.property] = ''
                 return
-            case "class":
+            case 'class':
                 $node.classList.remove(attr.value)
                 return
         }

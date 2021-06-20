@@ -12,6 +12,8 @@ import * as Decoder from './utils/Decoder'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
 
+import './Record.css'
+
 export type Id = {
     tag: 'recordId',
     id: number,
@@ -75,20 +77,8 @@ export function record(
     }
 }
 
-export function hasId(id: Id, record: Record): boolean {
-    return Utils.equals(id, record.id)
-}
-
 export function getDuration(record: Record): Time.Time {
     return Time.difference(record.startTime, record.endTime)
-}
-
-export function setDescription(description: string, record: Record): Record {
-    return { ...record, description }
-}
-
-export function setTask(task: string, record: Record): Record {
-    return { ...record, task }
 }
 
 export function setStartInput(startInput: string, record: Record): Record {
@@ -169,6 +159,12 @@ export function cleanInputs(record: Record): Record {
 
 export function view<E, C>(
     record: Record,
+    options: {
+        onChange: (input: InputName, value: string) => E,
+        onInput: (input: InputName, value: string) => E,
+        onPlay: E,
+        onDelete: E,
+    },
 ): Layout.Layout<E, C> {
     return Layout.row(
         'div',
@@ -177,8 +173,9 @@ export function view<E, C>(
         ],
         [
             Input.text(
+                'column',
                 [
-                    Layout.fillPortion(4),
+                    Layout.grow(4),
                 ],
                 {
                     id: `record_${record.id.id}_description`,
@@ -188,12 +185,16 @@ export function view<E, C>(
                         [Layout.text('Descripción')]
                     ),
                     value: record.description,
-                    attributes: [],
+                    attributes: [
+                        Input.onInput(value => options.onInput('description', value)),
+                        Input.onChange(value => options.onChange('description', value)),
+                    ],
                 }
             ),
             Input.text(
+                'column',
                 [
-                    Layout.fillPortion(2),
+                    Layout.grow(2),
                 ],
                 {
                     id: `record_${record.id.id}_task`,
@@ -203,12 +204,16 @@ export function view<E, C>(
                         [Layout.text('Tarea')]
                     ),
                     value: record.task,
-                    attributes: [],
+                    attributes: [
+                        Input.onInput(value => options.onInput('task', value)),
+                        Input.onChange(value => options.onChange('task', value)),
+                    ],
                 }
             ),
             Input.text(
+                'column',
                 [
-                    Layout.fillPortion(1),
+                    Layout.shrink(1),
                     Html.style('text-align', 'right'),
                 ],
                 {
@@ -219,12 +224,16 @@ export function view<E, C>(
                         [Layout.text('Inicio')]
                     ),
                     value: record.startInput,
-                    attributes: [],
+                    attributes: [
+                        Input.onInput(value => options.onInput('start', value)),
+                        Input.onChange(value => options.onChange('start', value)),
+                    ],
                 }
             ),
             Input.text(
+                'column',
                 [
-                    Layout.fillPortion(1),
+                    Layout.shrink(1),
                     Html.style('text-align', 'right'),
                 ],
                 {
@@ -235,12 +244,16 @@ export function view<E, C>(
                         [Layout.text('Fin')]
                     ),
                     value: record.endInput,
-                    attributes: [],
+                    attributes: [
+                        Input.onInput(value => options.onInput('end', value)),
+                        Input.onChange(value => options.onChange('end', value)),
+                    ],
                 }
             ),
             Input.text(
+                'column',
                 [
-                    Layout.fillPortion(1),
+                    Layout.shrink(1),
                     Html.style('text-align', 'right'),
                 ],
                 {
@@ -251,7 +264,10 @@ export function view<E, C>(
                         [Layout.text('Duración')]
                     ),
                     value: Time.toString(Time.difference(record.endTime, record.startTime)),
-                    attributes: [],
+                    attributes: [
+                        Input.onInput(value => options.onInput('duration', value)),
+                        Input.onChange(value => options.onChange('duration', value)),
+                    ],
                 }
             ),
             Layout.column(
@@ -263,13 +279,21 @@ export function view<E, C>(
                 ],
                 [
                     Icon.button(
-                        [],
-                        Icon.play()
+                        [
+                            Html.class_('record-play'),
+                        ],
+                        Icon.play(),
+                        {
+                            onClick: _ => options.onPlay,
+                            ariaLabel: 'Resumir tarea'
+                        }
                     ),
                     Layout.below(
                         'column',
                         'details',
-                        [],
+                        [
+                            Html.class_('record-menu'),
+                        ],
                         [
                             Icon.wrapper(
                                 'summary',
@@ -280,8 +304,23 @@ export function view<E, C>(
                         {
                             flexDirection: 'column',
                             tagName: 'div',
-                            attributes: [ Html.style('right', '0') ],
-                            children: [ Layout.text('Hola') ]
+                            attributes: [
+                                Html.style('right', '0'),
+                                Html.style('margin-top', '8px'),
+                                Layout.backgroundColor(Color.background),
+                                Layout.padding(12),
+                                Html.style('font-size', '12px'),
+                                Html.style('box-shadow', '-1px 2px 3px rgba(0, 0, 0, 0.45)')
+                            ],
+                            children: [
+                                Input.button(
+                                    [],
+                                    {
+                                        onClick: _ => options.onDelete,
+                                        label: Html.text('Eliminar'),
+                                    }
+                                )
+                            ]
                         }
                     )
                 ]
@@ -290,19 +329,7 @@ export function view<E, C>(
     )
 }
 
-export function mapWithId(records: Array<Record>, id: Id, fn: (record: Record) => Record): Array<Record> {
-    return records.map(record =>
-        hasId(id, record)
-            ? fn(record)
-            : record
-    )
-}
-
-export function deleteWithId(records: Array<Record>, id: Id): Array<Record> {
-    return records.filter(record => !hasId(id, record))
-}
-
-export function search(query: string, records: Array<Record>): Array<Record> {
+export function searchDescription(query: string, records: Array<Record>): Array<Record> {
     if (query === '')
         return []
     else
@@ -317,3 +344,43 @@ export function search(query: string, records: Array<Record>): Array<Record> {
             })
             .map(([record, _]) => record)
 }
+
+export type InputName =
+    | 'description'
+    | 'task'
+    | 'start'
+    | 'end'
+    | 'duration'
+
+/** Updates the input's string value but not the Time */
+export function updateInput(record: Record, input: InputName, value: string): Record {
+    switch (input) {
+        case 'description':
+            return { ...record, description: value }
+        case 'task':
+            return { ...record, task: value }
+        case 'start':
+            return { ...record, startInput: value }
+        case 'end':
+            return { ...record, endInput: value }
+        case 'duration':
+            return { ...record, durationInput: value }
+    }
+}
+
+/** Updates the input's string value and tries to update the Time */
+export function changeInput(record: Record, input: InputName, value: string): Record {
+    switch (input) {
+        case 'description':
+            return { ...record, description: value }
+        case 'task':
+            return { ...record, task: value }
+        case 'start':
+            return setStartInput(value, record)
+        case 'end':
+            return setEndInput(value, record)
+        case 'duration':
+            return setDurationInput(value, record)
+    }
+}
+

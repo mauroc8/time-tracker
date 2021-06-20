@@ -53,7 +53,7 @@ export function init(
         Maybe.fromNullable(localStorage)
             .map(localStorage => decodeLocalStorage<Event.Event>(localStorage, today))
             .withDefault(Update.pure(newInitialState(today))),
-        getNewDate(now),        
+        getNewDate(now),
     )
 }
 
@@ -118,7 +118,7 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
                 { ...state, today: Date.fromJavascript(event.date) },
                 [ getNewDate(Time.fromJavascript(event.date)) ]
             )
-        
+
         case 'dateGroupEvent':
             return Update.andThen(
                 Update.mapBoth(
@@ -128,6 +128,27 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
                 ),
                 saveStateToLocalStorage
             )
+
+        case 'onRecordPlay':
+            return Update.pure(state)
+
+        case 'onRecordDelete':
+            return Update.pure({
+                ...state,
+                records: Records.delete_(state.records, event.id)
+            })
+        
+        case 'onRecordInput':
+            return Update.pure({
+                ...state,
+                records: Records.updateInput(state.records, event.id, event.input, event.value),
+            })
+        
+        case 'onRecordChange':
+            return Update.pure({
+                ...state,
+                records: Records.changeInput(state.records, event.id, event.input, event.value),
+            })
     }
 }
 
@@ -155,6 +176,13 @@ body {
     border-top: 6px solid ${Color.toCssString(Color.accent)};
     color: ${Color.toCssString(Color.text)};
 }
+
+::selection,
+::-moz-selection {
+    background-color: ${Color.toCssString(Color.accent50)};
+    color: ${Color.toCssString(Color.rgba(1, 1, 1, 0.85))};
+}
+
     `)
                     ],
                 ),
@@ -168,12 +196,16 @@ body {
                     ],
                     [
                         Layout.space(0),
-                        Layout.map(
-                            Records.view(
-                                state.records.array,
-                                state.dateGroupState,
-                            ),
-                            Event.dateGroupEvent
+                        Records.view(
+                            state.records.array,
+                            state.dateGroupState,
+                            {
+                                onGroupEvent: Event.dateGroupEvent,
+                                onChange: Event.onRecordChange,
+                                onInput: Event.onRecordInput,
+                                onPlay: Event.onRecordPlay,
+                                onDelete: Event.onRecordDelete
+                            }
                         ),
                         Layout.space(0),
                     ]

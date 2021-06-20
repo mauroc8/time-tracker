@@ -100,11 +100,9 @@ export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
 export function toSpanishLabel(day: Tag): string {
     switch (day.dayTag) {
         case "distantDate":
-            return `${Date.weekdayToSpanishLabel(day.weekday)} ${day.day} de `
-                + `${Date.monthToSpanishLabel(day.month)}, ${day.year}`
+            return `${Date.weekdayToSpanishLabel(day.weekday)} ${day.day} de ${Date.monthToSpanishLabel(day.month)}, ${day.year}`
         case "thisYearsDate":
-            return `${Date.weekdayToSpanishLabel(day.weekday)} ${day.day} de `
-                + `${Date.monthToSpanishLabel(day.month)}`
+            return `${Date.weekdayToSpanishLabel(day.weekday)} ${day.day} de ${Date.monthToSpanishLabel(day.month)}`
         case "earlierThisWeek":
             return Date.weekdayToSpanishLabel(day.weekday)
         case "today":
@@ -121,6 +119,12 @@ export function toSpanishLabel(day: Tag): string {
 export function view<E, C>(
     tag: Tag,
     records: Array<Record.Record>,
+    options: {
+        onChange: (id: Record.Id, input: Record.InputName, value: string) => E,
+        onInput: (id: Record.Id, input: Record.InputName, value: string) => E,
+        onPlay: (id: Record.Id) => E,
+        onDelete: (id: Record.Id) => E,
+    }
 ): Layout.Layout<E, C> {
     return Layout.column(
         "div",
@@ -145,7 +149,17 @@ export function view<E, C>(
                 [
                     Layout.spacing(50),
                 ],
-                records.map(record => Record.view(record))
+                records.map(record =>
+                    Record.view(
+                        record,
+                        {
+                            onChange: (onInput, value) => options.onChange(record.id, onInput, value),
+                            onInput: (onInput, value) => options.onInput(record.id, onInput, value),
+                            onPlay: options.onPlay(record.id),
+                            onDelete: options.onDelete(record.id),
+                        }
+                    )
+                )
             )
         ]
     )

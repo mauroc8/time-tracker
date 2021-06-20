@@ -10,6 +10,8 @@ import * as Array_ from './utils/Array'
 import * as Update from './Update'
 import * as Task from './utils/Task'
 import * as Pair from './utils/Pair'
+import * as Color from './style/Color'
+
 import './DateGroup.css'
 
 const collapsingTransitionSeconds = 0.26
@@ -26,12 +28,12 @@ function transitionDecoder(): Decoder.Decoder<Transition> {
         ),
         Decoder.object3(
             'tag', Decoder.literal('aboutToCollapse'),
-            'groupTag', groupTagDecoder(),
+            'groupTag', tagDecoder(),
             'height', Decoder.number,
         ),
         Decoder.object2(
             'tag', Decoder.literal('collapsing'),
-            'groupTag', groupTagDecoder(),
+            'groupTag', tagDecoder(),
         ),
     )
 }
@@ -72,7 +74,7 @@ export type State = {
 export const decoder: Decoder.Decoder<State> =
     Decoder.object2(
         'transition', transitionDecoder(),
-        'collapsedGroups', Decoder.array(groupTagDecoder()),
+        'collapsedGroups', Decoder.array(tagDecoder()),
     )
 
 function stateOf(state: State): State {
@@ -93,18 +95,30 @@ export type Event =
     | { tag: 'endCollapseTransition' }
     | { tag: 'domError' }
 
-function eventOf(event: Event): Event {
-    return event
-}
-
 function clickedCollapseButton(groupTag: Tag): Event {
     return { tag: 'clickedCollapseButton', groupTag }
+}
+
+function gotHeightOfGroupBeingCollapsed(groupTag: Tag, height: number): Event {
+    return { tag: 'gotHeightOfGroupBeingCollapsed', groupTag, height }
+}
+
+function startCollapseTransition(): Event {
+    return { tag: 'startCollapseTransition' }
+}
+
+function endCollapseTransition(): Event {
+    return { tag: 'endCollapseTransition' }
+}
+
+function domError(): Event {
+    return { tag: 'domError' }
 }
 
 export function update(state: State, event: Event): Update.Update<State, Event> {
     switch (event.tag) {
         case 'domError':
-            // Ignoro
+            // Ignore.
             return Update.pure(state)
 
         case 'clickedCollapseButton':
@@ -121,13 +135,8 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                 [
                     getHeightOfGroup(
                         event.groupTag,
-                        height =>
-                            eventOf({
-                                tag: 'gotHeightOfGroupBeingCollapsed',
-                                groupTag: event.groupTag,
-                                height
-                            }),
-                            eventOf({ tag: 'domError' })
+                        height => gotHeightOfGroupBeingCollapsed(event.groupTag, height),
+                        domError()
                     )
                 ]
             )
@@ -141,7 +150,7 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                 [
                     Task.map(
                         Task.waitMilliseconds(0),
-                        _ => eventOf({ tag: 'startCollapseTransition' })
+                        _ => startCollapseTransition()
                     )
                 ]
             )
@@ -155,7 +164,7 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                 [
                     Task.map(
                         Task.waitMilliseconds(collapsingTransitionSeconds * 1000),
-                        _ => eventOf({ tag: 'endCollapseTransition' })
+                        _ => endCollapseTransition()
                     )
                 ]
             )
@@ -231,6 +240,8 @@ export function fromRecords(
 /** A DateGroup.Tag expresses the relationship between today and some other date
  * in a human-comprehensible way:
  * 'This week', 'Last week', '2 weeks ago', 'Last month', and so on.
+ * 
+ * The `Tag` is an ID.
  */
  export type Tag =
     | { groupTag: 'year', year: number }
@@ -243,11 +254,7 @@ export function fromRecords(
     | { groupTag: 'nextWeek' }
     | { groupTag: 'inTheFuture' }
 
-function tagOf(group: Tag): Tag {
-    return group
-}
-
-function groupTagDecoder(): Decoder.Decoder<Tag> {
+function tagDecoder(): Decoder.Decoder<Tag> {
     return Decoder.union9(
         Decoder.object2(
             'groupTag', Decoder.literal('year'),
@@ -284,43 +291,6 @@ function groupTagDecoder(): Decoder.Decoder<Tag> {
         Decoder.object(
             'groupTag', Decoder.literal('inTheFuture'),
         ),
-    )
-}
-
-function groupTagDecoderOld(): Decoder.Decoder<Tag> {
-    return Decoder.andThen(
-        Decoder.property('groupTag', Decoder.string),
-        groupTag => {
-            switch (groupTag) {
-                case 'inTheFuture':
-                case 'nextWeek':
-                case 'thisWeek':
-                case 'lastWeek':
-                case 'lastYear':
-                case 'lastMonth':
-                    return Decoder.succeed(tagOf({ groupTag }))
-                case 'year':
-                    return Decoder.map(
-                        Decoder.property('year', Decoder.number),
-                        year => tagOf({ groupTag, year })
-                    )
-                case 'month':
-                    return Decoder.map(
-                        Decoder.property('month', Date.monthDecoder),
-                        month => tagOf({ groupTag, month })
-                    )
-                case 'weeksAgo':
-                    return Decoder.andThen(
-                        Decoder.property('x', Decoder.number),
-                        x =>
-                            x === 2 || x === 3 || x === 4
-                                ? Decoder.succeed(tagOf({ groupTag, x }))
-                                : Decoder.fail(`Invalid weeksAgo ${x}`)
-                    )
-                default:
-                    return Decoder.fail(`Unknown group tag '${groupTag}'`)
-            }
-        }
     )
 }
 
@@ -482,39 +452,67 @@ function toOpacity(viewCollapseTransitionState: ViewStatus): number {
             return 1
     }
 }
-    
+
 export const collapseTransitionDuration: number = 0.24
 
-export function view<Context extends { today: Date.Date }>(
+export function view<E, Context extends { today: Date.Date }>(
     groupTag: Tag,
     records: Array<Record.Record>,
     state: State,
-): Layout.Layout<Event, Context> {
+    options: {
+        onGroupEvent: (evt: Event) => E,
+        onChange: (id: Record.Id, input: Record.InputName, value: string) => E,
+        onInput: (id: Record.Id, input: Record.InputName, value: string) => E,
+        onPlay: (id: Record.Id) => E,
+        onDelete: (id: Record.Id) => E,
+    },
+): Layout.Layout<E, Context> {
     const viewStatus = getViewStatus(groupTag, state)
 
-    return Layout.usingContext(({ today }) =>
-        Layout.column(
-            'div',
-            [
-                Layout.spacing(30),
-                Layout.fullWidth()
-            ],
-            [
-                Layout.row(
-                    'button',
-                    [
-                        Layout.spacing(10),
-                        Layout.fullWidth(),
-                        Html.class_('date-group-collapse-button'),
-                        Html.style('padding', '5px'),
-                        Html.style('margin', '-5px'),
-                        Html.on('click', () => clickedCollapseButton(groupTag)),
-                        Html.attribute('aria-controls', toStringId(groupTag)),
-                    ],
-                    [
-                        Layout.inlineText(toSpanishLabel(groupTag).toUpperCase()),
-                    ]
-                ),
+    return Layout.column(
+        'div',
+        [
+            Layout.spacing(30),
+            Layout.fullWidth()
+        ],
+        [
+            Layout.row(
+                'button',
+                [
+                    Layout.spacing(10),
+                    Layout.fullWidth(),
+                    Layout.baselineY(),
+                    Html.class_('date-group-collapse-button'),
+                    Html.style('padding', '5px'),
+                    Html.style('margin', '-5px'),
+                    Html.on('click', () => options.onGroupEvent(clickedCollapseButton(groupTag))),
+                    Html.attribute('aria-controls', toStringId(groupTag)),
+                    Html.style("letter-spacing", "0.15em"),
+                    Html.style('font-size', '12px')
+                ],
+                [
+                    Layout.column(
+                        'div',
+                        [
+                            Layout.grow(1),
+                            Layout.heightPx(1),
+                            Layout.backgroundColor(Color.hsl(0, 0, 0.2))
+                        ],
+                        []
+                    ),
+                    Layout.inlineText(toSpanishLabel(groupTag).toUpperCase()),
+                    Layout.column(
+                        'div',
+                        [
+                            Layout.grow(1),
+                            Layout.heightPx(1),
+                            Layout.backgroundColor(Color.hsl(0, 0, 0.2))
+                        ],
+                        []
+                    ),
+                ]
+            ),
+            Layout.usingContext(({ today }) =>
                 Layout.column(
                     'div',
                     [
@@ -546,10 +544,14 @@ export function view<Context extends { today: Date.Date }>(
                                 )
                         )
                             .map(day => 
-                                TimeGroup.view(TimeGroup.fromDate({ today, time: day[0].date }), day)
+                                TimeGroup.view(
+                                    TimeGroup.fromDate({ today, time: day[0].date }),
+                                    day,
+                                    options,
+                                )
                             )
                 )
-            ]
-        )
+            )
+        ]
     )
 }

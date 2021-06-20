@@ -15,12 +15,14 @@
 
 button, summary { cursor: pointer; }
 
-*:focus { outline: 1px dashed rgba(255, 255, 255, 0.15); }
-
 html { box-sizing: border-box; line-height: 1; }
 
 body {
     font-family: Lato, -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
         "Helvetica Neue", Helvetica, Ubuntu, Roboto, Noto, "Segoe UI", Arial, sans-serif;
+}
+
+*:focus {
+    outline: 1px solid rgba(255, 255, 255, 0.4);
 }
 

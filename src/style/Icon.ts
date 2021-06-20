@@ -4,6 +4,16 @@ import * as Html from '../vdom/Html'
 
 import * as Layout from '../layout/Layout'
 
+function roundIconAttributes<A, C>(): Array<Layout.Attribute<A, C>> {
+    return [
+        Layout.centerX(),
+        Layout.centerY(),
+        Layout.widthPx(16),
+        Layout.heightPx(16),
+        Html.style("border-radius", "50%"),
+    ]
+}
+
 export function wrapper<A, C>(
     htmlTag: string,
     attributes: Array<Layout.Attribute<A, C>>,
@@ -12,22 +22,29 @@ export function wrapper<A, C>(
     return Layout.row(
         htmlTag,
         [
-            Layout.centerX(),
-            Layout.centerY(),
-            Layout.widthPx(16),
-            Layout.heightPx(16),
-            Html.style("border-radius", "50%"),
-            Layout.backgroundColor(Color.background),
+            ...roundIconAttributes<A, C>(),
             ...attributes
         ],
         [ icon ]
     )
 }
 
-export function button<A, C>(attributes: Array<Layout.Attribute<A, C>>, icon: Html.Html<never>): Layout.Layout<A, C> {
+export function button<A, C>(
+    attributes: Array<Layout.Attribute<A, C>>,
+    icon: Html.Html<never>,
+    options: {
+        onClick: (evt: globalThis.Event) => A,
+        ariaLabel: string,
+    }
+): Layout.Layout<A, C> {
     return wrapper(
         "button",
-        attributes,
+        [
+            ...roundIconAttributes<A, C>(),
+            Html.on('click', evt => options.onClick(evt)),
+            Html.attribute('aria-label', options.ariaLabel),
+            ...attributes,
+        ],
         icon
     )
 }

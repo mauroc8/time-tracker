@@ -14,6 +14,10 @@ export function startRuntime<
     let currentState = init.state
     let $rootElement: Element | Text = $root
 
+    if (process.env.NODE_ENV === 'development') {
+        (window as any).currentState = currentState;
+    }
+
     requestAnimationFrame(() => {
         for (const cmd of init.cmds) {
             cmd.execute(deferedDispatch)
@@ -32,7 +36,11 @@ export function startRuntime<
             patch($rootElement)
             currentState = updateResult.state
             currentView = updatedView
-            
+
+            if (process.env.NODE_ENV === 'development') {
+                (window as any).currentState = currentState;
+            }
+
             for (const cmd of updateResult.cmds) {
                 cmd.execute(deferedDispatch)
             }
