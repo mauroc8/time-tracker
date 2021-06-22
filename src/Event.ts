@@ -1,6 +1,8 @@
 import * as DateGroup from './DateGroup'
 import * as Date from './utils/Date'
 import * as Record from './Record'
+import * as Time from './utils/Time'
+import * as Create from './Create'
 
 /** Actions, messages, or events that our application receives.
  * This covers all of our application input. Each Event is handled explicitly in the
@@ -9,19 +11,21 @@ import * as Record from './Record'
 
 export type Event =
     | { name: 'none' }
-    | { name: 'gotNewDate', date: Date.Javascript }
+    | { name: 'gotNewTime', date: Date.Javascript }
     | { name: 'dateGroupEvent', event: DateGroup.Event }
     | { name: 'onRecordPlay', id: Record.Id }
     | { name: 'onRecordDelete', id: Record.Id }
     | { name: 'onRecordInput', id: Record.Id, input: Record.InputName, value: string }
     | { name: 'onRecordChange', id: Record.Id, input: Record.InputName, value: string }
+    | { name: 'onCreateStart' }
+    | { name: 'onCreateInput', input: Create.InputName, value: string }
+    | { name: 'onCreateChange', input: Create.InputName, value: string }
+    | { name: 'onCreateStop' }
 
-export function none(): Event {
-    return { name: 'none' }
-}
+export const none: Event = { name: 'none' }
 
-export function gotNewDate(date: Date.Javascript): Event {
-    return { name: 'gotNewDate', date }
+export function gotNewTime(date: Date.Javascript): Event {
+    return { name: 'gotNewTime', date }
 }
 
 export function dateGroupEvent(event: DateGroup.Event): Event {
@@ -44,3 +48,14 @@ export function onRecordChange(id: Record.Id, input: Record.InputName, value: st
     return { name: 'onRecordChange', id, input, value }
 }
 
+export const onCreateStart: Event = { name: 'onCreateStart' }
+
+export function onCreateInput(input: Create.InputName, value: string): Event {
+    return { name: 'onCreateInput', input, value }
+}
+
+export function onCreateChange(input: Create.InputName, value: string): Event {
+    return { name: 'onCreateChange', input, value }
+}
+
+export const onCreateStop: Event = { name: 'onCreateStop' }

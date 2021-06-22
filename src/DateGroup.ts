@@ -459,7 +459,7 @@ export function view<E, Context extends { today: Date.Date }>(
     groupTag: Tag,
     records: Array<Record.Record>,
     state: State,
-    options: {
+    config: {
         onGroupEvent: (evt: Event) => E,
         onChange: (id: Record.Id, input: Record.InputName, value: string) => E,
         onInput: (id: Record.Id, input: Record.InputName, value: string) => E,
@@ -485,7 +485,7 @@ export function view<E, Context extends { today: Date.Date }>(
                     Html.class_('date-group-collapse-button'),
                     Html.style('padding', '5px'),
                     Html.style('margin', '-5px'),
-                    Html.on('click', () => options.onGroupEvent(clickedCollapseButton(groupTag))),
+                    Html.on('click', () => config.onGroupEvent(clickedCollapseButton(groupTag))),
                     Html.attribute('aria-controls', toStringId(groupTag)),
                     Html.style("letter-spacing", "0.15em"),
                     Html.style('font-size', '12px')
@@ -547,7 +547,7 @@ export function view<E, Context extends { today: Date.Date }>(
                                 TimeGroup.view(
                                     TimeGroup.fromDate({ today, time: day[0].date }),
                                     day,
-                                    options,
+                                    config,
                                 )
                             )
                 )

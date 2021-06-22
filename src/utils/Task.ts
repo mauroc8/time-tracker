@@ -7,10 +7,20 @@ type Dispatch<A> = (a: A) => void
 export type Task<A> = {
     tag: "Task",
     execute: (dispatch: Dispatch<A>) => void
+} & TaskPrototype<A>;
+
+export interface TaskPrototype<A> {
+    map<B>(f: (a: A) => B): Task<B>
+    andThen<B>(f: (a: A) => Task<B>): Task<B>
 }
 
 function of<A>(execute: (dispatch: Dispatch<A>) => void): Task<A> {
-    return { tag: "Task", execute }
+    return {
+        tag: "Task",
+        execute,
+        map: function(f) { return map(this, f) },
+        andThen: function(f) { return andThen(this, f) },
+    }
 }
 
 export function succeed<A>(a: A): Task<A> {
@@ -36,13 +46,6 @@ export function andThen<A, B>(cmd: Task<A>, f: (a: A) => Task<B>): Task<B> {
                 f(a).execute(dispatch)
             })
         }
-    )
-}
-
-export function map2<A, B, C>(cmd: Task<A>, cmdB: Task<B>, f: (a: A, b: B) => C): Task<C> {
-    return andThen(
-        cmd,
-        a => map(cmdB, b => f(a, b))
     )
 }
 

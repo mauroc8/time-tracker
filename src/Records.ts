@@ -70,6 +70,13 @@ export function delete_(
     }
 }
 
+export function findById(
+    records: Records,
+    id: Record.Id
+): Record.Record | undefined {
+    return records.array.find(record => Utils.equals(record.id, id))
+}
+
 export function mockRecords(today: Date.Date): Records {
     return {
         tag: 'Records',
@@ -129,7 +136,7 @@ export function mockRecords(today: Date.Date): Records {
 export function view<E, Context extends { today: Date.Date }>(
     records: Array<Record.Record>,
     dateGroupState: DateGroup.State,
-    options: {
+    config: {
         onGroupEvent: (evt: DateGroup.Event) => E,
         onChange: (id: Record.Id, input: Record.InputName, value: string) => E,
         onInput: (id: Record.Id, input: Record.InputName, value: string) => E,
@@ -163,7 +170,7 @@ export function view<E, Context extends { today: Date.Date }>(
                             groupTag,
                             groupRecords,
                             dateGroupState,
-                            options,
+                            config,
                         )
                     })
                 : [Layout.text("No hay ninguna entrada todavía")]

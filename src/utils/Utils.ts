@@ -10,6 +10,10 @@ export function assertNever(never: never): void {
 
 /** Structural equality */
 export function equals<A>(a: A, b: A): boolean {
+    if (a === b) {
+        return true
+    }
+
     if (a instanceof Array && b instanceof Array) {
         return a.length === b.length && a.every((x, i) => equals(x, b[i]))
     }

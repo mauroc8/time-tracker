@@ -24,10 +24,7 @@ export function text<A, C>(
         flexDirection,
         'label',
         [
-            Layout.spacing(14),
             Html.attribute('for', options.id),
-            Html.style('width', '100%'),
-            Html.style('height', '100%'),
             ...attributes,
         ],
         [
@@ -49,18 +46,20 @@ export function text<A, C>(
 }
 
 export function button<A, C>(
+    flexDirection: 'row' | 'column',
     attributes: Array<Layout.Attribute<A, C>>,
+    children: Array<Layout.Layout<A, C>>,
     args: {
-        onClick: (event: any) => A,
-        label: Layout.Layout<A, C>,
+        onClick: A,
     }
 ): Layout.Layout<A, C> {
-    return Layout.column(
+    return Layout.node(
+        flexDirection,
         'button',
         [
-            Html.on('click', args.onClick),
+            Html.on('click', _ => args.onClick),
             ...attributes
         ],
-        [args.label]
+        children,
     )
 }

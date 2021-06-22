@@ -78,8 +78,8 @@ export function toMinutes(time: Time): number {
     return time.hours * 60 + time.minutes
 }
 
-export function difference(a: Time, b: Time): Time {
-    return fromMinutes(Math.abs(toMinutes(a) - toMinutes(b)))
+export function difference(end: Time, start: Time): Time {
+    return fromMinutes(Math.max(0, toMinutes(end) - toMinutes(start)))
 }
 
 export function add(a: Time, b: Time): Time {

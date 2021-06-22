@@ -334,24 +334,21 @@ function diffKeyedChildren<T>(
             // to reorder nodes.
             for (let i = newChildren.length - 1; i >= 0; i = i - 1) {
                 const [key, html] = newChildren[i]
+                const keyedOldChild = oldChildrenDict[key]
 
-                let node: Element | Text
-
-                if (oldChildrenDict[key] === undefined) {
+                if (keyedOldChild === undefined) {
                     // The element didn't exist. Create it and insert it.
-                    node = $node.insertBefore(
+                    nextNode = $node.insertBefore(
                         render(html, dispatch),
                         nextNode
                     )
-                } else {
-                    // The element might have changed its order. Force it where it belongs.
-                    node = $node.insertBefore(
-                        oldChildrenDict[key].node,
+                } else if ($node.childNodes[i] !== keyedOldChild.node) {
+                    // The element is in wrong order.
+                    nextNode = $node.insertBefore(
+                        keyedOldChild.node,
                         nextNode
                     )
                 }
-
-                nextNode = node
             }
         }
     }
@@ -362,6 +359,7 @@ type KeyedNode<E> = {
     html: Html.Html<E>,
     node: Element | Text,
     nextKey: string | null,
+    index: number,
 }
 
 function toKeyedNode<T>(
@@ -372,6 +370,7 @@ function toKeyedNode<T>(
         key,
         html,
         node: $parent.childNodes[i] as Element | Text,
-        nextKey: children[i + 1] === undefined ? null : children[i + 1][0]
+        nextKey: children[i + 1] === undefined ? null : children[i + 1][0],
+        index: i,
     }))
 }

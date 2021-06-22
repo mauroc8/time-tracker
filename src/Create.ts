@@ -1,7 +1,13 @@
 import * as Layout from './layout/Layout'
+import * as Input from './layout/Input'
+import * as Icon from './style/Icon'
+import * as Color from './style/Color'
 import * as Date from './utils/Date'
+import * as Maybe from './utils/Maybe'
 import * as Decoder from './utils/Decoder'
 import * as Time from './utils/Time'
+import * as Utils from './utils/Utils'
+import * as Html from './vdom/Html'
 
 export type Create = {
     description: string,
@@ -35,16 +41,284 @@ export function create(
         task: options.task,
         startInput: Time.toString(options.now),
         startTime: options.now,
-        durationInput: Time.toString(Time.time(0, 0)),
+        durationInput: durationString(options.now, options.now),
         date: options.today,
     }
 }
 
-export function view<E, C extends { today: Date.Date }>(
-    create: Create,
-    options: {
+function durationString(end: Time.Time, start: Time.Time): string {
+    return Time.toString(Time.difference(end, start))
+}
 
+export function updateDuration(create: Create, oldTime: Time.Time, now: Time.Time): Create {
+    if (create.durationInput === durationString(oldTime, create.startTime)) {
+        return {
+            ...create,
+            durationInput: durationString(now, create.startTime)
+        }
+    }
+
+    // Entiendo que en este caso el durationInput está siendo editado.
+    return create
+}
+
+function normalize(create: Create, now: Time.Time): Create {
+    return {
+        ...create,
+        startInput: Time.toString(create.startTime),
+        durationInput: durationString(now, create.startTime),
+    }
+}
+
+function setStartInput(create: Create, value: string, now: Time.Time): Create {
+    const startTime = Time
+        .fromString(value)
+        .withDefault(create.startTime)
+
+    return normalize(
+        {
+            ...create,
+            startTime,
+        },
+        now
+    )
+}
+
+function setDurationInput(create: Create, value: string, now: Time.Time): Create {
+    const duration = Time
+        .fromString(value)
+
+    const startTime = duration
+        .map(duration => Time.difference(now, duration))
+        .withDefault(create.startTime)
+
+    return normalize(
+        {
+            ...create,
+            startTime
+        },
+        now
+    )
+}
+
+export type InputName =
+    | 'description'
+    | 'task'
+    | 'start'
+    | 'duration'
+
+export function updateInput(create: Create, input: InputName, value: string): Create {
+    switch (input) {
+        case 'description':
+            return { ...create, description: value }
+
+        case 'task':
+            return { ...create, task: value }
+
+        case 'start':
+            return { ...create, startInput: value }
+
+        case 'duration':
+            return { ...create, durationInput: value }
+    }
+}
+
+export function changeInput(create: Create, input: InputName, value: string, now: Time.Time): Create {
+    switch (input) {
+        case 'description':
+        case 'task':
+            return updateInput(create, input, value)
+        
+        case 'start':
+            return setStartInput(create, value, now)
+
+        case 'duration':
+            return setDurationInput(create, value, now)
+    }
+}
+
+export function view<E, C extends { today: Date.Date, now: Time.Time }>(
+    create: Maybe.Maybe<Create>,
+    config: {
+        onStart: E,
+        onInput: (input: InputName, value: string) => E,
+        onChange: (input: InputName, value: string) => E,
+        onStop: E,
     },
 ): Layout.Layout<E, C> {
-    return Layout.none()
+    return Maybe.caseOf(
+        create,
+        c => viewCreate(c, config),
+        () => viewButton(config),
+    )
+}
+
+function viewCreate<E, C extends { today: Date.Date, now: Time.Time }>(
+    create: Create,
+    options: {
+        onInput: (input: InputName, value: string) => E,
+        onChange: (input: InputName, value: string) => E,
+        onStop: E,
+    },
+): Layout.Layout<E, C> {
+    return Layout.row(
+        'div',
+        [
+            Layout.spacing(17),
+        ],
+        [
+            Input.text(
+                'column',
+                [
+                    Layout.spacing(14),
+                    Layout.grow(4),
+                ],
+                {
+                    id: `create_description`,
+                    label: Layout.column(
+                        'div',
+                        [Layout.paddingXY(8, 0)],
+                        [Layout.text('Descripción')],
+                    ),
+                    value: create.description,
+                    attributes: [
+                        Input.onInput(value => options.onInput('description', value)),
+                        Input.onChange(value => options.onChange('description', value)),
+                    ],
+                },
+            ),
+            Input.text(
+                'column',
+                [
+                    Layout.spacing(14),
+                    Layout.grow(1),
+                ],
+                {
+                    id: `create_task`,
+                    label: Layout.column(
+                        'div',
+                        [Layout.paddingXY(8, 0)],
+                        [Layout.text('Tarea')],
+                    ),
+                    value: create.task,
+                    attributes: [
+                        Input.onInput(value => options.onInput('task', value)),
+                        Input.onChange(value => options.onChange('task', value)),
+                    ],
+                },
+            ),
+            Input.text(
+                'column',
+                [
+                    Layout.spacing(14),
+                    Layout.widthPx(95),
+                    Html.style('text-align', 'right'),
+                ],
+                {
+                    id: `create_start`,
+                    label: Layout.column(
+                        'div',
+                        [Layout.paddingXY(8, 0)],
+                        [Layout.text('Inicio')],
+                    ),
+                    value: create.startInput,
+                    attributes: [
+                        Input.onInput(value => options.onInput('start', value)),
+                        Input.onChange(value => options.onChange('start', value)),
+                    ],
+                },
+            ),
+            Layout.usingContext(({ now }) =>
+                Input.text(
+                    'column',
+                    [
+                        Layout.spacing(14),
+                        Layout.widthPx(95),
+                        Html.style('text-align', 'right'),
+                        Html.style('opacity', '50%'),
+                    ],
+                    {
+                        id: `create_end`,
+                        label: Layout.column(
+                            'div',
+                            [Layout.paddingXY(8, 0)],
+                            [Layout.text('Fin')],
+                        ),
+                        value: Time.toString(now),
+                        attributes: [
+                            Input.onInput(value => options.onInput('duration', value)),
+                            Input.onChange(value => options.onChange('duration', value)),
+                            Html.property('disabled', true),
+                        ],
+                    },
+                ),
+            ),
+            Input.text(
+                'column',
+                [
+                    Layout.spacing(14),
+                    Layout.widthPx(95),
+                    Html.style('text-align', 'right'),
+                ],
+                {
+                    id: `create_duration`,
+                    label: Layout.column(
+                        'div',
+                        [Layout.paddingXY(8, 0)],
+                        [Layout.text('Duración')],
+                    ),
+                    value: create.durationInput,
+                    attributes: [
+                        Input.onInput(value => options.onInput('duration', value)),
+                        Input.onChange(value => options.onChange('duration', value)),
+                    ],
+                },
+            ),
+            Layout.column(
+                'div',
+                [
+                    Layout.spacing(8),
+                    Layout.widthPx(16),
+                    Layout.startY(),
+                ],
+                [
+                    Icon.button(
+                        [
+                            Html.class_('record-play'),
+                        ],
+                        Icon.play(),
+                        {
+                            onClick: options.onStop,
+                            ariaLabel: 'Parar',
+                        },
+                    ),
+                ],
+            ),
+        ]
+    )
+}
+
+function viewButton<E, C extends { today: Date.Date }>(
+    config: {
+        onStart: E,
+    },
+): Layout.Layout<E, C> {
+    return Layout.row(
+        'div',
+        [
+            Layout.spacing(17),
+        ],
+        [
+            Input.button(
+                'row',
+                [
+
+                ],
+                [Html.text('Empezar tarea')],
+                {
+                    onClick: config.onStart
+                }
+            ),
+        ],
+    )
 }

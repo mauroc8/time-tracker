@@ -33,7 +33,7 @@ export function button<A, C>(
     attributes: Array<Layout.Attribute<A, C>>,
     icon: Html.Html<never>,
     options: {
-        onClick: (evt: globalThis.Event) => A,
+        onClick: A,
         ariaLabel: string,
     }
 ): Layout.Layout<A, C> {
@@ -41,7 +41,7 @@ export function button<A, C>(
         "button",
         [
             ...roundIconAttributes<A, C>(),
-            Html.on('click', evt => options.onClick(evt)),
+            Html.on('click', _ => options.onClick),
             Html.attribute('aria-label', options.ariaLabel),
             ...attributes,
         ],

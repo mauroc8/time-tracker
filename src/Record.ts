@@ -71,14 +71,14 @@ export function record(
         startTime: start,
         endInput: Time.toString(end),
         endTime: end,
-        durationInput: Time.toString(Time.difference(start, end)),
+        durationInput: Time.toString(Time.difference(end, start)),
         task: task,
         date,
     }
 }
 
 export function getDuration(record: Record): Time.Time {
-    return Time.difference(record.startTime, record.endTime)
+    return Time.difference(record.endTime, record.startTime)
 }
 
 export function setStartInput(startInput: string, record: Record): Record {
@@ -159,7 +159,7 @@ export function cleanInputs(record: Record): Record {
 
 export function view<E, C>(
     record: Record,
-    options: {
+    config: {
         onChange: (input: InputName, value: string) => E,
         onInput: (input: InputName, value: string) => E,
         onPlay: E,
@@ -175,6 +175,7 @@ export function view<E, C>(
             Input.text(
                 'column',
                 [
+                    Layout.spacing(14),
                     Layout.grow(4),
                 ],
                 {
@@ -182,38 +183,40 @@ export function view<E, C>(
                     label: Layout.column(
                         'div',
                         [Layout.paddingXY(8, 0)],
-                        [Layout.text('Descripción')]
+                        [Layout.text('Descripción')],
                     ),
                     value: record.description,
                     attributes: [
-                        Input.onInput(value => options.onInput('description', value)),
-                        Input.onChange(value => options.onChange('description', value)),
+                        Input.onInput(value => config.onInput('description', value)),
+                        Input.onChange(value => config.onChange('description', value)),
                     ],
-                }
+                },
             ),
             Input.text(
                 'column',
                 [
-                    Layout.grow(2),
+                    Layout.spacing(14),
+                    Layout.grow(1),
                 ],
                 {
                     id: `record_${record.id.id}_task`,
                     label: Layout.column(
                         'div',
                         [Layout.paddingXY(8, 0)],
-                        [Layout.text('Tarea')]
+                        [Layout.text('Tarea')],
                     ),
                     value: record.task,
                     attributes: [
-                        Input.onInput(value => options.onInput('task', value)),
-                        Input.onChange(value => options.onChange('task', value)),
+                        Input.onInput(value => config.onInput('task', value)),
+                        Input.onChange(value => config.onChange('task', value)),
                     ],
-                }
+                },
             ),
             Input.text(
                 'column',
                 [
-                    Layout.shrink(1),
+                    Layout.spacing(14),
+                    Layout.widthPx(95),
                     Html.style('text-align', 'right'),
                 ],
                 {
@@ -221,19 +224,20 @@ export function view<E, C>(
                     label: Layout.column(
                         'div',
                         [Layout.paddingXY(8, 0)],
-                        [Layout.text('Inicio')]
+                        [Layout.text('Inicio')],
                     ),
                     value: record.startInput,
                     attributes: [
-                        Input.onInput(value => options.onInput('start', value)),
-                        Input.onChange(value => options.onChange('start', value)),
+                        Input.onInput(value => config.onInput('start', value)),
+                        Input.onChange(value => config.onChange('start', value)),
                     ],
-                }
+                },
             ),
             Input.text(
                 'column',
                 [
-                    Layout.shrink(1),
+                    Layout.spacing(14),
+                    Layout.widthPx(95),
                     Html.style('text-align', 'right'),
                 ],
                 {
@@ -241,19 +245,20 @@ export function view<E, C>(
                     label: Layout.column(
                         'div',
                         [Layout.paddingXY(8, 0)],
-                        [Layout.text('Fin')]
+                        [Layout.text('Fin')],
                     ),
                     value: record.endInput,
                     attributes: [
-                        Input.onInput(value => options.onInput('end', value)),
-                        Input.onChange(value => options.onChange('end', value)),
+                        Input.onInput(value => config.onInput('end', value)),
+                        Input.onChange(value => config.onChange('end', value)),
                     ],
-                }
+                },
             ),
             Input.text(
                 'column',
                 [
-                    Layout.shrink(1),
+                    Layout.spacing(14),
+                    Layout.widthPx(95),
                     Html.style('text-align', 'right'),
                 ],
                 {
@@ -261,20 +266,20 @@ export function view<E, C>(
                     label: Layout.column(
                         'div',
                         [Layout.paddingXY(8, 0)],
-                        [Layout.text('Duración')]
+                        [Layout.text('Duración')],
                     ),
-                    value: Time.toString(Time.difference(record.endTime, record.startTime)),
+                    value: record.durationInput,
                     attributes: [
-                        Input.onInput(value => options.onInput('duration', value)),
-                        Input.onChange(value => options.onChange('duration', value)),
+                        Input.onInput(value => config.onInput('duration', value)),
+                        Input.onChange(value => config.onChange('duration', value)),
                     ],
-                }
+                },
             ),
             Layout.column(
                 'div',
                 [
                     Layout.spacing(8),
-                    Html.style('width', '16px'),
+                    Layout.widthPx(16),
                     Layout.startY(),
                 ],
                 [
@@ -284,9 +289,9 @@ export function view<E, C>(
                         ],
                         Icon.play(),
                         {
-                            onClick: _ => options.onPlay,
-                            ariaLabel: 'Resumir tarea'
-                        }
+                            onClick: config.onPlay,
+                            ariaLabel: 'Resumir tarea',
+                        },
                     ),
                     Layout.below(
                         'column',
@@ -298,7 +303,7 @@ export function view<E, C>(
                             Icon.wrapper(
                                 'summary',
                                 [],
-                                Icon.options()
+                                Icon.options(),
                             )
                         ],
                         {
@@ -310,22 +315,23 @@ export function view<E, C>(
                                 Layout.backgroundColor(Color.background),
                                 Layout.padding(12),
                                 Html.style('font-size', '12px'),
-                                Html.style('box-shadow', '-1px 2px 3px rgba(0, 0, 0, 0.45)')
+                                Html.style('box-shadow', '-1px 2px 3px rgba(0, 0, 0, 0.45)'),
                             ],
                             children: [
                                 Input.button(
+                                    'column',
                                     [],
+                                    [Html.text('Eliminar')],
                                     {
-                                        onClick: _ => options.onDelete,
-                                        label: Html.text('Eliminar'),
+                                        onClick: config.onDelete,
                                     }
-                                )
-                            ]
-                        }
-                    )
-                ]
-            )
-        ]
+                                ),
+                            ],
+                        },
+                    ),
+                ],
+            ),
+        ],
     )
 }
 

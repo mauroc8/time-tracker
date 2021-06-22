@@ -120,7 +120,7 @@ export function toSpanishLabel(day: Tag): string {
 export function view<E, C>(
     tag: Tag,
     records: Array<Record.Record>,
-    options: {
+    config: {
         onChange: (id: Record.Id, input: Record.InputName, value: string) => E,
         onInput: (id: Record.Id, input: Record.InputName, value: string) => E,
         onPlay: (id: Record.Id) => E,
@@ -157,10 +157,10 @@ export function view<E, C>(
                         Record.view(
                             record,
                             {
-                                onChange: (onInput, value) => options.onChange(record.id, onInput, value),
-                                onInput: (onInput, value) => options.onInput(record.id, onInput, value),
-                                onPlay: options.onPlay(record.id),
-                                onDelete: options.onDelete(record.id),
+                                onChange: (onInput, value) => config.onChange(record.id, onInput, value),
+                                onInput: (onInput, value) => config.onInput(record.id, onInput, value),
+                                onPlay: config.onPlay(record.id),
+                                onDelete: config.onDelete(record.id),
                             }
                         )
                     )
