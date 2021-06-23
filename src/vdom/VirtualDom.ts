@@ -7,7 +7,7 @@ import * as Result from '../utils/Result'
 import * as Array_ from '../utils/Array'
 import * as Decoder from '../utils/Decoder'
 
-export type Patch = ($node: Element | Text) => void
+export type Patch = ($node: Element | Text) => Element | Text
 
 export function diff<T>(
     oldVDom: Html.Html<T>,
@@ -31,6 +31,8 @@ export function diff<T>(
         return $node => {
             patchAttributes($node)
             patchChildren($node)
+
+            return $node
         }
     }
 }
@@ -46,10 +48,11 @@ function unkeyChildren<T>(children: Array<[string, Html.Html<T>]> | Array<Html.H
 function replace<T>(
     newVDom: Html.Html<T>,
     dispatch: (event: T) => void,
-) {
+): Patch {
     return ($node: Element | Text) => {
         const $newNode = render(newVDom, dispatch)
         $node.replaceWith($newNode)
+
         return $newNode
     }
 }
@@ -243,7 +246,7 @@ function diffChildren<T>(
     oldChildren: Array<Html.Html<T>>,
     newChildren: Array<Html.Html<T>>,
     dispatch: (event: T) => void,
-): ($parent: Element | Text) => void {
+): Patch {
     return $parent => {
         if ($parent instanceof Element) {
             /** We need to calculate all the patches and then apply them because we could alter the indexes
@@ -252,6 +255,8 @@ function diffChildren<T>(
             const patches = getChildrenPatches(oldChildren, newChildren, dispatch, $parent)
             patches.forEach(patch => patch())
         }
+
+        return $parent
     }
 }
 
@@ -294,83 +299,226 @@ function diffKeyedChildren<T>(
 ): Patch {
     return ($node: Element | Text) => {
         if ($node instanceof Element) {
-            let keyedOldChildren = toKeyedNode(oldChildren, $node)
-            let oldChildrenDict = Array_.toDictionary(keyedOldChildren, child => child.key)
+            // We use this auxiliary data structure that performs DOM
+            // mutations while also mutating the VDOM children.
+            const children = keyedNodes(oldChildren, $node)
+            const newChildrenDict = Array_.toDictionary(newChildren, Utils.id)
 
-            /** Diff elements that share keys. */
+            // Remove children.
 
-            for (const [key, html] of newChildren) {
-                const oldChild = oldChildrenDict[key]
+            keyedNodesRemove(
+                children,
+                newChildrenDict,
+            )
 
-                if (oldChild) {
-                    diff(oldChild.html, html, dispatch)(oldChild.node)
-                }
-            }
+            // Diff remaining children.
 
-            /** Remove all elements that are not present in the newChildren list */
+            keyedNodesDiff(
+                children,
+                newChildrenDict,
+                dispatch
+            )
 
-            const keyedNewChildrenDict = Array_.toDictionary(newChildren, child => child[0])
+            // Create children.
 
-            for (const {key, node} of keyedOldChildren) {
-                if (keyedNewChildrenDict[key] === undefined) {
-                    node.remove()
-                }
-            }
-            
-            /** Update the dictionary references */
+            keyedNodesCreate(
+                children,
+                newChildren,
+                $node,
+                dispatch
+            )
 
-            keyedOldChildren = toKeyedNode(
-                oldChildren.filter(child => keyedNewChildrenDict[child[0]] !== undefined),
+            // Reorder.
+
+            keyedNodesReorder(
+                children,
+                newChildren,
                 $node
             )
-            oldChildrenDict = Array_.toDictionary(keyedOldChildren, child => child.key)
-
-
-            /** Order elements based on the `newChildren` order */
-
-            let nextNode: Element | Text | null = null
-        
-            // A reversed loop is convenient because we want to use `Node.prototype.insertBefore`
-            // to reorder nodes.
-            for (let i = newChildren.length - 1; i >= 0; i = i - 1) {
-                const [key, html] = newChildren[i]
-                const keyedOldChild = oldChildrenDict[key]
-
-                if (keyedOldChild === undefined) {
-                    // The element didn't exist. Create it and insert it.
-                    nextNode = $node.insertBefore(
-                        render(html, dispatch),
-                        nextNode
-                    )
-                } else if ($node.childNodes[i] !== keyedOldChild.node) {
-                    // The element is in wrong order.
-                    nextNode = $node.insertBefore(
-                        keyedOldChild.node,
-                        nextNode
-                    )
-                }
-            }
         }
+
+        return $node
     }
+}
+
+type KeyedNodes<E> = {
+    asArray: Array<KeyedNode<E>>,
+    asDictionary: { [key: string]: KeyedNode<E> | undefined },
 }
 
 type KeyedNode<E> = {
     key: string,
     html: Html.Html<E>,
     node: Element | Text,
-    nextKey: string | null,
-    index: number,
 }
 
-function toKeyedNode<T>(
-    children: Array<[string, Html.Html<T>]>,
-    $parent: Element
-): Array<KeyedNode<T>> {
-    return children.map(([key, html], i) => ({
+function keyedNodes<E>(
+    vdom: Array<[string, Html.Html<E>]>,
+    $parent: Element,
+): KeyedNodes<E> {
+    const asArray = vdom.map(([key, html], i) => ({
         key,
         html,
-        node: $parent.childNodes[i] as Element | Text,
-        nextKey: children[i + 1] === undefined ? null : children[i + 1][0],
-        index: i,
+        node: $parent.childNodes[i] as Element | Text
     }))
+
+    return {
+        asArray,
+        asDictionary: asArray.reduce(
+            (prev, curr, i) => {
+                prev[curr.key] = curr
+                return prev
+            },
+            Utils.id<{ [key: string]: KeyedNode<E> }>({})
+        )
+    }
+}
+
+/** Remove nodes that are not present in newChildrenDict. Mutates in place */
+function keyedNodesRemove<E>(
+    keyedNodes: KeyedNodes<E>,
+    newChildrenDict: { [key: string]: Html.Html<E> | undefined },
+): void {
+    for (
+        let i = 0,
+            length = keyedNodes.asArray.length,
+            removed = 0;
+        i < length;
+        i = i + 1
+    ) {
+        const keyed = keyedNodes.asArray[i - removed]
+
+        if (newChildrenDict[keyed.key] === undefined) {
+            // Delete from DOM
+            try {
+                keyed.node.remove()
+            } catch (e) {
+                Utils.debugError(e)
+            }
+
+            // Delete from array
+            keyedNodes.asArray.splice(i, 1)
+
+            // Delete from Dictionary
+            delete (keyedNodes.asDictionary)[keyed.key]            
+
+            removed = removed + 1
+        }
+    }
+}
+
+/** Diff elements already existing. Mutates in place. */
+function keyedNodesDiff<E>(
+    keyedNodes: KeyedNodes<E>,
+    newHtmls: { [key: string]: Html.Html<E> | undefined },
+    dispatch: (event: E) => void,
+): void {
+    for (
+        let i = 0,
+            length = keyedNodes.asArray.length;
+        i < length;
+        i = i + 1
+    ) {
+        const keyed = keyedNodes.asArray[i]
+
+        const newHtml = newHtmls[keyed.key]
+
+        if (newHtml) {
+            // Update the DOM
+            keyed.node = diff(keyed.html, newHtml, dispatch)(keyed.node)
+
+            // Update the Html
+            keyed.html = newHtml
+        }
+    }
+}
+
+function keyedNodesCreate<E>(
+    keyedNodes: KeyedNodes<E>,
+    newChildren: Array<[string, Html.Html<E>]>,
+    $parent: Element | Text,
+    dispatch: (event: E) => void,
+): void {
+    for (
+        let i = 0,
+            length = newChildren.length;
+        i < length;
+        i = i + 1
+    ) {
+        const [key, html] = newChildren[i]
+
+        if (keyedNodes.asDictionary[key] === undefined) {
+            const keyed: KeyedNode<E> = {
+                key,
+                html,
+                node: $parent.insertBefore(render(html, dispatch), null)
+            }
+
+            keyedNodes.asArray.push(keyed)
+            keyedNodes.asDictionary[key] = keyed
+        }
+    }
+}
+
+// Warn: This is O(n^2) in the worst case.
+// But when reordering one element it's O(n).
+// The worst case is when the order is reversed, or when two
+// consecutive elements are reordered.
+function keyedNodesReorder<E>(
+    keyedNodes: KeyedNodes<E>,
+    newChildren: Array<[string, Html.Html<E>]>,
+    $parent: Element,
+): void {
+    for (
+        let i = 0,
+            length = newChildren.length;
+        i < length;
+        i = i + 1
+    ) {
+        const [key] = newChildren[i]
+
+        const newNode = keyedNodes.asDictionary[key]
+        const oldNode = keyedNodes.asArray[i]
+
+        if (newNode && newNode !== oldNode) {
+            keyedNodesMove(keyedNodes, newNode, i, $parent)
+        }
+    }
+}
+
+// O(n)
+function keyedNodesMove<E>(
+    keyedNodes: KeyedNodes<E>,
+    keyed: KeyedNode<E>,
+    desiredPosition: number,
+    $parent: Element,
+): void {
+    const desiredNextSibling = keyedNodes.asArray[desiredPosition + 1]?.node || null
+
+    if (desiredNextSibling === keyed.node) {
+        // If we're right next to where we want to be, we can move the previous element
+        // to the end so that we can take its place.
+        $parent.insertBefore(
+            keyedNodes.asArray[desiredPosition].node,
+            null
+        )
+
+        keyedNodes.asArray.push(
+            ...keyedNodes.asArray.splice(desiredPosition, 1)
+        )
+
+        // This helps the simple reorder "move one element to the end of the list"
+        // to be very fast.
+    } else {
+        // Otherwise just move the element from its current position to the desired position.
+        $parent.insertBefore(
+            keyed.node,
+            desiredNextSibling
+        )
+
+        const currentPosition = keyedNodes.asArray.findIndex((x) => x === keyed)
+        keyedNodes.asArray.splice(currentPosition, 1)
+        keyedNodes.asArray.splice(desiredPosition, 0, keyed)
+    }
+
 }

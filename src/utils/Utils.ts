@@ -36,7 +36,7 @@ export function equals<A>(a: A, b: A): boolean {
 
     // NaN values are not equal between themselves or each other.
     // Without this, `equals(NaN, NaN)` would return `false`.
-    if (a !== a && b !== b) {
+    if (Number.isNaN(a) && Number.isNaN(b)) {
         return true;
     }
 
@@ -123,5 +123,11 @@ export function jsonParse(json: string): Result.Result<unknown, unknown> {
         return Result.ok(JSON.parse(json))
     } catch (error: unknown) {
         return Result.error(error)
+    }
+}
+
+export function debugError<A>(error: A): void {
+    if (process.env.NODE_ENV === 'development') {
+        console.error(error)
     }
 }

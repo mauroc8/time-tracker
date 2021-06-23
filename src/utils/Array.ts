@@ -92,12 +92,18 @@ export function decodeJson<A>(
     return Maybe.nothing()
 }
 
-export function toDictionary<A>(
+export function toDictionary<A, B>(
     keyedArray: Array<A>,
-    getKey: (a: A, i: number) => string,
-): { [key: string]: A } {
+    getKeyValue: (a: A, i: number) => [string, B]
+): { [key: string]: B | undefined } {
     return keyedArray.reduce(
-        (dict, a, i) => ({ ...dict, [getKey(a, i)]: a }),
-        {}
+        (dict, a, i) => {
+            const [key, value] = getKeyValue(a, i)
+
+            dict[key] = value
+
+            return dict
+        },
+        Utils.id<{ [key: string]: B | undefined }>({})
     )
 }
