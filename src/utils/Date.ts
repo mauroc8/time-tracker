@@ -6,11 +6,11 @@ export type Date =
 
 export const codec: Codec.Codec<Date> =
     Codec.map(
-        Codec.object3(
-            'year', Codec.number,
-            'month', monthCodec(),
-            'day', Codec.number,
-        ),
+        Codec.struct({
+            year: Codec.number,
+            month: monthCodec(),
+            day: Codec.number,
+        }),
         ({ year, month, day }) => date(year, month, day),
         Utils.id
     )

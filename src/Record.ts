@@ -20,10 +20,10 @@ export type Id = {
 }
 
 const idCodec: Codec.Codec<Id> =
-    Codec.object2(
-        'tag', Codec.literal('recordId'),
-        'id', Codec.number,
-    )
+    Codec.struct({
+        tag: Codec.literal('recordId'),
+        id: Codec.number,
+    })
 
 export function id(id: number): Id {
     return { tag: 'recordId', id }
@@ -44,17 +44,17 @@ export type Record = {
 }
 
 export const codec: Codec.Codec<Record> =
-    Codec.object9(
-        'id', idCodec,
-        'description', Codec.string,
-        'task', Codec.string,
-        'startInput', Codec.string,
-        'startTime', Time.codec,
-        'endInput', Codec.string,
-        'endTime', Time.codec,
-        'durationInput',  Codec.string,
-        'date', Date.codec
-    )
+    Codec.struct({
+        id: idCodec,
+        description: Codec.string,
+        task: Codec.string,
+        startInput: Codec.string,
+        startTime: Time.codec,
+        endInput: Codec.string,
+        endTime: Time.codec,
+        durationInput:  Codec.string,
+        date: Date.codec
+    })
 
 export function record(
     id: Id,

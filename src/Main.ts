@@ -41,13 +41,13 @@ export type State = {
 }
 
 export const codec: Codec.Codec<State> =
-    Codec.object5(
-        'records', Records.codec,
-        'dateGroupState', DateGroup.codec,
-        'create', Codec.maybe(Create.codec),
-        'today', Date.codec,
-        'now', Time.codec,
-    )
+    Codec.struct({
+        records: Records.codec,
+        dateGroupState: DateGroup.codec,
+        create: Codec.maybe(Create.codec),
+        today: Date.codec,
+        now: Time.codec,
+    })
 
 export function init(
     localStorage: string | null,

@@ -22,30 +22,6 @@ type Transition =
     | { tag: 'aboutToCollapse', groupTag: Tag, height: number }
     | { tag: 'collapsing', groupTag: Tag }
 
-const transitionCodec: Codec.Codec<Transition> =
-    Codec.union3(
-        Codec.object('tag', Codec.literal('idle')),
-        Codec.object3(
-            'tag', Codec.literal('aboutToCollapse'),
-            'groupTag', tagCodec(),
-            'height', Codec.number,
-        ),
-        Codec.object2(
-            'tag', Codec.literal('collapsing'),
-            'groupTag', tagCodec(),
-        ),
-        (transition, idle, aboutToCollapse, collapsing) => {
-            switch (transition.tag) {
-                case 'idle':
-                    return idle(transition)
-                case 'aboutToCollapse':
-                    return aboutToCollapse(transition)
-                case 'collapsing':
-                    return collapsing(transition)
-            }
-        }
-    )
-
 
 function idle(): Transition {
     return { tag: 'idle' }
@@ -81,9 +57,10 @@ export type State = {
 }
 
 export const codec: Codec.Codec<State> =
-    Codec.object2(
-        'transition', transitionCodec,
-        'collapsedGroups', Codec.array(tagCodec()),
+    Codec.map(
+        Codec.struct({ collapsedGroups: Codec.array(tagCodec()) }),
+        (state) => ({ ...state, transition: idle() }),
+        Utils.id
     )
 
 function stateOf(state: State): State {
@@ -273,36 +250,36 @@ function twoThreeOrFourCodec(): Codec.Codec<2 | 3 | 4> {
 
 function tagCodec(): Codec.Codec<Tag> {
     return Codec.union9(
-        Codec.object2(
-            'groupTag', Codec.literal('year'),
-            'year', Codec.number,
-        ),
-        Codec.object(
-            'groupTag', Codec.literal('lastYear'),
-        ),
-        Codec.object2(
-            'groupTag', Codec.literal('month'),
-            'month', Date.monthCodec(),
-        ),
-        Codec.object(
-            'groupTag', Codec.literal('lastMonth'),
-        ),
-        Codec.object2(
-            'groupTag', Codec.literal('weeksAgo'),
-            'x', twoThreeOrFourCodec(),
-        ),
-        Codec.object(
-            'groupTag', Codec.literal('lastWeek'),
-        ),
-        Codec.object(
-            'groupTag', Codec.literal('thisWeek'),
-        ),
-        Codec.object(
-            'groupTag', Codec.literal('nextWeek'),
-        ),
-        Codec.object(
-            'groupTag', Codec.literal('inTheFuture'),
-        ),
+        Codec.struct({
+            groupTag: Codec.literal('year'),
+            year: Codec.number,
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('lastYear'),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('month'),
+            month: Date.monthCodec(),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('lastMonth'),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('weeksAgo'),
+            x: twoThreeOrFourCodec(),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('lastWeek'),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('thisWeek'),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('nextWeek'),
+        }),
+        Codec.struct({
+            groupTag: Codec.literal('inTheFuture'),
+        }),
         (x, year, lastYear, month, lastMonth, weeksAgo, lastWeek, thisWeek, nextWeek, inTheFuture) => {
             switch (x.groupTag) {
                 case 'year':

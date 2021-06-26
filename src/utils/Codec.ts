@@ -78,347 +78,29 @@ export function andThen<A, B>(
     }
 }
 
-export function object<
-    KeyA extends string, A,
->(
-    keyA: KeyA, codecA: Codec<A>,
-): Codec<{ [Key in KeyA]: A }> {
+export function struct<A>(
+    properties: { [K in keyof A]: Codec<A[K]> }
+): Codec<{ [K in keyof A]: A[K] }> {
+    const propertyDecoders: { [K in keyof A]: Decoder.Decoder<A[K]> } = {} as any
+
+    for (const key in properties) if (Object.prototype.hasOwnProperty.call(properties, key)) {
+        propertyDecoders[key] = properties[key].decoder
+    }
+
     return {
         type: 'Codec',
-        decoder: Decoder.object(keyA, codecA.decoder),
-        encode: x => ({ [keyA]: codecA.encode(x[keyA]) })
+        decoder: Decoder.struct(propertyDecoders),
+        encode: struct => {
+            const encodedStruct: Utils.Json = {}
+            
+            for (const key in properties) if (Object.prototype.hasOwnProperty.call(properties, key)) {
+                encodedStruct[key] = properties[key].encode(struct[key])
+            }
+
+            return encodedStruct
+        }
     }
 }
-
-export function object2<
-    KeyA extends string, A,
-    KeyB extends string, B,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-): Codec<
-    { [Key in KeyA]: A }
-        & { [Key in KeyB]: B }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object2(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-        }),
-    }
-}
-
-export function object3<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object3(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-        }),
-    }
-}
-
-
-export function object4<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
-    KeyD extends string, D,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-    keyD: KeyD, codecD: Codec<D>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-    & { [Key in KeyD]: D }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object4(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-            keyD, codecD.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-            [keyD]: codecD.encode(x[keyD]),
-        }),
-    }
-}
-
-
-export function object5<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
-    KeyD extends string, D,
-    KeyE extends string, E,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-    keyD: KeyD, codecD: Codec<D>,
-    keyE: KeyE, codecE: Codec<E>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-    & { [Key in KeyD]: D }
-    & { [Key in KeyE]: E }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object5(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-            keyD, codecD.decoder,
-            keyE, codecE.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-            [keyD]: codecD.encode(x[keyD]),
-            [keyE]: codecE.encode(x[keyE]),
-        }),
-    }
-}
-
-
-export function object6<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
-    KeyD extends string, D,
-    KeyE extends string, E,
-    KeyF extends string, F,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-    keyD: KeyD, codecD: Codec<D>,
-    keyE: KeyE, codecE: Codec<E>,
-    keyF: KeyF, codecF: Codec<F>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-    & { [Key in KeyD]: D }
-    & { [Key in KeyE]: E }
-    & { [Key in KeyF]: F }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object6(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-            keyD, codecD.decoder,
-            keyE, codecE.decoder,
-            keyF, codecF.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-            [keyD]: codecD.encode(x[keyD]),
-            [keyE]: codecE.encode(x[keyE]),
-            [keyF]: codecF.encode(x[keyF]),
-        }),
-    }
-}
-
-
-export function object7<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
-    KeyD extends string, D,
-    KeyE extends string, E,
-    KeyF extends string, F,
-    KeyG extends string, G,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-    keyD: KeyD, codecD: Codec<D>,
-    keyE: KeyE, codecE: Codec<E>,
-    keyF: KeyF, codecF: Codec<F>,
-    keyG: KeyG, codecG: Codec<G>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-    & { [Key in KeyD]: D }
-    & { [Key in KeyE]: E }
-    & { [Key in KeyF]: F }
-    & { [Key in KeyG]: G }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object7(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-            keyD, codecD.decoder,
-            keyE, codecE.decoder,
-            keyF, codecF.decoder,
-            keyG, codecG.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-            [keyD]: codecD.encode(x[keyD]),
-            [keyE]: codecE.encode(x[keyE]),
-            [keyF]: codecF.encode(x[keyF]),
-            [keyG]: codecG.encode(x[keyG]),
-        }),
-    }
-}
-
-export function object8<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
-    KeyD extends string, D,
-    KeyE extends string, E,
-    KeyF extends string, F,
-    KeyG extends string, G,
-    KeyH extends string, H,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-    keyD: KeyD, codecD: Codec<D>,
-    keyE: KeyE, codecE: Codec<E>,
-    keyF: KeyF, codecF: Codec<F>,
-    keyG: KeyG, codecG: Codec<G>,
-    keyH: KeyH, codecH: Codec<H>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-    & { [Key in KeyD]: D }
-    & { [Key in KeyE]: E }
-    & { [Key in KeyF]: F }
-    & { [Key in KeyG]: G }
-    & { [Key in KeyH]: H }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object8(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-            keyD, codecD.decoder,
-            keyE, codecE.decoder,
-            keyF, codecF.decoder,
-            keyG, codecG.decoder,
-            keyH, codecH.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-            [keyD]: codecD.encode(x[keyD]),
-            [keyE]: codecE.encode(x[keyE]),
-            [keyF]: codecF.encode(x[keyF]),
-            [keyG]: codecG.encode(x[keyG]),
-            [keyH]: codecH.encode(x[keyH]),
-        }),
-    }
-}
-
-
-export function object9<
-    KeyA extends string, A,
-    KeyB extends string, B,
-    KeyC extends string, C,
-    KeyD extends string, D,
-    KeyE extends string, E,
-    KeyF extends string, F,
-    KeyG extends string, G,
-    KeyH extends string, H,
-    KeyI extends string, I,
->(
-    keyA: KeyA, codecA: Codec<A>,
-    keyB: KeyB, codecB: Codec<B>,
-    keyC: KeyC, codecC: Codec<C>,
-    keyD: KeyD, codecD: Codec<D>,
-    keyE: KeyE, codecE: Codec<E>,
-    keyF: KeyF, codecF: Codec<F>,
-    keyG: KeyG, codecG: Codec<G>,
-    keyH: KeyH, codecH: Codec<H>,
-    keyI: KeyI, codecI: Codec<I>,
-): Codec<
-    { [Key in KeyA]: A }
-    & { [Key in KeyB]: B }
-    & { [Key in KeyC]: C }
-    & { [Key in KeyD]: D }
-    & { [Key in KeyE]: E }
-    & { [Key in KeyF]: F }
-    & { [Key in KeyG]: G }
-    & { [Key in KeyH]: H }
-    & { [Key in KeyI]: I }
-> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.object9(
-            keyA, codecA.decoder,
-            keyB, codecB.decoder,
-            keyC, codecC.decoder,
-            keyD, codecD.decoder,
-            keyE, codecE.decoder,
-            keyF, codecF.decoder,
-            keyG, codecG.decoder,
-            keyH, codecH.decoder,
-            keyI, codecI.decoder,
-        ),
-        encode: x => ({
-            [keyA]: codecA.encode(x[keyA]),
-            [keyB]: codecB.encode(x[keyB]),
-            [keyC]: codecC.encode(x[keyC]),
-            [keyD]: codecD.encode(x[keyD]),
-            [keyE]: codecE.encode(x[keyE]),
-            [keyF]: codecF.encode(x[keyF]),
-            [keyG]: codecG.encode(x[keyG]),
-            [keyH]: codecH.encode(x[keyH]),
-            [keyI]: codecI.encode(x[keyI]),
-        }),
-    }
-}
-
 
 export function union2<A, B>(
     codecA: Codec<A>,
@@ -616,14 +298,15 @@ export function fail<A>(message: string): Codec<A> {
     }
 }
 
+// I need to study this because it's way more verbose than I'd like
 export function maybe<A>(codec: Codec<A>): Codec<Maybe.Maybe<A>> {
     return map(
         union2(
-            object2(
-                'tag', literal('just'),
-                'value', codec,
-            ),
-            object('tag', literal('nothing')),
+            struct({
+                tag: literal('just'),
+                value: codec,
+            }),
+            struct({ tag: literal('nothing') }),
             (x, just, nothing) => {
                 switch (x.tag) {
                     case 'just':
