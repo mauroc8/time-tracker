@@ -1,5 +1,4 @@
 import * as Utils from './Utils'
-import * as Decoder from './Decoder'
 import * as Codec from './Codec'
 
 export type Date =
@@ -71,15 +70,6 @@ export function compare(a: Date, b: Date): -1 | 0 | 1 {
     }
     return 1
 }
-
-export const monthDecoder: Decoder.Decoder<Month> =
-    Decoder.andThen(
-        Decoder.number,
-        number =>
-            isMonth(number)
-                ? Decoder.succeed(number)
-                : Decoder.fail(`Invalid month '${number}'`)
-    )
 
 export function monthCodec(): Codec.Codec<Month> {
     return Codec.andThen(

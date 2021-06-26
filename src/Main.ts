@@ -15,16 +15,17 @@ import * as Time from './utils/Time'
 import * as Task from './utils/Task'
 
 import * as Decoder from './utils/Decoder'
+import * as Codec from './utils/Codec'
 
 import * as Utils from './utils/Utils'
 import * as Maybe from './utils/Maybe'
 import * as Result from './utils/Result'
+import * as SortedArray from './utils/SortedArray'
 
 import * as DateGroup from './DateGroup'
 
 import * as Event from './Event'
 import * as Create from './Create'
-import * as Codec from './utils/Codec'
 
 
 // STATE ---
@@ -50,50 +51,35 @@ export const codec: Codec.Codec<State> =
 
 export function init(
     localStorage: string | null,
-    dateTime: Date.Javascript,
+    now: Date.Javascript,
 ): Update.Update<State, Event.Event> {
-    return Update.addTask(
+    return Update.of(
         Maybe.fromNullable(localStorage)
-            .map(localStorage => decodeLocalStorage<Event.Event>(localStorage, dateTime))
-            .withDefault(Update.pure(newInitialState(dateTime))),
-        getNewTime(dateTime),
+            .andThen(localStorage => getInitialState(localStorage, now))
+            .withDefault(newInitialState(now)),
+        [Task.waitMilliseconds(Event.gotNewTime, 0)],
     )
 }
 
-function decodeLocalStorage<Evt>(
+function getInitialState(
     localStorage: string,
-    dateTime: Date.Javascript,
-): Update.Update<State, Evt> {
-    return Utils.jsonParse(localStorage)
-        .mapError(errorWithMessage('localStorage parse error'))
-        .andThen(json =>
-            Decoder.decode(json, codec.decoder)
-                .mapError(Decoder.errorToString)
-                .mapError(errorWithMessage('localStorage decode error'))
-        )
-        .caseOf(
-            state =>
-                Update.pure({ ...state, today: Date.fromJavascript(dateTime) }),
-
-            ({ message, error }) =>
-                Update.of(
-                    newInitialState(dateTime),
-                    [
-                        Task.logInfo(message),
-                        Task.logError(error),
-                    ]
-                )
-        )
-}
-
-function errorWithMessage(message: string): (error: unknown) => { message: string, error: unknown } {
-    return error => ({ message, error })
+    now: Date.Javascript,
+): Maybe.Maybe<State> {
+    return Result.toMaybe(
+        Utils.jsonParse(localStorage)
+            .mapError(error => Utils.debugException('Json parse error', error, null))
+            .andThen(json =>
+                Decoder.decode(json, codec.decoder)
+                    .mapError(error => Utils.debugException('Json decode error', error, null))
+            )
+            .map(state => updateTime(state, now))
+    )
 }
 
 function getNewTime(now: Date.Javascript): Task.Task<Event.Event> {
-    return Task
-        .waitMilliseconds(1000 - now.getMilliseconds() % 1000)
-        .map(Event.gotNewTime)
+    const minute = 60 * 1000
+
+    return Task.waitMilliseconds(Event.gotNewTime, minute - Number(now) % minute)
 }
 
 function newInitialState(dateTime: Date.Javascript): State {
@@ -110,23 +96,65 @@ function newInitialState(dateTime: Date.Javascript): State {
 
 // --- UPDATE
 
+function updateTime(state: State, dateTime: Date.Javascript): State {    
+    const today = Date.fromJavascript(dateTime)
+    const now = Time.fromJavascript(dateTime)
+
+    /** If we're in a different day to the one saved in the model,
+     * the information in `Create` is transformed to a `Record` because
+     * `Record`s cannot span across different days.
+     * 
+     * We also automatically start a new `Create` for the current time.
+    */
+    if (!Utils.equals(state.today, today)) {
+        return {
+            ...state,
+            records: SortedArray.fromArray(
+                [
+                    ...state.records.toArray,
+                    ...state.create.map(create =>
+                            [Create.toRecord(
+                                create,
+                                Record.id(Number(dateTime)),
+                                state.today,
+                                Time.time(23, 59),
+                            )]
+                        )
+                        .withDefault([]),
+                ],
+                Record.compare
+            ),
+            create: state.create.map(create =>
+                Create.changeInput(create, 'start', Time.toString(now), now)
+            ),
+            today,
+            now
+        }
+    }
+
+    return {
+        ...state,
+        create: state.create.map(create =>
+            Create.updateDuration(
+                create,
+                state.now,
+                now
+            )
+        ),
+        today,
+        now,
+    }
+}
+
 export function update(state: State, event: Event.Event): Update.Update<State, Event.Event> {
     switch (event.name) {
         case 'none':
             return Update.pure(state)
 
         case 'gotNewTime': {
-            const today = Date.fromJavascript(event.date)
-            const now = Time.fromJavascript(event.date)
-
             return Update.of(
-                {
-                    ...state,
-                    create: state.create.map(create => Create.updateDuration(create, state.now, now)),
-                    today,
-                    now,
-                },
-                [ getNewTime(event.date) ]
+                updateTime(state, event.dateTime),
+                [getNewTime(event.dateTime)],
             )
         }
 
@@ -136,18 +164,19 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
                     dateGroupState => ({ ...state, dateGroupState }),
                     Event.dateGroupEvent
                 )
-                .andThen(saveStateToLocalStorage)
+                .andThen(saveToLocalStorage)
 
         case 'onRecordPlay': {
             const record = Records.findById(state.records, event.id)
 
-            return Update.pure(
+            return Update.pure<State, Event.Event>(
                 createRecordPlay(
                     state,
                     record?.description || '',
                     record?.task || '',
                 ),
             )
+                .andThen(saveToLocalStorage)
         }
 
         case 'onRecordDelete':
@@ -155,43 +184,46 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
                 ...state,
                 records: Records.delete_(state.records, event.id)
             })
-            .andThen(saveStateToLocalStorage)
+            .andThen(saveToLocalStorage)
 
         case 'onRecordInput':
             return Update.pure<State, Event.Event>({
                 ...state,
                 records: Records.updateInput(state.records, event.id, event.input, event.value),
             })
-            .andThen(saveStateToLocalStorage)
+            .andThen(saveToLocalStorage)
 
         case 'onRecordChange':
             return Update.pure<State, Event.Event>({
                 ...state,
                 records: Records.changeInput(state.records, event.id, event.input, event.value),
             })
-            .andThen(saveStateToLocalStorage)
+            .andThen(saveToLocalStorage)
 
         case 'onCreateStart':
-            return Update.pure(createRecordPlay(state, '', ''))
+            return Update
+                .pure<State, Event.Event>(createRecordPlay(state, '', ''))
+                .andThen(saveToLocalStorage)
 
         case 'onCreateInput':
-            return Update.pure({
+            return Update.pure<State, Event.Event>({
                 ...state,
                 create: state.create.map(create => Create.updateInput(create, event.input, event.value))
             })
+                .andThen(saveToLocalStorage)
 
         case 'onCreateChange':
-            return Update.pure({
+            return Update.pure<State, Event.Event>({
                 ...state,
                 create: state.create
                     .map(create =>
                         Create.changeInput(create, event.input, event.value, state.now)
                     )
             })
+                .andThen(saveToLocalStorage)
 
         case 'onCreateStop':
             return Update.pure(state)
-
     }
 }
 
@@ -203,14 +235,18 @@ function createRecordPlay(state: State, description: string, task: string): Stat
                 description: description,
                 task: task,
                 now: state.now,
-                today: state.today,
             }),
         ),
     }
 }
 
-function saveStateToLocalStorage(state: State): Update.Update<State, Event.Event> {
-    return Update.of(state, [ Task.saveToLocalStorage('state', state) ])
+function saveToLocalStorage(state: State): Update.Update<State, Event.Event> {
+    return Update.of(
+        state,
+        [
+            Task.saveToLocalStorage('state', codec.encode(state)),
+        ],
+    )
 }
 
 // --- VIEW
@@ -266,7 +302,7 @@ export function view(state: State): Html.Html<Event.Event> {
                         Layout.space(0),
                         Create.view(state.create, createConfig),
                         Records.view(
-                            state.records.array,
+                            state.records.toArray,
                             state.dateGroupState,
                             recordsConfig
                         ),

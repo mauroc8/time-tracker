@@ -4,18 +4,10 @@ import * as Utils from './Utils'
 
 // https://package.elm-lang.org/packages/miniBill/elm-codec/latest/Codec <3
 
-export type Json =
-    | string
-    | boolean
-    | number
-    | null
-    | Json[]
-    | { [key: string]: Json }
-
 export type Codec<A> = {
     type: 'Codec',
     decoder: Decoder.Decoder<A>,
-    encode: (x: A) => Json,
+    encode: (x: A) => Utils.Json,
 }
 
 const id = <A>(x: A) => x

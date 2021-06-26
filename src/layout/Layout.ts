@@ -355,3 +355,10 @@ export function widthPx<A>(px: number): Html.Attribute<A> {
 export function heightPx<A>(px: number): Html.Attribute<A> {
     return Html.style('height', `${px}px`)
 }
+
+export function horizontalGradient<A>(from: Color.Color, to: Color.Color): Html.Attribute<A> {
+    return Html.style(
+        'background-image',
+        `linear-gradient(to right, ${Color.toCssString(from)}, ${Color.toCssString(to)})`
+    )
+}

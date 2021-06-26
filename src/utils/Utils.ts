@@ -64,12 +64,6 @@ export function compareNumbers(a: number, b: number): -1 | 0 | 1 {
     return 1
 }
 
-export function debug<A>(tag: string, value: A): A {
-    console.log(tag, value)
-    return value
-}
-
-
 export function pipe<A, B>(
     a: A,
     f: (a: A) => B,
@@ -118,7 +112,15 @@ export function isObject(a: unknown): a is { [key: string]: unknown } {
     return typeof a === 'object' && a !== null
 }
 
-export function jsonParse(json: string): Result.Result<unknown, unknown> {
+export type Json =
+    | string
+    | boolean
+    | number
+    | null
+    | Json[]
+    | { [key: string]: Json }
+
+export function jsonParse(json: string): Result.Result<Json, unknown> {
     try {
         return Result.ok(JSON.parse(json))
     } catch (error: unknown) {
@@ -126,8 +128,19 @@ export function jsonParse(json: string): Result.Result<unknown, unknown> {
     }
 }
 
-export function debugError<A>(error: A): void {
+export function debug<A>(tag: string, value: A): A {
     if (process.env.NODE_ENV === 'development') {
+        console.log(tag, value)
+    }
+
+    return value
+}
+
+export function debugException<A>(message: string, error: unknown, value: A): A {
+    if (process.env.NODE_ENV === 'development') {
+        console.info(`[Runtime exception] ${message}:`)
         console.error(error)
     }
+
+    return value
 }

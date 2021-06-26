@@ -92,3 +92,5 @@ export const background = hsl(0, 0, 0.08)
 export const accent = hex('7F8BF8')
 export const accent70 = hex('414cb5')
 export const accent50 = hex('2d3582')
+
+export const transparent = rgba(0, 0, 0, 0)

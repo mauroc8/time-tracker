@@ -130,7 +130,7 @@ export function view<E, C>(
     return Layout.column(
         'div',
         [
-            Layout.spacing(30),
+            Layout.spacing(Record.spacing / 2),
         ],
         [
             Layout.column(
@@ -149,7 +149,7 @@ export function view<E, C>(
                 'column',
                 'div',
                 [
-                    Layout.spacing(50),
+                    Layout.spacing(Record.spacing),
                 ],
                 records.map(record =>
                     pair(

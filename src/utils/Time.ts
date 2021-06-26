@@ -1,5 +1,4 @@
 import * as Maybe from './Maybe'
-import * as Decoder from './Decoder'
 import * as Codec from './Codec'
 import * as Date from './Date'
 import * as Utils from './Utils'

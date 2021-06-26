@@ -8,7 +8,6 @@ import * as Input from './layout/Input'
 import * as Html from './vdom/Html'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
-import * as Decoder from './utils/Decoder'
 import * as Codec from './utils/Codec'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
@@ -19,12 +18,6 @@ export type Id = {
     tag: 'recordId',
     id: number,
 }
-
-const idDecoder: Decoder.Decoder<Id> =
-    Decoder.object2(
-        'tag', Decoder.literal('recordId'),
-        'id', Decoder.number,
-    )
 
 const idCodec: Codec.Codec<Id> =
     Codec.object2(
@@ -163,6 +156,8 @@ export function cleanInputs(record: Record): Record {
         )
     )
 }
+
+export const spacing: 50 = 50
 
 export function view<E, C>(
     record: Record,

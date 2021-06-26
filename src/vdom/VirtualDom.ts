@@ -1,11 +1,7 @@
 import * as Html from './Html'
 
 import * as Utils from '../utils/Utils'
-import * as Pair from '../utils/Pair'
-import * as Maybe from '../utils/Maybe'
-import * as Result from '../utils/Result'
 import * as Array_ from '../utils/Array'
-import * as Decoder from '../utils/Decoder'
 
 export type Patch = ($node: Element | Text) => Element | Text
 
@@ -23,7 +19,6 @@ export function diff<T>(
     } else {
         const patchAttributes = diffAttributes(oldVDom.attributes, newVDom.attributes, dispatch)
 
-
         const patchChildren = oldVDom.nodeType === 'keyed' && newVDom.nodeType === 'keyed'
             ? diffKeyedChildren(oldVDom.children, newVDom.children, dispatch)
             : diffChildren(unkeyChildren(oldVDom.children), unkeyChildren(newVDom.children), dispatch)
@@ -37,12 +32,18 @@ export function diff<T>(
     }
 }
 
+function isKeyedChildren<T>(
+    children: Array<[string, Html.Html<T>]> | Array<Html.Html<T>>
+): children is Array<[string, Html.Html<T>]> {
+    return children.length == 0 || children[0] instanceof Array
+}
+
 function unkeyChildren<T>(children: Array<[string, Html.Html<T>]> | Array<Html.Html<T>>): Array<Html.Html<T>> {
-    return children.map((child: [string, Html.Html<T>] | Html.Html<T>) =>
-        child instanceof Array
-            ? child[1]
-            : child
-    )
+    if (isKeyedChildren(children)) {
+        return children.map((child: [string, Html.Html<T>]) => child[1])
+    }
+
+    return children
 }
 
 function replace<T>(
@@ -393,7 +394,7 @@ function keyedNodesRemove<E>(
             try {
                 keyed.node.remove()
             } catch (e) {
-                Utils.debugError(e)
+                Utils.debugException('keyed.node.remove()', e, null)
             }
 
             // Delete from array
@@ -425,7 +426,11 @@ function keyedNodesDiff<E>(
 
         if (newHtml) {
             // Update the DOM
-            keyed.node = diff(keyed.html, newHtml, dispatch)(keyed.node)
+            try {
+                keyed.node = diff(keyed.html, newHtml, dispatch)(keyed.node)
+            } catch (e) {
+                Utils.debugException('keyed.node diff()', e, null)
+            }
 
             // Update the Html
             keyed.html = newHtml
@@ -448,14 +453,18 @@ function keyedNodesCreate<E>(
         const [key, html] = newChildren[i]
 
         if (keyedNodes.asDictionary[key] === undefined) {
-            const keyed: KeyedNode<E> = {
-                key,
-                html,
-                node: $parent.insertBefore(render(html, dispatch), null)
+            try {
+                const keyed: KeyedNode<E> = {
+                    key,
+                    html,
+                    node: $parent.insertBefore(render(html, dispatch), null)
+                }
+    
+                keyedNodes.asArray.push(keyed)
+                keyedNodes.asDictionary[key] = keyed
+            } catch (e) {
+                Utils.debugException('insertBefore(render())', e, null)
             }
-
-            keyedNodes.asArray.push(keyed)
-            keyedNodes.asDictionary[key] = keyed
         }
     }
 }
@@ -498,10 +507,14 @@ function keyedNodesMove<E>(
     if (desiredNextSibling === keyed.node) {
         // If we're right next to where we want to be, we can move the previous element
         // to the end so that we can take its place.
-        $parent.insertBefore(
-            keyedNodes.asArray[desiredPosition].node,
-            null
-        )
+        try {
+            $parent.insertBefore(
+                keyedNodes.asArray[desiredPosition].node,
+                null
+            )
+        } catch (e) {
+            Utils.debugException('insertBefore() case 1', e, null)
+        }
 
         keyedNodes.asArray.push(
             ...keyedNodes.asArray.splice(desiredPosition, 1)
@@ -511,10 +524,14 @@ function keyedNodesMove<E>(
         // to be very fast.
     } else {
         // Otherwise just move the element from its current position to the desired position.
-        $parent.insertBefore(
-            keyed.node,
-            desiredNextSibling
-        )
+        try {
+            $parent.insertBefore(
+                keyed.node,
+                desiredNextSibling
+            )
+        } catch (e) {
+            Utils.debugException('insertBefore() case 2', e, null)
+        }
 
         const currentPosition = keyedNodes.asArray.findIndex((x) => x === keyed)
         keyedNodes.asArray.splice(currentPosition, 1)

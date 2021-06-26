@@ -7,46 +7,46 @@ import * as Pair from './Pair'
 // https://package.elm-lang.org/packages/elm/json/latest/Json-Decode
 
 export type Decoder<A> =
-    { tag: 'Decoder', decoder: (a: unknown) => Result.Result<A, Error> }
+    { tag: 'Decoder', decoder: (a: Utils.Json) => Result.Result<A, Error> }
 
-export function decode<A>(a: unknown, decoder: Decoder<A>): Result.Result<A, Error> {
+export function decode<A>(a: Utils.Json, decoder: Decoder<A>): Result.Result<A, Error> {
     return decoder.decoder(a)
 }
 
-function decoder<A>(decoder: (a: unknown) => Result.Result<A, Error>): Decoder<A> {
+function decoder<A>(decoder: (a: Utils.Json) => Result.Result<A, Error>): Decoder<A> {
     return { tag: 'Decoder', decoder }
 }
 
 export const string: Decoder<string> =
     decoder(
-        (a: unknown) =>
+        (a: Utils.Json) =>
             typeof a === 'string'
                 ? Result.ok<string, Error>(a)
-                : Result.error<string, Error>({ tag: 'expectingString' })
+                : Result.error<string, Error>({ tag: 'expectingString', found: a })
     )
 
 export const boolean: Decoder<boolean> =
     decoder(
-        (a: unknown) =>
+        (a: Utils.Json) =>
             typeof a === 'boolean'
                 ? Result.ok<boolean, Error>(a)
-                : Result.error<boolean, Error>({ tag: 'expectingBoolean' })
+                : Result.error<boolean, Error>({ tag: 'expectingBoolean', found: a })
     )
 
 export const number: Decoder<number> =
     decoder(
-        (a: unknown) =>
+        (a: Utils.Json) =>
             typeof a === 'number'
                 ? Result.ok<number, Error>(a)
-                : Result.error<number, Error>({ tag: 'expectingNumber' })
+                : Result.error<number, Error>({ tag: 'expectingNumber', found: a })
     )
 
 export function literal<A extends string | number | boolean | null | undefined>(literal: A): Decoder<A> {
     return decoder(
-        (a: unknown) =>
+        (a: Utils.Json) =>
             a === literal
                 ? Result.ok<A, Error>(literal)
-                : Result.error<A, Error>({ tag: 'expectingLiteral', literal })
+                : Result.error<A, Error>({ tag: 'expectingLiteral', literal, found: a })
     )
 }
 
@@ -55,42 +55,42 @@ export const null_: Decoder<null> =
 
 export function array<A>(elementDecoder: Decoder<A>): Decoder<Array<A>> {
     return decoder(
-        (as: unknown) =>
+        (as: Utils.Json) =>
             as instanceof Array
                 ? Result.collect(
                     as.map(
                         (a, index) =>
                             decode(a, elementDecoder)
-                                .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error }))
+                                .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error, found: a }))
                     )
                   )
-                : Result.error<Array<A>, Error>({ tag: 'expectingArray' })
+                : Result.error<Array<A>, Error>({ tag: 'expectingArray', found: as })
     )
 }
 
 export function property<A>(propertyName: string, propertyDecoder: Decoder<A>): Decoder<A> {
     return decoder(
-        (a: unknown) =>
+        (a: Utils.Json) =>
             Utils.isObject(a)
                 ? decode(a[propertyName], propertyDecoder)
-                    .mapError<Error>(error => ({ tag: 'atObjectProperty', propertyName, error }))
-                : Result.error<A, Error>({ tag: 'expectingObject' })
+                    .mapError<Error>(error => ({ tag: 'atObjectProperty', propertyName, error, found: a[propertyName] }))
+                : Result.error<A, Error>({ tag: 'expectingObject', found: a })
     )
 }
 
 export function index<A>(index: number, elementDecoder: Decoder<A>): Decoder<A> {
     return decoder(
-        (as: unknown) =>
+        (as: Utils.Json) =>
             as instanceof Array
                 ? decode(as[index], elementDecoder)
-                    .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error }))
-                : Result.error<A, Error>({ tag: 'expectingArray' })
+                    .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error, found: as[index] }))
+                : Result.error<A, Error>({ tag: 'expectingArray', found: as })
     )
 }
 
 export function oneOf<A>(decoder_: Decoder<A>, ...decoders: Array<Decoder<A>>): Decoder<A> {
     return decoder(
-        (a: unknown) =>
+        (a: Utils.Json) =>
             decoders.reduce(
                 (previousResult, currentDecoder) =>
                     previousResult.caseOf(
@@ -103,15 +103,15 @@ export function oneOf<A>(decoder_: Decoder<A>, ...decoders: Array<Decoder<A>>): 
 }
 
 export type Error =
-    | { tag: 'expectingString' }
-    | { tag: 'expectingBoolean' }
-    | { tag: 'expectingNumber' }
-    | { tag: 'expectingLiteral', literal: unknown }
-    | { tag: 'expectingArray' }
-    | { tag: 'atArrayIndex', index: number, error: Error }
-    | { tag: 'expectingObject' }
-    | { tag: 'atObjectProperty', propertyName: string, error: Error }
-    | { tag: 'message', message: string }
+    | { tag: 'expectingString', found: Utils.Json }
+    | { tag: 'expectingBoolean', found: Utils.Json }
+    | { tag: 'expectingNumber', found: Utils.Json }
+    | { tag: 'expectingLiteral', literal: unknown, found: Utils.Json }
+    | { tag: 'expectingArray', found: Utils.Json }
+    | { tag: 'atArrayIndex', index: number, error: Error, found: Utils.Json }
+    | { tag: 'expectingObject', found: Utils.Json }
+    | { tag: 'atObjectProperty', propertyName: string, error: Error, found: Utils.Json }
+    | { tag: 'message', message: string, found: Utils.Json }
 
 export function errorToString(error: Error): string {
     switch (error.tag) {
@@ -131,7 +131,7 @@ export function errorToString(error: Error): string {
             return 'Expecting an object'
         case 'atObjectProperty':
             const [properties, error_] = joinConsecutivePropertyAccessErrors(error.propertyName, error.error)
-            return `${errorToString(error_)} in <object>.${properties.join('.')}`
+            return `${errorToString(error_)} at <object>.${properties.join('.')}`
         case 'message':
             return error.message
     }
@@ -152,7 +152,7 @@ function joinConsecutivePropertyAccessErrors(property: string, error: Error): [A
 
 export function map<A, B>(decoder_: Decoder<A>, mapFunction: (a: A) => B): Decoder<B> {
     return decoder(
-        (x: unknown) =>
+        (x: Utils.Json) =>
             decode(x, decoder_)
                 .map(mapFunction)
     )
@@ -164,7 +164,7 @@ export function map2<A, B, C>(
     mapFunction: (a: A, b: B) => C
 ): Decoder<C> {
     return decoder(
-        (x: unknown) =>
+        (x: Utils.Json) =>
             Result.map2(
                 decode(x, decoderA),
                 decode(x, decoderB),
@@ -182,7 +182,7 @@ export function andMap<A, B>(
 
 export function andThen<A, B>(decoder_: Decoder<A>, func: (a: A) => Decoder<B>): Decoder<B> {
     return decoder(
-        (x: unknown) =>
+        (x: Utils.Json) =>
             decode(x, decoder_).andThen(
                 a => decode(x, func(a))
             )
@@ -356,7 +356,7 @@ export function succeed<A>(a: A): Decoder<A> {
 }
 
 export function fail<A>(message: string): Decoder<A> {
-    return decoder((_) => Result.error<A, Error>({ tag: 'message', message }))
+    return decoder(a => Result.error<A, Error>({ tag: 'message', message, found: a }))
 }
 
 export function maybe<A>(decoder_: Decoder<A>): Decoder<Maybe.Maybe<A>> {

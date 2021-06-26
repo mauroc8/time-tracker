@@ -11,7 +11,7 @@ import * as Create from './Create'
 
 export type Event =
     | { name: 'none' }
-    | { name: 'gotNewTime', date: Date.Javascript }
+    | { name: 'gotNewTime', dateTime: Date.Javascript }
     | { name: 'dateGroupEvent', event: DateGroup.Event }
     | { name: 'onRecordPlay', id: Record.Id }
     | { name: 'onRecordDelete', id: Record.Id }
@@ -25,7 +25,7 @@ export type Event =
 export const none: Event = { name: 'none' }
 
 export function gotNewTime(date: Date.Javascript): Event {
-    return { name: 'gotNewTime', date }
+    return { name: 'gotNewTime', dateTime: date }
 }
 
 export function dateGroupEvent(event: DateGroup.Event): Event {

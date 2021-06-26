@@ -9,6 +9,8 @@ import * as Time from './utils/Time'
 import * as Utils from './utils/Utils'
 import * as Html from './vdom/Html'
 import * as Codec from './utils/Codec'
+import * as Result from './utils/Result'
+import * as Record from './Record'
 
 export type Create = {
     description: string,
@@ -16,17 +18,21 @@ export type Create = {
     startInput: string,
     startTime: Time.Time,
     durationInput: string,
-    date: Date.Date,
 }
 
 export const codec: Codec.Codec<Create> =
-    Codec.object6(
-        'description', Codec.string,
-        'task', Codec.string,
-        'startInput', Codec.string,
-        'startTime', Time.codec,
-        'durationInput', Codec.string,
-        'date', Date.codec,
+    Codec.map(
+        Codec.object4(
+            'description', Codec.string,
+            'task', Codec.string,
+            'startTime', Time.codec,
+            'durationInput', Codec.string,
+        ),
+        /** Don't save the `start input` to keep the invariant that
+         * 
+        */
+        (object4) => ({ ...object4, startInput: Time.toString(object4.startTime) }),
+        Utils.id
     )
 
 export function create(
@@ -34,7 +40,6 @@ export function create(
         description: string,
         task: string,
         now: Time.Time,
-        today: Date.Date,
     }
 ): Create {
     return {
@@ -43,7 +48,6 @@ export function create(
         startInput: Time.toString(options.now),
         startTime: options.now,
         durationInput: durationString(options.now, options.now),
-        date: options.today,
     }
 }
 
@@ -51,16 +55,32 @@ function durationString(end: Time.Time, start: Time.Time): string {
     return Time.toString(Time.difference(end, start))
 }
 
-export function updateDuration(create: Create, oldTime: Time.Time, now: Time.Time): Create {
-    if (create.durationInput === durationString(oldTime, create.startTime)) {
-        return {
-            ...create,
-            durationInput: durationString(now, create.startTime)
-        }
+export function toRecord(create: Create, id: Record.Id, today: Date.Date, now: Time.Time): Record.Record {
+    return Record.record(
+        id,
+        create.description,
+        create.task,
+        create.startTime,
+        now,
+        today
+    )
+}
+
+export function updateDuration(
+    create: Create,
+    oldTime: Time.Time,
+    now: Time.Time,
+): Create {
+    // (!) This should be true iff the user's editing the duration input
+    if (create.durationInput !== durationString(oldTime, create.startTime)) {
+        // I avoid changing the value of an input that's being edited by the user!
+        return create
     }
 
-    // Entiendo que en este caso el durationInput está siendo editado.
-    return create
+    return {
+        ...create,
+        durationInput: durationString(now, create.startTime)
+    }
 }
 
 function normalize(create: Create, now: Time.Time): Create {

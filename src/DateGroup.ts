@@ -22,22 +22,6 @@ type Transition =
     | { tag: 'aboutToCollapse', groupTag: Tag, height: number }
     | { tag: 'collapsing', groupTag: Tag }
 
-const transitionDecoder: Decoder.Decoder<Transition> =
-    Decoder.union3(
-        Decoder.object(
-            'tag', Decoder.literal('idle')
-        ),
-        Decoder.object3(
-            'tag', Decoder.literal('aboutToCollapse'),
-            'groupTag', tagDecoder(),
-            'height', Decoder.number,
-        ),
-        Decoder.object2(
-            'tag', Decoder.literal('collapsing'),
-            'groupTag', tagDecoder(),
-        ),
-    )
-
 const transitionCodec: Codec.Codec<Transition> =
     Codec.union3(
         Codec.object('tag', Codec.literal('idle')),
@@ -173,10 +157,7 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                     transition: aboutToCollapse(event.groupTag, event.height)
                 }),
                 [
-                    Task.map(
-                        Task.waitMilliseconds(0),
-                        _ => startCollapseTransition()
-                    )
+                    Task.waitMilliseconds(_ => startCollapseTransition(), 0),
                 ]
             )
 
@@ -187,9 +168,9 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                     transition: startCollapsing(state.transition)
                 }),
                 [
-                    Task.map(
-                        Task.waitMilliseconds(collapsingTransitionSeconds * 1000),
-                        _ => endCollapseTransition()
+                    Task.waitMilliseconds(
+                        _ => endCollapseTransition(),
+                        collapsingTransitionSeconds * 1000,
                     )
                 ]
             )
@@ -279,48 +260,8 @@ export function fromRecords(
     | { groupTag: 'nextWeek' }
     | { groupTag: 'inTheFuture' }
 
-function tagDecoder(): Decoder.Decoder<Tag> {
-    return Decoder.union9(
-        Decoder.object2(
-            'groupTag', Decoder.literal('year'),
-            'year', Decoder.number,
-        ),
-        Decoder.object(
-            'groupTag', Decoder.literal('lastYear'),
-        ),
-        Decoder.object2(
-            'groupTag', Decoder.literal('month'),
-            'month', Date.monthDecoder,
-        ),
-        Decoder.object(
-            'groupTag', Decoder.literal('lastMonth'),
-        ),
-        Decoder.object2(
-            'groupTag', Decoder.literal('weeksAgo'),
-            'x', Decoder.andThen(
-                Decoder.number,
-                n => n === 2 || n === 3 || n === 4
-                    ? Decoder.succeed<2 | 3 | 4>(n)
-                    : Decoder.fail<2 | 3 | 4>('Invalid weeks ago')
-            )
-        ),
-        Decoder.object(
-            'groupTag', Decoder.literal('lastWeek'),
-        ),
-        Decoder.object(
-            'groupTag', Decoder.literal('thisWeek'),
-        ),
-        Decoder.object(
-            'groupTag', Decoder.literal('nextWeek'),
-        ),
-        Decoder.object(
-            'groupTag', Decoder.literal('inTheFuture'),
-        ),
-    )
-}
-
-const twoThreeOrFourCodec: Codec.Codec<2 | 3 | 4> =
-    Codec.andThen(
+function twoThreeOrFourCodec(): Codec.Codec<2 | 3 | 4> {
+    return Codec.andThen(
         Codec.number,
         n =>
             n === 2 || n === 3 || n === 4
@@ -328,6 +269,7 @@ const twoThreeOrFourCodec: Codec.Codec<2 | 3 | 4> =
                 : Codec.fail('Invalid weeks ago'),
         Utils.id,
     )
+}
 
 function tagCodec(): Codec.Codec<Tag> {
     return Codec.union9(
@@ -347,7 +289,7 @@ function tagCodec(): Codec.Codec<Tag> {
         ),
         Codec.object2(
             'groupTag', Codec.literal('weeksAgo'),
-            'x', twoThreeOrFourCodec,
+            'x', twoThreeOrFourCodec(),
         ),
         Codec.object(
             'groupTag', Codec.literal('lastWeek'),
@@ -564,7 +506,7 @@ export function view<E, Context extends { today: Date.Date }>(
     return Layout.column(
         'div',
         [
-            Layout.spacing(30),
+            Layout.spacing(Record.spacing / 2),
             Layout.fullWidth()
         ],
         [
@@ -588,7 +530,7 @@ export function view<E, Context extends { today: Date.Date }>(
                         [
                             Layout.grow(1),
                             Layout.heightPx(1),
-                            Layout.backgroundColor(Color.hsl(0, 0, 0.2))
+                            Layout.horizontalGradient(Color.transparent, Color.hsl(0, 0, 0.2))
                         ],
                         []
                     ),
@@ -598,7 +540,7 @@ export function view<E, Context extends { today: Date.Date }>(
                         [
                             Layout.grow(1),
                             Layout.heightPx(1),
-                            Layout.backgroundColor(Color.hsl(0, 0, 0.2))
+                            Layout.horizontalGradient(Color.hsl(0, 0, 0.2), Color.transparent)
                         ],
                         []
                     ),
@@ -608,7 +550,7 @@ export function view<E, Context extends { today: Date.Date }>(
                 Layout.column(
                     'div',
                     [
-                        Layout.spacing(30),
+                        Layout.spacing(Record.spacing),
                         Layout.fullWidth(),
                         Html.property('id', toStringId(groupTag)),
                         Html.style(
@@ -631,8 +573,8 @@ export function view<E, Context extends { today: Date.Date }>(
                             records,
                             (a, b) =>
                                 Utils.equals(
-                                    fromDate({ today, time: a.date }),
-                                    fromDate({ today, time: b.date })
+                                    TimeGroup.fromDate({ today, time: a.date }),
+                                    TimeGroup.fromDate({ today, time: b.date })
                                 )
                         )
                             .map(day => 

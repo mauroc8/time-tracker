@@ -1,6 +1,12 @@
 import * as Maybe from './Maybe'
 import * as Result from './Result'
 import * as Date from './Date'
+import * as Codec from './Codec';
+import * as Utils from './Utils';
+
+/** One important assumption about this module is that each Task calls "dispatch" at most once.
+ * (When it calls dispatch 0 times, it will be a Task<never>).
+*/
 
 type Dispatch<A> = (a: A) => void
 
@@ -53,21 +59,26 @@ export function none<T>(): Task<T> {
     return of(() => {})
 }
 
-export function saveToLocalStorage<A>(key: string, value: unknown): Task<A> {
+export function saveToLocalStorage<A>(key: string, value: Utils.Json): Task<never> {
     return of (
-        (_) => {
+        (dispatch) => {
             localStorage.setItem(key, JSON.stringify(value))
         }
     )
 }
 
-export function getFromLocalStorage(key: string): Task<Maybe.Maybe<string>> {
+export function getFromLocalStorage(key: string): Task<Maybe.Maybe<Utils.Json>> {
     return of(
         (dispatch) => {
-            const stateString = localStorage.getItem(key)
+            const string = localStorage.getItem(key)
 
-            if (stateString !== null) {
-                dispatch(Maybe.just(stateString))
+            if (string !== null) {
+                try {
+                    dispatch(Maybe.just(JSON.parse(string)))
+                } catch (x) {
+                    localStorage.removeItem(key)
+                    dispatch(Maybe.nothing())
+                }
             } else {
                 dispatch(Maybe.nothing())
             }
@@ -75,18 +86,21 @@ export function getFromLocalStorage(key: string): Task<Maybe.Maybe<string>> {
     )
 }
 
-export function preventDefault<T>(event: Event): Task<T> {
+export function preventDefault<T>(event: Event): Task<never> {
     return of(
-        (_) => {
+        (dispatch) => {
             event.preventDefault()
         }
     )
 }
 
-export function waitMilliseconds(milliseconds: number): Task<Date.Javascript> {
+export function waitMilliseconds<A>(
+    event: (dateTime: Date.Javascript) => A,
+    milliseconds: number,
+): Task<A> {
     return of(
         (dispatch) => {
-            setTimeout(() => dispatch(new window.Date()), milliseconds)
+            setTimeout(() => dispatch(event(new window.Date())), milliseconds)
         }
     )
 }
