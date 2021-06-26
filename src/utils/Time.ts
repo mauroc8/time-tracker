@@ -1,6 +1,8 @@
 import * as Maybe from './Maybe'
 import * as Decoder from './Decoder'
+import * as Codec from './Codec'
 import * as Date from './Date'
+import * as Utils from './Utils'
 
 export type Time =
     { hours: number, minutes: number }
@@ -16,11 +18,14 @@ export function fromJavascript(date: Date.Javascript): Time {
     return time(date.getHours(), date.getMinutes())
 }
 
-export const decoder: Decoder.Decoder<Time> =
-    Decoder.map2(
-        Decoder.property('hours', Decoder.number),
-        Decoder.property('minutes', Decoder.number),
-        time
+export const codec: Codec.Codec<Time> =
+    Codec.map(
+        Codec.object2(
+            'hours', Codec.number,
+            'minutes', Codec.number,
+        ),
+        ({ hours, minutes }) => time(hours, minutes),
+        Utils.id
     )
 
 export function fromString(input: string): Maybe.Maybe<Time> {

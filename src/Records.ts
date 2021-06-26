@@ -15,14 +15,15 @@ import * as Html from './vdom/Html'
 
 import * as DateGroup from './DateGroup'
 import * as Decoder from './utils/Decoder'
+import * as Codec from './utils/Codec'
 
 export type Records =
     { tag: 'Records', array: Array<Record.Record> }
 
-export const decoder: Decoder.Decoder<Records> =
-    Decoder.object2(
-        'tag', Decoder.literal('Records'),
-        'array', Decoder.array(Record.decoder)
+export const codec: Codec.Codec<Records> =
+    Codec.object2(
+        'tag', Codec.literal('Records'),
+        'array', Codec.array(Record.codec),
     )
 
 function update(

@@ -1,18 +1,36 @@
-export interface Maybe<A> {
-    tag: "just" | "nothing"
+export interface MaybeInterface<A> {
     withDefault(value: A): A
     map<B>(func: (a: A) => B): Maybe<B>
     andThen<B>(func: (a: A) => Maybe<B>): Maybe<B>
-    orElse(_: () => Maybe<A>): Maybe<A>
+    orElse(func: () => Maybe<A>): Maybe<A>
     caseOf<B>(ifJust: (a: A) => B, ifNothing: () => B): B
 }
 
+export type Maybe<A> =
+    | { tag: 'just', value: A } & MaybeInterface<A>
+    | { tag: 'nothing' } & MaybeInterface<A>
+
 export function just<A>(value: A): Maybe<A> {
-    return new Just<A>(value)
+    return {
+        tag: 'just',
+        value,
+        withDefault: _ => value,
+        map: f => just(f(value)),
+        andThen: f => f(value),
+        orElse: _ => just(value),
+        caseOf: (f, _) => f(value),
+    }
 }
 
 export function nothing<A>(): Maybe<A> {
-    return new Nothing<A>()
+    return {
+        tag: 'nothing',
+        withDefault: x => x,
+        map: nothing,
+        andThen: nothing,
+        orElse: f => f(),
+        caseOf: (_, f) => f(),
+    }
 }
 
 export function map2<A, B, C>(fn: (a: A, b: B) => C, a: Maybe<A>, b: Maybe<B>): Maybe<C> {
@@ -49,73 +67,7 @@ export function filter<A>(maybe: Maybe<A>, f: (a: A) => boolean): Maybe<A> {
 }
 
 export function caseOf<A, B>(maybe: Maybe<A>, ifJust: (a: A) => B, ifNothing: () => B): B {
-    return maybe
-        .map(a => () => ifJust(a))
-        .withDefault(ifNothing)
-        ()
-}
-
-class Just<A> implements Maybe<A> {
-    public tag: "just" = "just"
-    value: A
-
-    constructor(value: A) {
-        this.value = value
-    }
-
-    caseOf<B>(ifJust: (a: A) => B, _: () => B): B {
-        return ifJust(this.value)
-    }
-
-    withDefault(_: A): A {
-        return this.value
-    }
-
-    map<B>(func: (a: A) => B): Maybe<B> {
-        return new Just(func(this.value))
-    }
-
-    andThen<B>(func: (a: A) => Maybe<B>): Maybe<B> {
-        return func(this.value)
-    }
-
-    orElse(_: () => Maybe<A>): Maybe<A> {
-        return this
-    }
-
-    toBool(): boolean {
-        return true
-    }
-}
-
-class Nothing<A> implements Maybe<A> {
-    public tag: "nothing" = "nothing"
-
-    constructor() { }
-
-    caseOf<B>(_: (a: A) => B, ifNothing: () => B): B {
-        return ifNothing()
-    }
-
-    withDefault(value: A): A {
-        return value
-    }
-
-    map<B>(_: (a: A) => B): Maybe<B> {
-        return new Nothing()
-    }
-
-    andThen<B>(_: (a: A) => Maybe<B>): Maybe<B> {
-        return new Nothing()
-    }
-
-    orElse(f: () => Maybe<A>): Maybe<A> {
-        return f()
-    }
-
-    toBool(): boolean {
-        return false
-    }
+    return maybe.caseOf(ifJust, ifNothing)
 }
 
 export function combine<A>(maybes: Array<Maybe<A>>): Maybe<Array<A>> {

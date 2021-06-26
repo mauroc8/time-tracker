@@ -10,6 +10,7 @@ import * as Array_ from './utils/Array'
 import * as Update from './Update'
 import * as Task from './utils/Task'
 import * as Pair from './utils/Pair'
+import * as Codec from './utils/Codec'
 import * as Color from './style/Color'
 
 import './DateGroup.css'
@@ -21,8 +22,8 @@ type Transition =
     | { tag: 'aboutToCollapse', groupTag: Tag, height: number }
     | { tag: 'collapsing', groupTag: Tag }
 
-function transitionDecoder(): Decoder.Decoder<Transition> {
-    return Decoder.union3(
+const transitionDecoder: Decoder.Decoder<Transition> =
+    Decoder.union3(
         Decoder.object(
             'tag', Decoder.literal('idle')
         ),
@@ -36,7 +37,31 @@ function transitionDecoder(): Decoder.Decoder<Transition> {
             'groupTag', tagDecoder(),
         ),
     )
-}
+
+const transitionCodec: Codec.Codec<Transition> =
+    Codec.union3(
+        Codec.object('tag', Codec.literal('idle')),
+        Codec.object3(
+            'tag', Codec.literal('aboutToCollapse'),
+            'groupTag', tagCodec(),
+            'height', Codec.number,
+        ),
+        Codec.object2(
+            'tag', Codec.literal('collapsing'),
+            'groupTag', tagCodec(),
+        ),
+        (transition, idle, aboutToCollapse, collapsing) => {
+            switch (transition.tag) {
+                case 'idle':
+                    return idle(transition)
+                case 'aboutToCollapse':
+                    return aboutToCollapse(transition)
+                case 'collapsing':
+                    return collapsing(transition)
+            }
+        }
+    )
+
 
 function idle(): Transition {
     return { tag: 'idle' }
@@ -71,10 +96,10 @@ export type State = {
     collapsedGroups: Array<Tag>,
 }
 
-export const decoder: Decoder.Decoder<State> =
-    Decoder.object2(
-        'transition', transitionDecoder(),
-        'collapsedGroups', Decoder.array(tagDecoder()),
+export const codec: Codec.Codec<State> =
+    Codec.object2(
+        'transition', transitionCodec,
+        'collapsedGroups', Codec.array(tagCodec()),
     )
 
 function stateOf(state: State): State {
@@ -291,6 +316,73 @@ function tagDecoder(): Decoder.Decoder<Tag> {
         Decoder.object(
             'groupTag', Decoder.literal('inTheFuture'),
         ),
+    )
+}
+
+const twoThreeOrFourCodec: Codec.Codec<2 | 3 | 4> =
+    Codec.andThen(
+        Codec.number,
+        n =>
+            n === 2 || n === 3 || n === 4
+                ? Codec.succeed(n)
+                : Codec.fail('Invalid weeks ago'),
+        Utils.id,
+    )
+
+function tagCodec(): Codec.Codec<Tag> {
+    return Codec.union9(
+        Codec.object2(
+            'groupTag', Codec.literal('year'),
+            'year', Codec.number,
+        ),
+        Codec.object(
+            'groupTag', Codec.literal('lastYear'),
+        ),
+        Codec.object2(
+            'groupTag', Codec.literal('month'),
+            'month', Date.monthCodec(),
+        ),
+        Codec.object(
+            'groupTag', Codec.literal('lastMonth'),
+        ),
+        Codec.object2(
+            'groupTag', Codec.literal('weeksAgo'),
+            'x', twoThreeOrFourCodec,
+        ),
+        Codec.object(
+            'groupTag', Codec.literal('lastWeek'),
+        ),
+        Codec.object(
+            'groupTag', Codec.literal('thisWeek'),
+        ),
+        Codec.object(
+            'groupTag', Codec.literal('nextWeek'),
+        ),
+        Codec.object(
+            'groupTag', Codec.literal('inTheFuture'),
+        ),
+        (x, year, lastYear, month, lastMonth, weeksAgo, lastWeek, thisWeek, nextWeek, inTheFuture) => {
+            switch (x.groupTag) {
+                case 'year':
+                    return year(x)
+                case 'lastYear':
+                    return lastYear(x)
+                case 'month':
+                    return month(x)
+                case 'lastMonth':
+                    return lastMonth(x)
+                case 'weeksAgo':
+                    return weeksAgo(x)
+                case 'lastWeek':
+                    return lastWeek(x)
+                case 'thisWeek':
+                    return thisWeek(x)
+                case 'nextWeek':
+                    return nextWeek(x)
+                case 'inTheFuture':
+                    return inTheFuture(x)
+            }
+        }
     )
 }
 

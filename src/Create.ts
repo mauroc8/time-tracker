@@ -8,6 +8,7 @@ import * as Decoder from './utils/Decoder'
 import * as Time from './utils/Time'
 import * as Utils from './utils/Utils'
 import * as Html from './vdom/Html'
+import * as Codec from './utils/Codec'
 
 export type Create = {
     description: string,
@@ -18,14 +19,14 @@ export type Create = {
     date: Date.Date,
 }
 
-export const decoder: Decoder.Decoder<Create> =
-    Decoder.object6(
-        'description', Decoder.string,
-        'task', Decoder.string,
-        'startInput', Decoder.string,
-        'startTime', Time.decoder,
-        'durationInput', Decoder.string,
-        'date', Date.decoder,
+export const codec: Codec.Codec<Create> =
+    Codec.object6(
+        'description', Codec.string,
+        'task', Codec.string,
+        'startInput', Codec.string,
+        'startTime', Time.codec,
+        'durationInput', Codec.string,
+        'date', Date.codec,
     )
 
 export function create(

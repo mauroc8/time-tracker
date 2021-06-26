@@ -9,6 +9,7 @@ import * as Html from './vdom/Html'
 import * as Icon from './style/Icon'
 import * as Color from './style/Color'
 import * as Decoder from './utils/Decoder'
+import * as Codec from './utils/Codec'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
 
@@ -23,6 +24,12 @@ const idDecoder: Decoder.Decoder<Id> =
     Decoder.object2(
         'tag', Decoder.literal('recordId'),
         'id', Decoder.number,
+    )
+
+const idCodec: Codec.Codec<Id> =
+    Codec.object2(
+        'tag', Codec.literal('recordId'),
+        'id', Codec.number,
     )
 
 export function id(id: number): Id {
@@ -43,17 +50,17 @@ export type Record = {
     date: Date.Date,
 }
 
-export const decoder: Decoder.Decoder<Record> =
-    Decoder.object9(
-        'id', idDecoder,
-        'description', Decoder.string,
-        'task', Decoder.string,
-        'startInput', Decoder.string,
-        'startTime', Time.decoder,
-        'endInput', Decoder.string,
-        'endTime', Time.decoder,
-        'durationInput',  Decoder.string,
-        'date', Date.decoder
+export const codec: Codec.Codec<Record> =
+    Codec.object9(
+        'id', idCodec,
+        'description', Codec.string,
+        'task', Codec.string,
+        'startInput', Codec.string,
+        'startTime', Time.codec,
+        'endInput', Codec.string,
+        'endTime', Time.codec,
+        'durationInput',  Codec.string,
+        'date', Date.codec
     )
 
 export function record(

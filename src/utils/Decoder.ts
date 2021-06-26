@@ -790,7 +790,7 @@ export function object9<
 
 
 
-function union2<
+export function union2<
     A,
     B,
 >(

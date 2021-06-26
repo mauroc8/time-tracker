@@ -24,6 +24,7 @@ import * as DateGroup from './DateGroup'
 
 import * as Event from './Event'
 import * as Create from './Create'
+import * as Codec from './utils/Codec'
 
 
 // STATE ---
@@ -32,19 +33,19 @@ import * as Create from './Create'
  */
 export type State = {
     records: Records.Records,
-    today: Date.Date,
-    now: Time.Time,
     dateGroupState: DateGroup.State,
     create: Maybe.Maybe<Create.Create>,
+    today: Date.Date,
+    now: Time.Time,
 }
 
-export const decoder: Decoder.Decoder<State> =
-    Decoder.object5(
-        'records', Records.decoder,
-        'today', Date.decoder,
-        'now', Time.decoder,
-        'dateGroupState', DateGroup.decoder,
-        'create', Decoder.maybe(Create.decoder),
+export const codec: Codec.Codec<State> =
+    Codec.object5(
+        'records', Records.codec,
+        'dateGroupState', DateGroup.codec,
+        'create', Codec.maybe(Create.codec),
+        'today', Date.codec,
+        'now', Time.codec,
     )
 
 export function init(
@@ -66,7 +67,7 @@ function decodeLocalStorage<Evt>(
     return Utils.jsonParse(localStorage)
         .mapError(errorWithMessage('localStorage parse error'))
         .andThen(json =>
-            Decoder.decode(json, decoder)
+            Decoder.decode(json, codec.decoder)
                 .mapError(Decoder.errorToString)
                 .mapError(errorWithMessage('localStorage decode error'))
         )

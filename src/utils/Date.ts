@@ -1,8 +1,20 @@
 import * as Utils from './Utils'
 import * as Decoder from './Decoder'
+import * as Codec from './Codec'
 
 export type Date =
     { year: number, month: Month, day: number }
+
+export const codec: Codec.Codec<Date> =
+    Codec.map(
+        Codec.object3(
+            'year', Codec.number,
+            'month', monthCodec(),
+            'day', Codec.number,
+        ),
+        ({ year, month, day }) => date(year, month, day),
+        Utils.id
+    )
 
 /** The type of Javascript's window.Date. It can be converted to both a `Date` and a `Time` */
 export type Javascript =
@@ -19,6 +31,10 @@ export function date(year: number, month: number, day: number): Date {
 /** Warn: This is different to how Javascript's Date defines months
 */
 export type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12
+
+export function isMonth(x: number): x is Month {
+    return 1 <= x && x <= 12
+}
 
 function monthOf(number: number): Month {
     return Math.min(Math.max(1, Math.floor(number)), 12) as Month
@@ -56,33 +72,25 @@ export function compare(a: Date, b: Date): -1 | 0 | 1 {
     return 1
 }
 
-export const decoder: Decoder.Decoder<Date> =
-    Decoder.map3(
-        Decoder.property('year', Decoder.number),
-        Decoder.property('month', Decoder.number),
-        Decoder.property('day', Decoder.number),
-        date
-    )
-
 export const monthDecoder: Decoder.Decoder<Month> =
     Decoder.andThen(
         Decoder.number,
         number =>
-            number === 1
-                || number === 2
-                || number === 3
-                || number === 4
-                || number === 5
-                || number === 6
-                || number === 7
-                || number === 8
-                || number === 9
-                || number === 10
-                || number === 11
-                || number === 12
+            isMonth(number)
                 ? Decoder.succeed(number)
                 : Decoder.fail(`Invalid month '${number}'`)
     )
+
+export function monthCodec(): Codec.Codec<Month> {
+    return Codec.andThen(
+        Codec.number,
+        x =>
+            isMonth(x)
+                ? Codec.succeed(x)
+                : Codec.fail(`Invalid month: ${x}`),
+        Utils.id,
+    )
+}
 
 // https://weeknumber.net/how-to/javascript
 /** Returns the ISO week of the date. */
