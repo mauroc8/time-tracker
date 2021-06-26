@@ -8,10 +8,10 @@ export type SortedArray<A> =
 
 export function codec<A>(codec: Codec.Codec<A>, compare: Compare<A>): Codec.Codec<SortedArray<A>> {
     return Codec.map(
-        Codec.object2(
-            'tag', Codec.literal('SortedArray'),
-            'toArray', Codec.array(codec),
-        ),
+        Codec.struct({
+            tag: Codec.literal('SortedArray'),
+            toArray: Codec.array(codec),
+        }),
         sorted => fromArray(sorted.toArray, compare),
         Utils.id
     )

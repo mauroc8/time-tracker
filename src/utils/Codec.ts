@@ -78,207 +78,124 @@ export function andThen<A, B>(
     }
 }
 
+function getStructDecoders<A>(
+    codecStruct: { [K in keyof A]: Codec<A[K]> }
+): { [K in keyof A]: Decoder.Decoder<A[K]> } {
+    const propertyDecoders: { [K in keyof A]: Decoder.Decoder<A[K]> } = {} as any
+
+    for (const key in codecStruct) if (Utils.hasOwnProperty(codecStruct, key)) {
+        propertyDecoders[key] = codecStruct[key].decoder
+    }
+
+    return propertyDecoders
+}
+
+function encodeStruct<A>(struct: A, properties: { [K in keyof A]: Codec<A[K]> }): Utils.Json {
+    const encodedStruct: Utils.Json = {}
+            
+    for (const key in properties) if (Utils.hasOwnProperty(properties, key)) {
+        encodedStruct[key] = properties[key].encode(struct[key])
+    }
+
+    return encodedStruct
+}
+
 export function struct<A>(
     properties: { [K in keyof A]: Codec<A[K]> }
 ): Codec<{ [K in keyof A]: A[K] }> {
-    const propertyDecoders: { [K in keyof A]: Decoder.Decoder<A[K]> } = {} as any
-
-    for (const key in properties) if (Object.prototype.hasOwnProperty.call(properties, key)) {
-        propertyDecoders[key] = properties[key].decoder
-    }
+    const structDecoders = getStructDecoders(properties)
 
     return {
         type: 'Codec',
-        decoder: Decoder.struct(propertyDecoders),
-        encode: struct => {
-            const encodedStruct: Utils.Json = {}
-            
-            for (const key in properties) if (Object.prototype.hasOwnProperty.call(properties, key)) {
-                encodedStruct[key] = properties[key].encode(struct[key])
-            }
-
-            return encodedStruct
-        }
+        decoder: Decoder.struct(structDecoders),
+        encode: struct => encodeStruct(struct, properties),
     }
 }
 
 export function union2<A, B>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    match: <X>(x: A | B, caseA: (a: A) => X, caseB: (b: B) => X) => X,
+    asA: (x: A | B) => A | null, codecA: Codec<A>,
+    asB: (x: A | B) => B | null, codecB: Codec<B>,
 ): Codec<A | B> {
     return {
         type: 'Codec',
         decoder: Decoder.union2(codecA.decoder, codecB.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode)
+        encode: x =>
+            Utils.nullMap(codecA.encode, asA(x))
+                ?? Utils.nullMap(codecB.encode, asB(x))
+                ?? null
     }
 }
 
 export function union3<A, B, C>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    match: <X>(
-        x: A | B | C,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-    ) => X,
-    ): Codec<A | B | C> {
+    asA: (x: A | B | C) => A | null, codecA: Codec<A>,
+    asB: (x: A | B | C) => B | null, codecB: Codec<B>,
+    asC: (x: A | B | C) => C | null, codecC: Codec<C>,
+): Codec<A | B | C> {
     return {
         type: 'Codec',
         decoder: Decoder.union3(codecA.decoder, codecB.decoder, codecC.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode)
+        encode: x =>
+            Utils.nullMap(codecA.encode, asA(x))
+                ?? Utils.nullMap(codecB.encode, asB(x))
+                ?? Utils.nullMap(codecC.encode, asC(x))
+                ?? null
     }
 }
 
 export function union4<A, B, C, D>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    codecD: Codec<D>,
-    match: <X>(
-        x: A | B | C | D,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-        caseD: (y: D) => X,
-    ) => X,
-    ): Codec<A | B | C | D> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union4(codecA.decoder, codecB.decoder, codecC.decoder, codecD.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode, codecD.encode)
-    }
+    asA: (x: A | B | C | D) => A | null, codecA: Codec<A>,
+    asB: (x: A | B | C | D) => B | null, codecB: Codec<B>,
+    asC: (x: A | B | C | D) => C | null, codecC: Codec<C>,
+    asD: (x: A | B | C | D) => D | null, codecD: Codec<D>,
+): Codec<A | B | C | D> {
+    return union2(
+        x => asA(x) || asB(x), union2(asA, codecA, asB, codecB),
+        x => asC(x) || asD(x), union2(asC, codecC, asD, codecD),
+    )
 }
 
-export function union5<A, B, C, D, E>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    codecD: Codec<D>,
-    codecE: Codec<E>,
-    match: <X>(
-        x: A | B | C | D | E,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-        caseD: (y: D) => X,
-        caseE: (y: E) => X,
-    ) => X,
-    ): Codec<A | B | C | D | E> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union5(codecA.decoder, codecB.decoder, codecC.decoder, codecD.decoder, codecE.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode, codecD.encode, codecE.encode)
+function getVariantsDecoders<A>(
+    variantsStruct: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Codec<A[Variant][Prop]> } }
+): { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Decoder.Decoder<A[Variant][Prop]> } } {
+    const variantsDecoders: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Decoder.Decoder<A[Variant][Prop]> } } =
+        {} as any
+
+    for (const key in variantsStruct) if (Utils.hasOwnProperty(variantsStruct, key)) {
+        variantsDecoders[key as keyof A] = getStructDecoders(variantsStruct[key as keyof A])
     }
+
+    return variantsDecoders
 }
 
-export function union6<A, B, C, D, E, F>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    codecD: Codec<D>,
-    codecE: Codec<E>,
-    codecF: Codec<F>,
-    match: <X>(
-        x: A | B | C | D | E | F,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-        caseD: (y: D) => X,
-        caseE: (y: E) => X,
-        caseF: (y: F) => X,
-    ) => X,
-    ): Codec<A | B | C | D | E | F> {
+export function taggedUnion<
+    Tag extends string,    
+    A,
+    Output extends { [Variant in keyof A]: { [tag in Tag]: Variant } & A[Variant] }
+>(
+    tag: Tag,
+    variants: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Codec<A[Variant][Prop]> } },
+): Codec<Output[keyof Output]> {
     return {
         type: 'Codec',
-        decoder: Decoder.union6(codecA.decoder, codecB.decoder, codecC.decoder, codecD.decoder, codecE.decoder, codecF.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode, codecD.encode, codecE.encode, codecF.encode)
-    }
-}
+        decoder: Decoder.taggedUnion(tag, getVariantsDecoders(variants)),
+        encode: (union: Output[keyof Output]) => {
+            for (const tagVariant in variants) if (Utils.hasOwnProperty(variants, tagVariant)) {
+                if (tagVariant as keyof A === union[tag] as any) {
+                    const payload = struct(variants[tagVariant as keyof A]).encode(union as any)
 
-export function union7<A, B, C, D, E, F, G>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    codecD: Codec<D>,
-    codecE: Codec<E>,
-    codecF: Codec<F>,
-    codecG: Codec<G>,
-    match: <X>(
-        x: A | B | C | D | E | F | G,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-        caseD: (y: D) => X,
-        caseE: (y: E) => X,
-        caseF: (y: F) => X,
-        caseG: (y: G) => X,
-    ) => X,
-    ): Codec<A | B | C | D | E | F | G> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union7(codecA.decoder, codecB.decoder, codecC.decoder, codecD.decoder, codecE.decoder, codecF.decoder, codecG.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode, codecD.encode, codecE.encode, codecF.encode, codecG.encode)
-    }
-}
+                    if (Utils.isObject(payload)) {
+                        return {
+                            [tag]: tagVariant,
+                            ...payload
+                        }
+                    }
 
-export function union8<A, B, C, D, E, F, G, H>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    codecD: Codec<D>,
-    codecE: Codec<E>,
-    codecF: Codec<F>,
-    codecG: Codec<G>,
-    codecH: Codec<H>,
-    match: <X>(
-        x: A | B | C | D | E | F | G | H,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-        caseD: (y: D) => X,
-        caseE: (y: E) => X,
-        caseF: (y: F) => X,
-        caseG: (y: G) => X,
-        caseH: (y: H) => X,
-    ) => X,
-    ): Codec<A | B | C | D | E | F | G | H> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union8(codecA.decoder, codecB.decoder, codecC.decoder, codecD.decoder, codecE.decoder, codecF.decoder, codecG.decoder, codecH.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode, codecD.encode, codecE.encode, codecF.encode, codecG.encode, codecH.encode)
-    }
-}
+                    return null
+                }
+            }
 
-export function union9<A, B, C, D, E, F, G, H, I>(
-    codecA: Codec<A>,
-    codecB: Codec<B>,
-    codecC: Codec<C>,
-    codecD: Codec<D>,
-    codecE: Codec<E>,
-    codecF: Codec<F>,
-    codecG: Codec<G>,
-    codecH: Codec<H>,
-    codecI: Codec<I>,
-    match: <X>(
-        x: A | B | C | D | E | F | G | H | I,
-        caseA: (y: A) => X,
-        caseB: (y: B) => X,
-        caseC: (y: C) => X,
-        caseD: (y: D) => X,
-        caseE: (y: E) => X,
-        caseF: (y: F) => X,
-        caseG: (y: G) => X,
-        caseH: (y: H) => X,
-        caseI: (y: I) => X,
-    ) => X,
-    ): Codec<A | B | C | D | E | F | G | H | I> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union9(codecA.decoder, codecB.decoder, codecC.decoder, codecD.decoder, codecE.decoder, codecF.decoder, codecG.decoder, codecH.decoder, codecI.decoder),
-        encode: x => match(x, codecA.encode, codecB.encode, codecC.encode, codecD.encode, codecE.encode, codecF.encode, codecG.encode, codecH.encode, codecI.encode)
+            return null
+        }
     }
 }
 
@@ -302,19 +219,13 @@ export function fail<A>(message: string): Codec<A> {
 export function maybe<A>(codec: Codec<A>): Codec<Maybe.Maybe<A>> {
     return map(
         union2(
+            x => x.tag === 'just' ? x : null,
             struct({
                 tag: literal('just'),
                 value: codec,
             }),
+            x => x.tag === 'nothing' ? x : null,
             struct({ tag: literal('nothing') }),
-            (x, just, nothing) => {
-                switch (x.tag) {
-                    case 'just':
-                        return just(x)
-                    case 'nothing':
-                        return nothing(x)
-                }
-            }
         ),
         x => {
             switch (x.tag) {

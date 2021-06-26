@@ -160,10 +160,10 @@ export function view<E, Context extends { today: Date.Date }>(
                         )
                 )
                     .map(groupRecords => {
-                        const groupTag = DateGroup.fromDate({ today, time: groupRecords[0].date })
+                        const dateGroupId = DateGroup.fromDate({ today, time: groupRecords[0].date })
 
                         return DateGroup.view(
-                            groupTag,
+                            dateGroupId,
                             groupRecords,
                             dateGroupState,
                             config,

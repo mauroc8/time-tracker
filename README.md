@@ -1,5 +1,7 @@
 # Time tracker
 
+**WARNING** This repo is only public because I wanted to use gh-pages. It contains experiments.
+
 A homemade, vainilla-ts time tracking app.
 
 I shamelessly stole almost every idea I could from **Elm** and **elm-ui**.

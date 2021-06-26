@@ -19,20 +19,20 @@ const collapsingTransitionSeconds = 0.26
 
 type Transition =
     | { tag: 'idle' }
-    | { tag: 'aboutToCollapse', groupTag: Tag, height: number }
-    | { tag: 'collapsing', groupTag: Tag }
+    | { tag: 'aboutToCollapse', id: Id, height: number }
+    | { tag: 'collapsing', id: Id }
 
 
 function idle(): Transition {
     return { tag: 'idle' }
 }
 
-function aboutToCollapse(group: Tag, height: number): Transition {
-    return { tag: 'aboutToCollapse', groupTag: group, height }
+function aboutToCollapse(id: Id, height: number): Transition {
+    return { tag: 'aboutToCollapse', id, height }
 }
 
-function collapsing(tag: Tag): Transition {
-    return { tag: 'collapsing', groupTag: tag }
+function collapsing(tag: Id): Transition {
+    return { tag: 'collapsing', id: tag }
 }
 
 function startCollapsing(collapsingCollapseTransitionState: Transition): Transition {
@@ -42,7 +42,7 @@ function startCollapsing(collapsingCollapseTransitionState: Transition): Transit
             return collapsingCollapseTransitionState
 
         case 'aboutToCollapse':
-            return collapsing(collapsingCollapseTransitionState.groupTag)
+            return collapsing(collapsingCollapseTransitionState.id)
     }
 }
 
@@ -53,12 +53,12 @@ function startCollapsing(collapsingCollapseTransitionState: Transition): Transit
 
 export type State = {
     transition: Transition,
-    collapsedGroups: Array<Tag>,
+    collapsedGroups: Array<Id>,
 }
 
 export const codec: Codec.Codec<State> =
     Codec.map(
-        Codec.struct({ collapsedGroups: Codec.array(tagCodec()) }),
+        Codec.struct({ collapsedGroups: Codec.array(idCodec()) }),
         (state) => ({ ...state, transition: idle() }),
         Utils.id
     )
@@ -75,18 +75,18 @@ export function init(): State {
 }
 
 export type Event =
-    | { tag: 'clickedCollapseButton', groupTag: Tag }
-    | { tag: 'gotHeightOfGroupBeingCollapsed', groupTag: Tag, height: number }
+    | { tag: 'clickedCollapseButton', id: Id }
+    | { tag: 'gotHeightOfGroupBeingCollapsed', id: Id, height: number }
     | { tag: 'startCollapseTransition' }
     | { tag: 'endCollapseTransition' }
     | { tag: 'domError' }
 
-function clickedCollapseButton(groupTag: Tag): Event {
-    return { tag: 'clickedCollapseButton', groupTag }
+function clickedCollapseButton(id: Id): Event {
+    return { tag: 'clickedCollapseButton', id }
 }
 
-function gotHeightOfGroupBeingCollapsed(groupTag: Tag, height: number): Event {
-    return { tag: 'gotHeightOfGroupBeingCollapsed', groupTag, height }
+function gotHeightOfGroupBeingCollapsed(id: Id, height: number): Event {
+    return { tag: 'gotHeightOfGroupBeingCollapsed', id, height }
 }
 
 function startCollapseTransition(): Event {
@@ -108,11 +108,11 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
             return Update.pure(state)
 
         case 'clickedCollapseButton':
-            if (state.collapsedGroups.some(Utils.eq(event.groupTag))) {
+            if (state.collapsedGroups.some(Utils.eq(event.id))) {
                 return Update.pure({
                     transition: state.transition,
                     collapsedGroups: state.collapsedGroups
-                        .filter(group => !Utils.equals(group, event.groupTag)),
+                        .filter(group => !Utils.equals(group, event.id)),
                 })
             }
 
@@ -120,8 +120,8 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
                 state,
                 [
                     getHeightOfGroup(
-                        event.groupTag,
-                        height => gotHeightOfGroupBeingCollapsed(event.groupTag, height),
+                        event.id,
+                        height => gotHeightOfGroupBeingCollapsed(event.id, height),
                         domError()
                     )
                 ]
@@ -130,8 +130,8 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
         case 'gotHeightOfGroupBeingCollapsed':
             return Update.of(
                 stateOf({
-                    collapsedGroups: [...state.collapsedGroups, event.groupTag],
-                    transition: aboutToCollapse(event.groupTag, event.height)
+                    collapsedGroups: [...state.collapsedGroups, event.id],
+                    transition: aboutToCollapse(event.id, event.height)
                 }),
                 [
                     Task.waitMilliseconds(_ => startCollapseTransition(), 0),
@@ -161,12 +161,12 @@ export function update(state: State, event: Event): Update.Update<State, Event> 
 }
 
 function getHeightOfGroup<A>(
-    group: Tag,
+    group: Id,
     onHeight: (height: number) => A,
     onError: A
 ): Task.Task<A> {
     return Task.map(
-        Task.getRectOf(toStringId(group)),
+        Task.getRectOf(idToString(group)),
         maybeRect =>
             maybeRect
                 .map(rect => onHeight(rect.height))
@@ -178,7 +178,7 @@ function getHeightOfGroup<A>(
 
 export type DateGroup = {
     kind: 'DateGroup',
-    tag: Tag,
+    tag: Id,
     days: [TimeGroup.TimeGroup, ...TimeGroup.TimeGroup[]]
 }
 
@@ -226,16 +226,16 @@ export function fromRecords(
  * 
  * The `Tag` is an ID.
  */
- export type Tag =
-    | { groupTag: 'year', year: number }
-    | { groupTag: 'lastYear' }
-    | { groupTag: 'month', month: Date.Month }
-    | { groupTag: 'lastMonth' }
-    | { groupTag: 'weeksAgo', x: 2 | 3 | 4 }
-    | { groupTag: 'lastWeek' }
-    | { groupTag: 'thisWeek' }
-    | { groupTag: 'nextWeek' }
-    | { groupTag: 'inTheFuture' }
+ export type Id =
+    | { tag: 'year', year: number }
+    | { tag: 'lastYear' }
+    | { tag: 'month', month: Date.Month }
+    | { tag: 'lastMonth' }
+    | { tag: 'weeksAgo', x: 2 | 3 | 4 }
+    | { tag: 'lastWeek' }
+    | { tag: 'thisWeek' }
+    | { tag: 'nextWeek' }
+    | { tag: 'inTheFuture' }
 
 function twoThreeOrFourCodec(): Codec.Codec<2 | 3 | 4> {
     return Codec.andThen(
@@ -248,65 +248,24 @@ function twoThreeOrFourCodec(): Codec.Codec<2 | 3 | 4> {
     )
 }
 
-function tagCodec(): Codec.Codec<Tag> {
-    return Codec.union9(
-        Codec.struct({
-            groupTag: Codec.literal('year'),
-            year: Codec.number,
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('lastYear'),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('month'),
-            month: Date.monthCodec(),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('lastMonth'),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('weeksAgo'),
-            x: twoThreeOrFourCodec(),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('lastWeek'),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('thisWeek'),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('nextWeek'),
-        }),
-        Codec.struct({
-            groupTag: Codec.literal('inTheFuture'),
-        }),
-        (x, year, lastYear, month, lastMonth, weeksAgo, lastWeek, thisWeek, nextWeek, inTheFuture) => {
-            switch (x.groupTag) {
-                case 'year':
-                    return year(x)
-                case 'lastYear':
-                    return lastYear(x)
-                case 'month':
-                    return month(x)
-                case 'lastMonth':
-                    return lastMonth(x)
-                case 'weeksAgo':
-                    return weeksAgo(x)
-                case 'lastWeek':
-                    return lastWeek(x)
-                case 'thisWeek':
-                    return thisWeek(x)
-                case 'nextWeek':
-                    return nextWeek(x)
-                case 'inTheFuture':
-                    return inTheFuture(x)
-            }
-        }
-    )
+function idCodec(): Codec.Codec<Id> {
+    return Codec.taggedUnion(
+        'tag',
+        {
+            year: { year: Codec.number },
+            lastYear: {},
+            month: { month: Date.monthCodec() },
+            lastMonth: {},
+            weeksAgo: { x: twoThreeOrFourCodec() },
+            lastWeek: {},
+            thisWeek: {},
+            nextWeek: {},
+            inTheFuture: {},
+        })
 }
 
-export function toSpanishLabel(group: Tag): string {
-    switch (group.groupTag) {
+export function toSpanishLabel(group: Id): string {
+    switch (group.tag) {
         case 'inTheFuture':
             return 'En el futuro'
         case 'nextWeek':
@@ -331,8 +290,8 @@ export function toSpanishLabel(group: Tag): string {
     }
 }
 
-export function toStringId(group: Tag): string {
- switch (group.groupTag) {
+export function idToString(group: Id): string {
+ switch (group.tag) {
      case 'inTheFuture':
          return 'inTheFuture'
      case 'nextWeek':
@@ -357,43 +316,43 @@ export function toStringId(group: Tag): string {
  }
 }
 
-export function fromDate(args: { today: Date.Date, time: Date.Date }): Tag {
+export function fromDate(args: { today: Date.Date, time: Date.Date }): Id {
  const { today, time } = args
 
  if (time.year > today.year) {
-     return { groupTag: 'inTheFuture' }
+     return { tag: 'inTheFuture' }
  } else if (time.year === today.year) {
     if (time.month > today.month) {
         if (Date.isoWeek(time) === Date.isoWeek(today) + 1) {
-            return { groupTag: 'nextWeek' }
+            return { tag: 'nextWeek' }
         } else {
-            return { groupTag: 'inTheFuture' }
+            return { tag: 'inTheFuture' }
         }
     } else if (time.month === today.month) {
         if (Date.isoWeek(time) === Date.isoWeek(today) + 1) {
-            return { groupTag: 'nextWeek' }
+            return { tag: 'nextWeek' }
         } else if (Date.isoWeek(time) === Date.isoWeek(today)) {
-            return { groupTag: 'thisWeek' }
+            return { tag: 'thisWeek' }
         } else if (Date.isoWeek(time) === Date.isoWeek(today) - 1) {
-            return { groupTag: 'lastWeek' }
+            return { tag: 'lastWeek' }
         } else {
             return {
-                groupTag: 'weeksAgo',
+                tag: 'weeksAgo',
                 x: Date.isoWeek(today) - Date.isoWeek(time) as 2 | 3 | 4
             }
         }
     } else if (time.month === today.month - 1) {
-        return { groupTag: 'lastMonth' }
+        return { tag: 'lastMonth' }
     } else {
         return {
-            groupTag: 'month',
+            tag: 'month',
             month: time.month
         }
     }
  } else if (time.year === today.year - 1) {
-     return { groupTag: 'lastYear' }
+     return { tag: 'lastYear' }
  } else {
-     return { groupTag: 'year', year: time.year }
+     return { tag: 'year', year: time.year }
  }
 }
 
@@ -408,17 +367,17 @@ type ViewStatus =
 
 
 export function getViewStatus(
-    groupTag: Tag,
+    id: Id,
     state: State,
 ): ViewStatus {
     switch (state.transition.tag) {
         case 'aboutToCollapse':
-            if (Utils.equals(state.transition.groupTag, groupTag)) {
+            if (Utils.equals(state.transition.id, id)) {
                 return { tag: 'aboutToCollapse', height: state.transition.height }
             }
             break
         case 'collapsing':
-            if (Utils.equals(state.transition.groupTag, groupTag)) {
+            if (Utils.equals(state.transition.id, id)) {
                 return { tag: 'collapsing' }
             }
             break
@@ -429,7 +388,7 @@ export function getViewStatus(
             break
     }
 
-    if (state.collapsedGroups.some(Utils.eq(groupTag))) {
+    if (state.collapsedGroups.some(Utils.eq(id))) {
         return { tag: 'collapsed' }
     }
 
@@ -467,7 +426,7 @@ function toOpacity(viewCollapseTransitionState: ViewStatus): number {
 export const collapseTransitionDuration: number = 0.24
 
 export function view<E, Context extends { today: Date.Date }>(
-    groupTag: Tag,
+    id: Id,
     records: Array<Record.Record>,
     state: State,
     config: {
@@ -478,7 +437,7 @@ export function view<E, Context extends { today: Date.Date }>(
         onDelete: (id: Record.Id) => E,
     },
 ): Layout.Layout<E, Context> {
-    const viewStatus = getViewStatus(groupTag, state)
+    const viewStatus = getViewStatus(id, state)
 
     return Layout.column(
         'div',
@@ -496,8 +455,8 @@ export function view<E, Context extends { today: Date.Date }>(
                     Html.class_('date-group-collapse-button'),
                     Html.style('padding', '5px'),
                     Html.style('margin', '-5px'),
-                    Html.on('click', () => config.onGroupEvent(clickedCollapseButton(groupTag))),
-                    Html.attribute('aria-controls', toStringId(groupTag)),
+                    Html.on('click', () => config.onGroupEvent(clickedCollapseButton(id))),
+                    Html.attribute('aria-controls', idToString(id)),
                     Html.style("letter-spacing", "0.15em"),
                     Html.style('font-size', '12px')
                 ],
@@ -511,7 +470,7 @@ export function view<E, Context extends { today: Date.Date }>(
                         ],
                         []
                     ),
-                    Layout.inlineText(toSpanishLabel(groupTag).toUpperCase()),
+                    Layout.inlineText(toSpanishLabel(id).toUpperCase()),
                     Layout.column(
                         'div',
                         [
@@ -529,7 +488,7 @@ export function view<E, Context extends { today: Date.Date }>(
                     [
                         Layout.spacing(Record.spacing),
                         Layout.fullWidth(),
-                        Html.property('id', toStringId(groupTag)),
+                        Html.property('id', idToString(id)),
                         Html.style(
                             'overflow',
                             viewStatus.tag === 'uncollapsed'

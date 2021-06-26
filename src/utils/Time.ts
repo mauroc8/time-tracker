@@ -19,10 +19,10 @@ export function fromJavascript(date: Date.Javascript): Time {
 
 export const codec: Codec.Codec<Time> =
     Codec.map(
-        Codec.object2(
-            'hours', Codec.number,
-            'minutes', Codec.number,
-        ),
+        Codec.struct({
+            hours: Codec.number,
+            minutes: Codec.number,
+        }),
         ({ hours, minutes }) => time(hours, minutes),
         Utils.id
     )

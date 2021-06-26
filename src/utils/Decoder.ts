@@ -61,7 +61,7 @@ export function array<A>(elementDecoder: Decoder<A>): Decoder<Array<A>> {
                     as.map(
                         (a, index) =>
                             decode(a, elementDecoder)
-                                .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error, found: a }))
+                                .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error }))
                     )
                   )
                 : Result.error<Array<A>, Error>({ tag: 'expectingArray', found: as })
@@ -73,7 +73,7 @@ export function property<A>(propertyName: string, propertyDecoder: Decoder<A>): 
         (a: Utils.Json) =>
             Utils.isObject(a)
                 ? decode(a[propertyName], propertyDecoder)
-                    .mapError<Error>(error => ({ tag: 'atObjectProperty', propertyName, error, found: a[propertyName] }))
+                    .mapError<Error>(error => ({ tag: 'atObjectProperty', propertyName, error }))
                 : Result.error<A, Error>({ tag: 'expectingObject', found: a })
     )
 }
@@ -83,7 +83,7 @@ export function index<A>(index: number, elementDecoder: Decoder<A>): Decoder<A> 
         (as: Utils.Json) =>
             as instanceof Array
                 ? decode(as[index], elementDecoder)
-                    .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error, found: as[index] }))
+                    .mapError<Error>(error => ({ tag: 'atArrayIndex', index, error }))
                 : Result.error<A, Error>({ tag: 'expectingArray', found: as })
     )
 }
@@ -108,10 +108,11 @@ export type Error =
     | { tag: 'expectingNumber', found: Utils.Json }
     | { tag: 'expectingLiteral', literal: unknown, found: Utils.Json }
     | { tag: 'expectingArray', found: Utils.Json }
-    | { tag: 'atArrayIndex', index: number, error: Error, found: Utils.Json }
+    | { tag: 'atArrayIndex', index: number, error: Error }
     | { tag: 'expectingObject', found: Utils.Json }
-    | { tag: 'atObjectProperty', propertyName: string, error: Error, found: Utils.Json }
+    | { tag: 'atObjectProperty', propertyName: string, error: Error }
     | { tag: 'message', message: string, found: Utils.Json }
+    | { tag: 'expectingTaggedUnion', tags: Array<string>, found: Utils.Json }
 
 export function errorToString(error: Error): string {
     switch (error.tag) {
@@ -134,6 +135,8 @@ export function errorToString(error: Error): string {
             return `${errorToString(error_)} at <object>.${properties.join('.')}`
         case 'message':
             return error.message
+        case 'expectingTaggedUnion':
+            return `Expecting a tagged union with tags ${error.tags.join(', ')}`
     }
 }
 
@@ -374,20 +377,20 @@ export function maybe<A>(decoder_: Decoder<A>): Decoder<Maybe.Maybe<A>> {
 }
 
 export function struct<A>(
-    properties: { [K in keyof A]: Decoder<A[K]> }
+    struct: { [K in keyof A]: Decoder<A[K]> }
 ):  Decoder<{ [K in keyof A]: A[K] }> {
     return decoder(json => {
         if (Utils.isObject(json)) {
             const decoded: { [K in keyof A]: A[K] } = {} as any
 
-            for (let key in properties) if (Object.prototype.hasOwnProperty.call(properties, key)) {
-                const result = decode(json[key], properties[key])
+            for (let key in struct) if (Utils.hasOwnProperty(struct, key)) {
+                const result = decode(json[key], struct[key])
 
                 if (result.tag === 'ok') {
                     decoded[key] = result.value
                 } else {
                     return Result.error<{ [K in keyof A]: A[K] }, Error>(
-                        { tag: 'atObjectProperty', propertyName: key, error: result.error, found: json[key] }
+                        { tag: 'atObjectProperty', propertyName: key, error: result.error }
                     )
                 }
             }
@@ -396,6 +399,50 @@ export function struct<A>(
         }
 
         return Result.error<{ [K in keyof A]: A[K] }, Error>({ tag: 'expectingObject', found: json })
+    })
+}
+
+export function taggedUnion<
+    Tag extends string,    
+    A,
+    Output extends { [Variant in keyof A]: { [tag in Tag]: Variant } & A[Variant] }
+>(
+    tag: Tag,
+    variants: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Decoder<A[Variant][Prop]> } },
+): Decoder<Output[keyof Output]> {
+    return decoder(json => {
+        if (Utils.isObject(json)) {
+            const jsonTag = decode(json[tag], string)
+
+            return jsonTag.andThen(jsonTagValue => {
+                for (const variantTag in variants) if (Utils.hasOwnProperty(variants, variantTag)) {
+                    if (variantTag === jsonTagValue) {
+                        const decoder = variants[variantTag]
+
+                        return decode(json, struct(decoder))
+                            .andThen(decodedValue => {
+                                if (Utils.isObject(decodedValue)) {
+                                    return Result.ok({ ...decodedValue, [tag]: variantTag } as any)
+                                } else {
+                                    return Result.error<Output[keyof Output], Error>({
+                                        tag: 'message',
+                                        message: 'Decoded variant is not an object!',
+                                        found: null
+                                    })
+                                }
+                            })
+                    }
+                }
+
+                return Result.error<Output[keyof Output], Error>({
+                    tag: 'expectingTaggedUnion',
+                    tags: Object.keys(variants),
+                    found: json
+                })
+            })
+        }
+
+        return Result.error<Output[keyof Output], Error>({ tag: 'expectingObject', found: json })
     })
 }
 

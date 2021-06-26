@@ -144,3 +144,17 @@ export function debugException<A>(message: string, error: unknown, value: A): A 
 
     return value
 }
+
+export function hasOwnProperty<Property extends string>(
+    object: { [key: string]: unknown }, property: Property
+): object is { [x in Property]: unknown } {
+    return Object.prototype.hasOwnProperty.call(object, property)
+}
+
+export function nullMap<A, B>(f: (x: A) => B, x: A | null): B | null {
+    if (x !== null) {
+        return f(x)
+    }
+
+    return null
+}
