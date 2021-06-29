@@ -151,10 +151,23 @@ export function hasOwnProperty<Property extends string>(
     return Object.prototype.hasOwnProperty.call(object, property)
 }
 
+export function objectValues<A>(
+    object: { [Key in keyof A]: A[Key] }
+): Array<({ [Key in keyof A]: A[Key] })[keyof A]> {
+    return Object.values(object) as any
+}
+
 export function nullMap<A, B>(f: (x: A) => B, x: A | null): B | null {
     if (x !== null) {
         return f(x)
     }
 
     return null
+}
+
+export function letIn<A, B>(
+    value: A,
+    f: (a: A) => B,
+): B {
+    return f(value)
 }

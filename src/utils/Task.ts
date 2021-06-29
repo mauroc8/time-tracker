@@ -13,9 +13,9 @@ type Dispatch<A> = (a: A) => void
 export type Task<A> = {
     tag: "Task",
     execute: (dispatch: Dispatch<A>) => void
-} & TaskPrototype<A>;
+} & Interface<A>;
 
-export interface TaskPrototype<A> {
+export interface Interface<A> {
     map<B>(f: (a: A) => B): Task<B>
     andThen<B>(f: (a: A) => Task<B>): Task<B>
 }
@@ -107,7 +107,7 @@ export function waitMilliseconds<A>(
 
 export function getRectOf(
     id: string
-) : Task<Maybe.Maybe<{ x: number, y: number, width: number, height: number }>> {
+) : Task<Maybe.Interface<{ x: number, y: number, width: number, height: number }>> {
     return of(
         (dispatch) => {
             try {

@@ -1,40 +1,60 @@
-export interface MaybeInterface<A> {
-    withDefault(value: A): A
-    map<B>(func: (a: A) => B): Maybe<B>
-    andThen<B>(func: (a: A) => Maybe<B>): Maybe<B>
-    orElse(func: () => Maybe<A>): Maybe<A>
-    caseOf<B>(ifJust: (a: A) => B, ifNothing: () => B): B
-}
 
 export type Maybe<A> =
-    | { tag: 'just', value: A } & MaybeInterface<A>
-    | { tag: 'nothing' } & MaybeInterface<A>
+    | { tag: 'just', value: A }
+    | { tag: 'nothing' }
 
-export function just<A>(value: A): Maybe<A> {
+/** A Maybe<A> that implements the Maybe.Interface<A> and thus has methods
+ * that can be called in a "pipeline" style.
+*/
+export type Interface<A> = Maybe<A> & {
+    withDefault(value: A): A,
+    map<B>(func: (a: A) => B): Interface<B>,
+    andThen<B>(func: (a: A) => Maybe<B>): Interface<B>,
+    orElse(func: () => Maybe<A>): Interface<A>,
+    caseOf<B>(ifJust: (a: A) => B, ifNothing: () => B): B,
+}
+
+export function just<A>(value: A): Interface<A> {
     return {
         tag: 'just',
         value,
         withDefault: _ => value,
         map: f => just(f(value)),
-        andThen: f => f(value),
+        andThen: f => withInterface(f(value)),
         orElse: _ => just(value),
         caseOf: (f, _) => f(value),
     }
 }
 
-export function nothing<A>(): Maybe<A> {
+export function nothing<A>(): Interface<A> {
     return {
         tag: 'nothing',
         withDefault: x => x,
         map: nothing,
         andThen: nothing,
-        orElse: f => f(),
+        orElse: f => withInterface(f()),
         caseOf: (_, f) => f(),
     }
 }
 
-export function map2<A, B, C>(fn: (a: A, b: B) => C, a: Maybe<A>, b: Maybe<B>): Maybe<C> {
-    return a.andThen(a_ => b.map(b_ => fn(a_, b_)))
+export function withInterface<A>(maybe: Maybe<A>): Interface<A> {
+    if (maybe.tag === 'just') {
+        return just(maybe.value)
+    }
+
+    return nothing()
+}
+
+export function map2<A, B, C>(
+    fn: (a: A, b: B) => C,
+    a: Maybe<A>,
+    b: Maybe<B>
+): Interface<C> {
+    if (a.tag === 'just' && b.tag === 'just') {
+        return just(fn(a.value, b.value))
+    }
+
+    return nothing()
 }
 
 export function map3<A, B, C, D>(
@@ -42,35 +62,47 @@ export function map3<A, B, C, D>(
     maybeA: Maybe<A>,
     maybeB: Maybe<B>,
     maybeC: Maybe<C>,
-): Maybe<D> {
-    return maybeA.andThen(a =>
-        maybeB.andThen(b =>
-            maybeC.map(c => fn(a, b, c))))
+): Interface<D> {
+    if (maybeA.tag === 'just' && maybeB.tag === 'just' && maybeC.tag === 'just') {
+        return just(fn(maybeA.value, maybeB.value, maybeC.value))
+    }
+
+    return nothing()
 }
 
-export function fromUndefined<A>(a: A | undefined): Maybe<A> {
+export function fromUndefined<A>(a: A | undefined): Interface<A> {
     if (a === undefined)
         return nothing()
     else
         return just(a)
 }
 
-export function fromNullable<A>(a: A | null): Maybe<A> {
+export function fromNullable<A>(a: A | null): Interface<A> {
     if (a === null)
         return nothing()
     else
         return just(a)
 }
 
-export function filter<A>(maybe: Maybe<A>, f: (a: A) => boolean): Maybe<A> {
-    return maybe.andThen(a => f(a) ? just(a) : nothing())
+export function filter<A>(maybe: Maybe<A>, f: (a: A) => boolean): Interface<A> {
+    if (maybe.tag === 'just') {
+        if (!f(maybe.value)) {
+            return nothing()
+        }
+    }
+
+    return withInterface(maybe)
 }
 
 export function caseOf<A, B>(maybe: Maybe<A>, ifJust: (a: A) => B, ifNothing: () => B): B {
-    return maybe.caseOf(ifJust, ifNothing)
+    if (maybe.tag === 'just') {
+        return ifJust(maybe.value)
+    }
+
+    return ifNothing()
 }
 
-export function combine<A>(maybes: Array<Maybe<A>>): Maybe<Array<A>> {
+export function combine<A>(maybes: Array<Maybe<A>>): Interface<Array<A>> {
     return maybes.reduce(
         (maybeArray, maybeItem) =>
             map2(

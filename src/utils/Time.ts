@@ -17,17 +17,16 @@ export function fromJavascript(date: Date.Javascript): Time {
     return time(date.getHours(), date.getMinutes())
 }
 
-export const codec: Codec.Codec<Time> =
-    Codec.map(
-        Codec.struct({
-            hours: Codec.number,
-            minutes: Codec.number,
-        }),
+export const codec: Codec.Codec<Time> = Codec.struct({
+    hours: Codec.number,
+    minutes: Codec.number,
+})
+    .map(
         ({ hours, minutes }) => time(hours, minutes),
         Utils.id
     )
 
-export function fromString(input: string): Maybe.Maybe<Time> {
+export function fromString(input: string): Maybe.Interface<Time> {
     const matches = input.match(/(\d\d?)[:\- ]*(\d\d?)?/)
 
     var hours: Maybe.Maybe<number> = Maybe.nothing()

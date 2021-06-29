@@ -27,7 +27,7 @@ export function mapNotNull<A, B>(array: Array<A>, fn: (a: A) => B | null): Array
     return newArray
 }
 
-export function filterMap<A, B>(array: Array<A>, fn: (a: A) => Maybe.Maybe<B>): Array<B> {
+export function filterMap<A, B>(array: Array<A>, fn: (a: A) => Maybe.Interface<B>): Array<B> {
     const newArray: Array<B> = []
     const l = array.length
 
@@ -80,7 +80,7 @@ export function map2<A, B, C>(
 
 export function decodeJson<A>(
     json: unknown,
-    decodeElement: (json: unknown) => Maybe.Maybe<A>
+    decodeElement: (json: unknown) => Maybe.Interface<A>
 ): Maybe.Maybe<Array<A>> {
     if (json instanceof Array) {
         const decoded = filterMap(json, decodeElement)

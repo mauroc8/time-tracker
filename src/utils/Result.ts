@@ -69,9 +69,11 @@ export function toMaybe<A, E>(result: Result<A, E>): Maybe.Maybe<A> {
 }
 
 export function fromMaybe<A, E>(err: E, maybe: Maybe.Maybe<A>): Result<A, E> {
-    return maybe
-        .map(a => ok<A, E>(a))
-        .withDefault(error(err))
+    return Maybe.caseOf(
+        maybe,
+        a => ok<A, E>(a),
+        () => error(err),
+    )
 }
 
 export function collect<A, E>(array: Array<Result<A, E>>): Result<Array<A>, E> {

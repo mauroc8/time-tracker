@@ -7,14 +7,14 @@ export type SortedArray<A> =
     { tag: 'SortedArray', toArray: Array<A> }
 
 export function codec<A>(codec: Codec.Codec<A>, compare: Compare<A>): Codec.Codec<SortedArray<A>> {
-    return Codec.map(
-        Codec.struct({
-            tag: Codec.literal('SortedArray'),
-            toArray: Codec.array(codec),
-        }),
-        sorted => fromArray(sorted.toArray, compare),
-        Utils.id
-    )
+    return Codec.struct({
+        tag: Codec.literal('SortedArray'),
+        toArray: Codec.array(codec),
+    })
+        .map(
+            sorted => fromArray(sorted.toArray, compare),
+            Utils.id
+        )
 }
 
 export type Compare<A> =

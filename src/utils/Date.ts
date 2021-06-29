@@ -4,13 +4,12 @@ import * as Codec from './Codec'
 export type Date =
     { year: number, month: Month, day: number }
 
-export const codec: Codec.Codec<Date> =
-    Codec.map(
-        Codec.struct({
-            year: Codec.number,
-            month: monthCodec(),
-            day: Codec.number,
-        }),
+export const codec: Codec.Codec<Date> = Codec.struct({
+    year: Codec.number,
+    month: monthCodec(),
+    day: Codec.number,
+})
+    .map(
         ({ year, month, day }) => date(year, month, day),
         Utils.id
     )

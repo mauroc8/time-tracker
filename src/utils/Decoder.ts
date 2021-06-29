@@ -7,7 +7,10 @@ import * as Pair from './Pair'
 // https://package.elm-lang.org/packages/elm/json/latest/Json-Decode
 
 export type Decoder<A> =
-    { tag: 'Decoder', decoder: (a: Utils.Json) => Result.Result<A, Error> }
+    {
+        tag: 'Decoder',
+        decoder: (a: Utils.Json) => Result.Result<A, Error>
+    }
 
 export function decode<A>(a: Utils.Json, decoder: Decoder<A>): Result.Result<A, Error> {
     return decoder.decoder(a)
@@ -113,6 +116,8 @@ export type Error =
     | { tag: 'atObjectProperty', propertyName: string, error: Error }
     | { tag: 'message', message: string, found: Utils.Json }
     | { tag: 'expectingTaggedUnion', tags: Array<string>, found: Utils.Json }
+    | { tag: 'expectingUnion', found: Utils.Json }
+    | { tag: 'emptyUnion' }
 
 export function errorToString(error: Error): string {
     switch (error.tag) {
@@ -137,6 +142,10 @@ export function errorToString(error: Error): string {
             return error.message
         case 'expectingTaggedUnion':
             return `Expecting a tagged union with tags ${error.tags.join(', ')}`
+        case 'expectingUnion':
+            return `Expecting a variant from a union`
+        case 'emptyUnion':
+            return 'A `union` with no keys cannot decode to anything'
     }
 }
 
@@ -362,17 +371,13 @@ export function fail<A>(message: string): Decoder<A> {
     return decoder(a => Result.error<A, Error>({ tag: 'message', message, found: a }))
 }
 
-export function maybe<A>(decoder_: Decoder<A>): Decoder<Maybe.Maybe<A>> {
-    return oneOf(
-        map(
-            property('tag', literal('nothing')),
-            _ => Maybe.nothing()
-        ),
-        map2(
-            property('tag', literal('just')),
-            property('value', decoder_),
-            (_, value) => Maybe.just(value)
-        )
+export function maybe<A>(decoder_: Decoder<A>): Decoder<Maybe.Interface<A>> {
+    return map(
+        union({
+            a: struct({ tag: literal('nothing') }),
+            b: struct({ tag: literal('just'), value: decoder_ }),
+        }),
+        Maybe.withInterface
     )
 }
 
@@ -402,48 +407,19 @@ export function struct<A>(
     })
 }
 
-export function taggedUnion<
-    Tag extends string,    
-    A,
-    Output extends { [Variant in keyof A]: { [tag in Tag]: Variant } & A[Variant] }
->(
-    tag: Tag,
-    variants: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Decoder<A[Variant][Prop]> } },
-): Decoder<Output[keyof Output]> {
-    return decoder(json => {
-        if (Utils.isObject(json)) {
-            const jsonTag = decode(json[tag], string)
-
-            return jsonTag.andThen(jsonTagValue => {
-                for (const variantTag in variants) if (Utils.hasOwnProperty(variants, variantTag)) {
-                    if (variantTag === jsonTagValue) {
-                        const decoder = variants[variantTag]
-
-                        return decode(json, struct(decoder))
-                            .andThen(decodedValue => {
-                                if (Utils.isObject(decodedValue)) {
-                                    return Result.ok({ ...decodedValue, [tag]: variantTag } as any)
-                                } else {
-                                    return Result.error<Output[keyof Output], Error>({
-                                        tag: 'message',
-                                        message: 'Decoded variant is not an object!',
-                                        found: null
-                                    })
-                                }
-                            })
-                    }
-                }
-
-                return Result.error<Output[keyof Output], Error>({
-                    tag: 'expectingTaggedUnion',
-                    tags: Object.keys(variants),
-                    found: json
-                })
-            })
-        }
-
-        return Result.error<Output[keyof Output], Error>({ tag: 'expectingObject', found: json })
-    })
+export function union<R>(
+    decoders: { [Key in keyof R]: Decoder<R[Key]> }
+): Decoder<R[keyof R]> {
+    return decoder(
+        json =>
+            Utils.objectValues<{ [Key in keyof R]: Decoder<R[Key]> }>(decoders)
+                .reduce(
+                    (result, decoder) => result.orElse(_ =>
+                        decode<R[keyof R]>(json, decoder)
+                    ),
+                    Result.error<R[keyof R], Error>({ tag: 'emptyUnion' }),
+                )
+    )
 }
 
 export function union2<
@@ -463,152 +439,5 @@ export function union2<
                         .decoder(data)
                         .map<A | B>(x => x)    
                 )
-    )
-}
-
-export function union3<
-    A,
-    B,
-    C,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-): Decoder<A | B | C> {
-    return union2(
-        union2(decoderA, decoderB),
-        decoderC,
-    )
-}
-
-export function union4<
-    A,
-    B,
-    C,
-    D,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-    decoderD: Decoder<D>,
-): Decoder<A | B | C | D> {
-    return union2(
-        union2(decoderA, decoderB),
-        union2(decoderC, decoderD),
-    )
-}
-
-export function union5<
-    A,
-    B,
-    C,
-    D,
-    E,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-    decoderD: Decoder<D>,
-    decoderE: Decoder<E>,
-): Decoder<A | B | C | D | E> {
-    return union2(
-        union2(decoderA, decoderB),
-        union3(decoderC, decoderD, decoderE),
-    )
-}
-
-export function union6<
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-    decoderD: Decoder<D>,
-    decoderE: Decoder<E>,
-    decoderF: Decoder<F>,
-): Decoder<A | B | C | D | E | F> {
-    return union2(
-        union3(decoderA, decoderB, decoderC),
-        union3(decoderD, decoderE, decoderF),
-    )
-}
-
-export function union7<
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-    decoderD: Decoder<D>,
-    decoderE: Decoder<E>,
-    decoderF: Decoder<F>,
-    decoderG: Decoder<G>,
-): Decoder<A | B | C | D | E | F | G> {
-    return union2(
-        union3(decoderA, decoderB, decoderC),
-        union4(decoderD, decoderE, decoderF, decoderG),
-    )
-}
-
-export function union8<
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-    decoderD: Decoder<D>,
-    decoderE: Decoder<E>,
-    decoderF: Decoder<F>,
-    decoderG: Decoder<G>,
-    decoderH: Decoder<H>,
-): Decoder<A | B | C | D | E | F | G | H> {
-    return union2(
-        union4(decoderA, decoderB, decoderC, decoderD),
-        union4(decoderE, decoderF, decoderG, decoderH),
-    )
-}
-
-export function union9<
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-    I,
->(
-    decoderA: Decoder<A>,
-    decoderB: Decoder<B>,
-    decoderC: Decoder<C>,
-    decoderD: Decoder<D>,
-    decoderE: Decoder<E>,
-    decoderF: Decoder<F>,
-    decoderG: Decoder<G>,
-    decoderH: Decoder<H>,
-    decoderI: Decoder<I>,
-): Decoder<A | B | C | D | E | F | G | H | I> {
-    return union2(
-        union4(decoderA, decoderB, decoderC, decoderD),
-        union5(decoderE, decoderF, decoderG, decoderH, decoderI),
     )
 }

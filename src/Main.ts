@@ -35,7 +35,7 @@ import * as Create from './Create'
 export type State = {
     records: Records.Records,
     dateGroupState: DateGroup.State,
-    create: Maybe.Maybe<Create.Create>,
+    create: Maybe.Interface<Create.Create>,
     today: Date.Date,
     now: Time.Time,
 }
@@ -283,33 +283,32 @@ body {
 export function view(state: State): Html.Html<Event.Event> {
     return Layout.toHtml(
         { today: state.today, now: state.now },
-        Layout.column(
-            'div',
-            [
-                Layout.centerX(),
-            ],
-            [
-                Html.node('style', [], [ Html.text(staticCss) ]),
-                Layout.column(
-                    'div',
-                    [
-                        Layout.spacing(50),
-                        Layout.paddingXY(12, 20),
-                        Layout.fullWidth(),
-                        Html.style('max-width', `${1024 + 40}px`),
-                    ],
-                    [
-                        Layout.space(0),
-                        Create.view(state.create, createConfig),
-                        Records.view(
-                            state.records.toArray,
-                            state.dateGroupState,
-                            recordsConfig
-                        ),
-                        Layout.space(0),
-                    ]
-                )
-            ]
-        )
+        'column',
+        'div',
+        [
+            Layout.centerX(),
+        ],
+        [
+            Html.node('style', [], [ Html.text(staticCss) ]),
+            Layout.column(
+                'div',
+                [
+                    Layout.spacing(50),
+                    Layout.paddingXY(12, 20),
+                    Layout.fullWidth(),
+                    Html.style('max-width', `${1024 + 40}px`),
+                ],
+                [
+                    Layout.space(0),
+                    Create.view(state.create, createConfig),
+                    Records.view(
+                        state.records.toArray,
+                        state.dateGroupState,
+                        recordsConfig
+                    ),
+                    Layout.space(0),
+                ]
+            )
+        ]
     )
 }

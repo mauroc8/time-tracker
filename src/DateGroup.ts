@@ -13,8 +13,6 @@ import * as Pair from './utils/Pair'
 import * as Codec from './utils/Codec'
 import * as Color from './style/Color'
 
-import './DateGroup.css'
-
 const collapsingTransitionSeconds = 0.26
 
 type Transition =
@@ -56,9 +54,10 @@ export type State = {
     collapsedGroups: Array<Id>,
 }
 
-export const codec: Codec.Codec<State> =
-    Codec.map(
-        Codec.struct({ collapsedGroups: Codec.array(idCodec()) }),
+export const codec: Codec.Codec<State> = Codec.struct({
+    collapsedGroups: Codec.array(idCodec())
+})
+    .map(
         (state) => ({ ...state, transition: idle() }),
         Utils.id
     )
@@ -218,13 +217,13 @@ export function fromRecords(
         )
 }
 
-// --- GROUP TAG
+// --- GROUP ID
 
-/** A DateGroup.Tag expresses the relationship between today and some other date
+/** A DateGroup.Id expresses the relationship between today and some other date
  * in a human-comprehensible way:
  * 'This week', 'Last week', '2 weeks ago', 'Last month', and so on.
  * 
- * The `Tag` is an ID.
+ * It is an "ID" because the DateGroup is just the array of records that have that particular ID.
  */
  export type Id =
     | { tag: 'year', year: number }
@@ -238,30 +237,61 @@ export function fromRecords(
     | { tag: 'inTheFuture' }
 
 function twoThreeOrFourCodec(): Codec.Codec<2 | 3 | 4> {
-    return Codec.andThen(
-        Codec.number,
-        n =>
-            n === 2 || n === 3 || n === 4
-                ? Codec.succeed(n)
-                : Codec.fail('Invalid weeks ago'),
-        Utils.id,
-    )
+    return Codec.union({
+        0: [
+            x => x === 2 ? x : null,
+            Codec.literal(2)
+        ],
+        1: [
+            x => x === 3 ? x : null,
+            Codec.literal(3)
+        ],
+        2: [
+            x => x === 4 ? x : null,
+            Codec.literal(4)
+        ],
+    })
 }
 
 function idCodec(): Codec.Codec<Id> {
-    return Codec.taggedUnion(
-        'tag',
-        {
-            year: { year: Codec.number },
-            lastYear: {},
-            month: { month: Date.monthCodec() },
-            lastMonth: {},
-            weeksAgo: { x: twoThreeOrFourCodec() },
-            lastWeek: {},
-            thisWeek: {},
-            nextWeek: {},
-            inTheFuture: {},
-        })
+    return Codec.union({
+        0: [
+            x => x.tag === 'year' ? x : null,
+            Codec.struct({ tag: Codec.literal('year'), year: Codec.number })
+        ],
+        1: [
+            x => x.tag === 'lastYear' ? x : null,
+            Codec.struct({ tag: Codec.literal('lastYear') })
+        ],
+        2: [
+            x => x.tag === 'month' ? x : null,
+            Codec.struct({ tag: Codec.literal('month'), month: Date.monthCodec() })
+        ],
+        3: [
+            x => x.tag === 'lastMonth' ? x : null,
+            Codec.struct({ tag: Codec.literal('lastMonth') })
+        ],
+        4: [
+            x => x.tag === 'weeksAgo' ? x : null,
+            Codec.struct({ tag: Codec.literal('weeksAgo'), x: twoThreeOrFourCodec() })
+        ],
+        5: [
+            x => x.tag === 'lastWeek' ? x : null,
+            Codec.struct({ tag: Codec.literal('lastWeek') })
+        ],
+        6: [
+            x => x.tag === 'thisWeek' ? x : null,
+            Codec.struct({ tag: Codec.literal('thisWeek') })
+        ],
+        7: [
+            x => x.tag === 'nextWeek' ? x : null,
+            Codec.struct({ tag: Codec.literal('nextWeek') })
+        ],
+        8: [
+            x => x.tag === 'inTheFuture' ? x : null,
+            Codec.struct({ tag: Codec.literal('inTheFuture') })
+        ],
+    })
 }
 
 export function toSpanishLabel(group: Id): string {
@@ -452,13 +482,26 @@ export function view<E, Context extends { today: Date.Date }>(
                     Layout.spacing(10),
                     Layout.fullWidth(),
                     Layout.baselineY(),
-                    Html.class_('date-group-collapse-button'),
-                    Html.style('padding', '5px'),
-                    Html.style('margin', '-5px'),
+                    Layout.css({
+                        className: 'date-group-collapse-button',
+                        normal: [
+                            Layout.cssProperty('font-size', '12px'),
+                            Layout.cssProperty('transition', 'opacity 0.2s ease-out'),
+                            Layout.cssProperty('opacity', '0.5'),
+                            Layout.cssProperty('padding', '5px'),
+                            Layout.cssProperty('margin', '-5px'),
+                            Layout.cssProperty("letter-spacing", "0.15em"),
+                        ],
+                        hover: [
+                            Layout.cssProperty('opacity', '0.75'),
+                        ],
+                        focus: [
+                            Layout.cssProperty('opacity', '1'),
+                            Layout.cssProperty('outline', '0'),
+                        ]
+                    }),
                     Html.on('click', () => config.onGroupEvent(clickedCollapseButton(id))),
                     Html.attribute('aria-controls', idToString(id)),
-                    Html.style("letter-spacing", "0.15em"),
-                    Html.style('font-size', '12px')
                 ],
                 [
                     Layout.column(

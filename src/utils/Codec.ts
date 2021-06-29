@@ -8,62 +8,80 @@ export type Codec<A> = {
     type: 'Codec',
     decoder: Decoder.Decoder<A>,
     encode: (x: A) => Utils.Json,
+} & Interface<A>
+
+export interface Interface<A> {
+    map<B>(
+        f: (a: A) => B,
+        g: (b: B) => A
+    ): Codec<B>
+
+    andThen<B>(
+        f: (a: A) => Codec<B>,
+        g: (b: B) => A
+    ): Codec<B>
 }
 
-const id = <A>(x: A) => x
-
-export const string: Codec<string> = {
-    type: 'Codec',
-    decoder: Decoder.string,
-    encode: id,
-}
-
-export const bool: Codec<boolean> = {
-    type: 'Codec',
-    decoder: Decoder.boolean,
-    encode: id,
-}
-
-export const number: Codec<number> = {
-    type: 'Codec',
-    decoder: Decoder.number,
-    encode: id,
-}
-
-export const null_: Codec<null> = {
-    type: 'Codec',
-    decoder: Decoder.null_,
-    encode: id,
-}
-
-export function array<A>(codec: Codec<A>): Codec<A[]> {
+function codecOf<A>(decoder: Decoder.Decoder<A>, encode: (x: A) => Utils.Json): Codec<A> {
     return {
         type: 'Codec',
-        decoder: Decoder.array(codec.decoder),
-        encode: (x: A[]) => x.map(codec.encode),
+        decoder,
+        encode,
+        map: (f, g) =>
+            codecOf(
+                Decoder.map(decoder, f),
+                x => encode(g(x)),
+            ),
+        andThen: (f, g) =>
+            codecOf(
+                Decoder.andThen(decoder, x => f(x).decoder),
+                b => encode(g(b))
+            )
     }
+}
+
+export const string: Codec<string> = codecOf(
+    Decoder.string,
+    Utils.id,
+)
+
+export const bool: Codec<boolean> = codecOf(
+    Decoder.boolean,
+    Utils.id,
+)
+
+export const number: Codec<number> = codecOf(
+    Decoder.number,
+    Utils.id,
+)
+
+export const null_: Codec<null> = codecOf(
+    Decoder.null_,
+    Utils.id,
+)
+
+export function array<A>(codec: Codec<A>): Codec<A[]> {
+    return codecOf(
+        Decoder.array(codec.decoder),
+        (x: A[]) => x.map(codec.encode),
+    )
 }
 
 type Literal = string | number | boolean | null
 
 export function literal<A extends Literal>(x: A): Codec<A> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.literal(x),
-        encode: _ => x,
-    }
+    return codecOf(
+        Decoder.literal(x),
+        _ => x,
+    )
 }
 
 export function map<A, B>(
     codec: Codec<A>,
     f: (a: A) => B,
-    g: (b: B) => A,
+    g: (b: B) => A
 ): Codec<B> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.map(codec.decoder, f),
-        encode: x => codec.encode(g(x))
-    }
+    return codec.map(f, g)
 }
 
 export function andThen<A, B>(
@@ -71,11 +89,7 @@ export function andThen<A, B>(
     f: (a: A) => Codec<B>,
     g: (b: B) => A
 ): Codec<B> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.andThen(codec.decoder, x => f(x).decoder),
-        encode: b => codec.encode(g(b))
-    }
+    return codec.andThen(f, g)
 }
 
 function getStructDecoders<A>(
@@ -105,136 +119,104 @@ export function struct<A>(
 ): Codec<{ [K in keyof A]: A[K] }> {
     const structDecoders = getStructDecoders(properties)
 
-    return {
-        type: 'Codec',
-        decoder: Decoder.struct(structDecoders),
-        encode: struct => encodeStruct(struct, properties),
+    return codecOf(
+        Decoder.struct(structDecoders),
+        struct => encodeStruct(struct, properties),
+    )
+}
+
+function getVariantsDecoders2<A>(
+    variants: {
+        [K in keyof A]: [
+            (x: A[keyof A]) => A[K] | null,
+            Codec<A[K]>,
+        ]
     }
+): { [K in keyof A]: Decoder.Decoder<A[K]> } {
+    const decoders: { [K in keyof A]: Decoder.Decoder<A[K]> } =
+        {} as any
+    
+    for (const key in variants) if (Utils.hasOwnProperty(variants, key)) {
+        decoders[key] = variants[key][1].decoder
+    }
+
+    return decoders
+}
+
+function encodeVariants<A>(
+    x: A[keyof A],
+    variants: {
+        [K in keyof A]: [
+            (x: A[keyof A]) => A[K] | null,
+            Codec<A[K]>,
+        ]
+    }
+): Utils.Json {
+    for (const key in variants) if (Utils.hasOwnProperty(variants, key)) {
+        const y = variants[key][0](x)
+
+        if (y !== null) {
+            return variants[key][1].encode(y)
+        }
+    }
+
+    return null
+}
+
+export function union<A>(
+    variants: {
+        [K in keyof A]: [
+            (x: A[keyof A]) => A[K] | null,
+            Codec<A[K]>,
+        ]
+    }
+): Codec<A[keyof A]> {
+    return codecOf(
+        Decoder.union(getVariantsDecoders2(variants)),
+        x => encodeVariants(x, variants)
+    )
 }
 
 export function union2<A, B>(
     asA: (x: A | B) => A | null, codecA: Codec<A>,
     asB: (x: A | B) => B | null, codecB: Codec<B>,
 ): Codec<A | B> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union2(codecA.decoder, codecB.decoder),
-        encode: x =>
+    return codecOf(
+        Decoder.union2(codecA.decoder, codecB.decoder),
+        x =>
             Utils.nullMap(codecA.encode, asA(x))
                 ?? Utils.nullMap(codecB.encode, asB(x))
                 ?? null
-    }
-}
-
-export function union3<A, B, C>(
-    asA: (x: A | B | C) => A | null, codecA: Codec<A>,
-    asB: (x: A | B | C) => B | null, codecB: Codec<B>,
-    asC: (x: A | B | C) => C | null, codecC: Codec<C>,
-): Codec<A | B | C> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.union3(codecA.decoder, codecB.decoder, codecC.decoder),
-        encode: x =>
-            Utils.nullMap(codecA.encode, asA(x))
-                ?? Utils.nullMap(codecB.encode, asB(x))
-                ?? Utils.nullMap(codecC.encode, asC(x))
-                ?? null
-    }
-}
-
-export function union4<A, B, C, D>(
-    asA: (x: A | B | C | D) => A | null, codecA: Codec<A>,
-    asB: (x: A | B | C | D) => B | null, codecB: Codec<B>,
-    asC: (x: A | B | C | D) => C | null, codecC: Codec<C>,
-    asD: (x: A | B | C | D) => D | null, codecD: Codec<D>,
-): Codec<A | B | C | D> {
-    return union2(
-        x => asA(x) || asB(x), union2(asA, codecA, asB, codecB),
-        x => asC(x) || asD(x), union2(asC, codecC, asD, codecD),
     )
 }
 
-function getVariantsDecoders<A>(
-    variantsStruct: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Codec<A[Variant][Prop]> } }
-): { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Decoder.Decoder<A[Variant][Prop]> } } {
-    const variantsDecoders: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Decoder.Decoder<A[Variant][Prop]> } } =
-        {} as any
-
-    for (const key in variantsStruct) if (Utils.hasOwnProperty(variantsStruct, key)) {
-        variantsDecoders[key as keyof A] = getStructDecoders(variantsStruct[key as keyof A])
-    }
-
-    return variantsDecoders
-}
-
-export function taggedUnion<
-    Tag extends string,    
-    A,
-    Output extends { [Variant in keyof A]: { [tag in Tag]: Variant } & A[Variant] }
->(
-    tag: Tag,
-    variants: { [Variant in keyof A]: { [Prop in keyof A[Variant]]: Codec<A[Variant][Prop]> } },
-): Codec<Output[keyof Output]> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.taggedUnion(tag, getVariantsDecoders(variants)),
-        encode: (union: Output[keyof Output]) => {
-            for (const tagVariant in variants) if (Utils.hasOwnProperty(variants, tagVariant)) {
-                if (tagVariant as keyof A === union[tag] as any) {
-                    const payload = struct(variants[tagVariant as keyof A]).encode(union as any)
-
-                    if (Utils.isObject(payload)) {
-                        return {
-                            [tag]: tagVariant,
-                            ...payload
-                        }
-                    }
-
-                    return null
-                }
-            }
-
-            return null
-        }
-    }
-}
-
 export function succeed<A>(value: A): Codec<A> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.succeed(value),
-        encode: _ => null,
-    }
+    return codecOf(
+        Decoder.succeed(value),
+        _ => null,
+    )
 }
 
 export function fail<A>(message: string): Codec<A> {
-    return {
-        type: 'Codec',
-        decoder: Decoder.fail(message),
-        encode: _ => null,
-    }
+    return codecOf(
+        Decoder.fail(message),
+        _ => null,
+    )
 }
 
-// I need to study this because it's way more verbose than I'd like
-export function maybe<A>(codec: Codec<A>): Codec<Maybe.Maybe<A>> {
-    return map(
-        union2(
+export function maybe<A>(codec: Codec<A>): Codec<Maybe.Interface<A>> {
+    return union({
+        a: [
             x => x.tag === 'just' ? x : null,
             struct({
                 tag: literal('just'),
                 value: codec,
             }),
+        ],
+        b: [
             x => x.tag === 'nothing' ? x : null,
             struct({ tag: literal('nothing') }),
-        ),
-        x => {
-            switch (x.tag) {
-                case 'just':
-                    return Maybe.just(x.value)
-                case 'nothing':
-                    return Maybe.nothing()
-            }
-        },
-        Utils.id,
-    )
+        ],
+    })
+        .map(Maybe.withInterface, Utils.id)
 }
