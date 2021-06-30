@@ -1,158 +1,16 @@
 import * as Html from '../vdom/Html'
 import * as Color from '../style/Color'
 import * as Utils from '../utils/Utils'
+import * as Pair from '../utils/Pair'
+import * as Css from './Css'
 
 import './Layout.css'
-import { pair } from '../utils/Pair'
-
-// --- Css
-
-type Css =
-    | { pseudoClass: 'normal' | 'hover' | 'focus' | 'parentHover' | 'parentFocus', class: string, content: string }
-    | { pseudoClass: 'groupHover' | 'groupFocus', groupClass: string, class: string, content: string }
-
-function cssSelector(css: Css): string {
-    switch (css.pseudoClass) {
-        case 'normal':
-            return `.${css.class}`
-        case 'hover':
-            return `.${css.class}:hover`
-        case 'focus':
-            return `.${css.class}:focus`
-        case 'parentHover':
-            return `*:hover > ${css.class}`
-        case 'parentFocus':
-            return `*:focus > ${css.class}`
-        case 'groupHover':
-            return `${css.groupClass}:hover > ${css.class}`
-        case 'groupFocus':
-            return `${css.groupClass}:focus > ${css.class}`
-    }
-}
-
-function cssArrayToDict(css: Array<Css>): { [selector: string]: string } {
-    const cssDict: { [selector: string]: string } = {}
-
-    for (const css_ of css) {
-        cssDict[cssSelector(css_)] = css_.content
-    }
-
-    return cssDict
-}
-
-export function css<E, C>(
-    config: {
-        className: string,
-        normal?: Array<CssProperty>,
-        hover?: Array<CssProperty>,
-        focus?: Array<CssProperty>,
-        parentHover?: Array<CssProperty>,
-        parentFocus?: Array<CssProperty>,
-        group?: {
-            className: string,
-            hover?: Array<CssProperty>,
-            focus?: Array<CssProperty>,
-        },
-    },
-): Attribute<E, C> {
-    const css: Array<Css> = []
-
-    if (config.normal) {
-        css.push(simpleCss('normal', config.className, config.normal))
-    }
-    if (config.hover) {
-        css.push(simpleCss('hover', config.className, config.hover))
-    }
-    if (config.focus) {
-        css.push(simpleCss('focus', config.className, config.focus))
-    }
-    if (config.parentHover) {
-        css.push(simpleCss('parentHover', config.className, config.parentHover))
-    }
-    if (config.parentFocus) {
-        css.push(simpleCss('parentFocus', config.className, config.parentFocus))
-    }
-    if (config.group) {
-        if (config.group.hover) {
-            css.push(groupCss(
-                'groupHover',
-                config.group.className,
-                config.className,
-                config.group.hover
-            ))
-        }
-        if (config.group.focus) {
-            css.push(groupCss(
-                'groupFocus',
-                config.group.className,
-                config.className,
-                config.group.focus
-            ))
-        }
-    }
-
-    return {
-        tag: 'css',
-        css,
-    }
-}
-
-export function simpleCss(
-    pseudoClass: 'normal' | 'hover' | 'focus' | 'parentHover' | 'parentFocus',
-    className: string,
-    properties: Array<CssProperty>,
-): Css {
-    return {
-        pseudoClass,
-        class: className,
-        content: propertiesToString(properties)
-    }
-}
-
-export function groupCss(
-    pseudoClass: 'groupHover' | 'groupFocus',
-    groupClass: string,
-    className: string,
-    properties: Array<CssProperty>,
-): Css {
-    return {
-        pseudoClass,
-        groupClass,
-        class: className,
-        content: propertiesToString(properties)
-    }
-}
-
-type CssProperty =
-    | { tag: 'property', name: string, value: string }
-    | { tag: 'batch', properties: Array<CssProperty> }
-
-export function cssProperty(name: string, value: string): CssProperty {
-    return { tag: 'property', name, value }
-}
-
-export function batch(properties: Array<CssProperty>): CssProperty {
-    return { tag: 'batch', properties }
-}
-
-function propertiesToString(properties: Array<CssProperty>): string {
-    return properties.map(propertyToString).join(';')
-}
-
-function propertyToString(property: CssProperty): string {
-    switch (property.tag) {
-        case 'property':
-            return `${property.name}:${property.value}`
-        case 'batch':
-            return propertiesToString(property.properties)
-    }
-}
 
 // --- Styled Html
 
 
 type StyledHtml<E> =
-    { html: Html.Html<E>, css: Array<Css> }
+    { html: Html.Html<E>, css: Array<Css.Statement> }
 
 function mapStyledHtml<A, B>(styled: StyledHtml<A>, f: (a: A) => B): StyledHtml<B> {
     return {
@@ -161,40 +19,46 @@ function mapStyledHtml<A, B>(styled: StyledHtml<A>, f: (a: A) => B): StyledHtml<
     }
 }
 
-function collectChildrenCss<E, C>(
+type StyledChildren<E> =
+    { children: Array<Html.Html<E>>, css: Array<Css.Statement> }
+
+function toStyledChildren<E, C>(
     context: C,
     children: Array<Layout<E, C>>
-): { htmlChildren: Array<Html.Html<E>>, css: Array<Css> } {
-    return children.map(child => toStyledHtml(context, child))
+): StyledChildren<E> {
+    return children
         .reduce(
-            (collected, { html, css }) => {
-                collected.htmlChildren.push(html)
+            (collected, child) => {
+                const { html, css } = toStyledHtml(context, child)
+
+                collected.children.push(html)
                 collected.css.push(...css)
+
                 return collected
             },
-            Utils.id<{ htmlChildren: Array<Html.Html<E>>, css: Array<Css> }>({ htmlChildren: [], css: [] })
+            Utils.id<StyledChildren<E>>({
+                children: [],
+                css: []
+            })
         )
 }
 
-function collectNodeCss<E, C>(
+function styledHtml<E, C>(
     context: C,
     flexDirection: 'row' | 'column',
     attributes: Array<Attribute<E, C>>,
     children: Array<Layout<E, C>>,
     f: (
-        htmlChildren: Array<Html.Html<E>>,
         htmlAttributes: Array<Html.Attribute<E>>,
-        css: Array<Css>
+        htmlChildren: Array<Html.Html<E>>,
     ) => Html.Html<E>
 ): StyledHtml<E> {
-    const { htmlAttributes, css: attributesCss } = toHtmlAttributes(attributes, context, flexDirection)
-    const { htmlChildren, css: childrenCss } = collectChildrenCss(context, children)
-
-    const css = [ ...childrenCss, ...attributesCss ]
+    const { children: htmlChildren, css: childrenCss } = toStyledChildren(context, children)
+    const { attributes: htmlAttributes, css: attributesCss } = toStyledAttributes(attributes, context, flexDirection)
 
     return {
-        html: f(htmlChildren, htmlAttributes, css),
-        css,
+        html: f(htmlAttributes, htmlChildren),
+        css: [ ...childrenCss, ...attributesCss ],
     }
 }
 
@@ -220,40 +84,20 @@ export function toStyledHtml<Event, Context>(
 
 export function toHtml<E, C>(
     context: C,
-    flexDirection: 'row' | 'column',
-    htmlTag: string,
-    attributes: Array<Attribute<E, C>>,
-    children: Array<Layout<E, C>>,
+    containerTag: string,
+    containerAttributes: Array<Html.Attribute<E>>,
+    layout: Layout<E, C>,
 ): Html.Html<E> {
-    return collectNodeCss(
-        context,
-        flexDirection,
-        attributes,
-        children,
-        (htmlChildren, htmlAttributes, css) => Html.node(
-            htmlTag,
-            htmlAttributes,
+    const { html, css } = toStyledHtml(context, layout)
+
+    return Html.node(
+            containerTag,
+            containerAttributes,
             [
-                Html.keyed(
-                    'div',
-                    [],
-                    Object.entries(cssArrayToDict(css))
-                        .map(([selector, content]) =>
-                            pair(
-                                selector,
-                                Html.node(
-                                    'style',
-                                    [],
-                                    [Html.text(content)]
-                                )
-                            )
-                        ),
-                ),
-                ...htmlChildren
-            ],
-        ),
-    )
-        .html
+                Css.toHtml(css),
+                html
+            ]
+        )
 }
 
 export function none<Event, Context>(): Layout<Event, Context> {
@@ -268,12 +112,12 @@ export function node<E, C>(
 ): Layout<E, C> {
     return {
         type: 'Layout',
-        build: (context: C) => collectNodeCss(
+        build: (context: C) => styledHtml(
             context,
             flexDirection,
             attributes,
             children,
-            (htmlChildren, htmlAttributes) => Html.node(
+            (htmlAttributes, htmlChildren) => Html.node(
                 htmlTag,
                 htmlAttributes,
                 htmlChildren,
@@ -290,12 +134,12 @@ export function keyed<E, C>(
 ): Layout<E, C> {
     return {
         type: 'Layout',
-        build: (context: C) => collectNodeCss(
+        build: (context: C) => styledHtml(
             context,
             flexDirection,
             attributes,
             children.map(([_, child]) => child),
-            (htmlChildren, htmlAttributes) => Html.keyed(
+            (htmlAttributes, htmlChildren) => Html.keyed(
                 htmlTag,
                 htmlAttributes,
                 children.map(([key, _], i) => [key, htmlChildren[i]])
@@ -360,7 +204,7 @@ export function below<E, C>(
     }
 ): Layout<E, C> {
     return node<E, C>(
-        'column',
+        flexDirection,
         tagName,
         [
             ...attributes,
@@ -382,7 +226,7 @@ export function below<E, C>(
     )
 }
 
-export function usingContext<E, Context>(useContext: (context: Context) => Layout<E, Context>): Layout<E, Context> {
+export function withContext<E, Context>(useContext: (context: Context) => Layout<E, Context>): Layout<E, Context> {
     return {
         type: 'Layout',
         build: context => {
@@ -401,13 +245,13 @@ export function map<A, B, C>(layout: Layout<A, C>, f: (a: A) => B): Layout<B, C>
 // --- ATTRIBUTES
 
 /** Layouts can receive the same attributes from the `Html` module, and also a
- * `Layout.attributeUsingContext` that uses the context to create an `Html.Attribute`.
+ * `Layout.attributeWithContext` that uses the context to create an `Html.Attribute`.
  */
 export type Attribute<Event, Context> =
     | Html.Attribute<Event>
-    | { tag: 'attributeUsingContext', htmlAttribute: (context: Context) => Html.Attribute<Event> }
-    | { tag: 'attributeUsingFlexDirection', htmlAttribute: (flexDirection: 'row' | 'column') => Html.Attribute<Event> }
-    | { tag: 'css', css: Array<Css> }
+    | { tag: 'attributeWithContext', htmlAttribute: (context: Context) => Html.Attribute<Event> }
+    | { tag: 'attributeWithFlexDirection', htmlAttribute: (flexDirection: 'row' | 'column') => Html.Attribute<Event> }
+    | { tag: 'cssStatement', statement: Css.Statement }
 
 /** Use the current context to create a Html attribute.
  * For example, if the context is the color scheme:
@@ -416,8 +260,8 @@ export type Attribute<Event, Context> =
  * Layout.column(
  *   'div',
  *   [
- *     Layout.useContext(colorScheme => Layout.color(colorScheme.textColor)),
- *     Layout.useContext(colorScheme => Layout.backgroundColor(colorScheme.backgroundColor)),
+ *     Layout.attributeWithContext(colorScheme => Layout.color(colorScheme.textColor)),
+ *     Layout.attributeWithContext(colorScheme => Layout.backgroundColor(colorScheme.backgroundColor)),
  *   ],
  *   [
  *     Layout.text('Hello world'),
@@ -425,76 +269,77 @@ export type Attribute<Event, Context> =
  * )
  * ```
 */
-export function attributeUsingContext<E, Context>(
+export function attributeWithContext<E, Context>(
     htmlAttribute: (context: Context) => Html.Attribute<E>
 ): Attribute<E, Context> {
     return {
-        tag: 'attributeUsingContext',
+        tag: 'attributeWithContext',
         htmlAttribute
     }
 }
 
-function attributeUsingFlexDirection<E, C>(
+function attributeWithFlexDirection<E, C>(
     htmlAttribute: (flexDirection: 'row' | 'column') => Html.Attribute<E>
 ): Attribute<E, C> {
     return {
-        tag: 'attributeUsingFlexDirection',
+        tag: 'attributeWithFlexDirection',
         htmlAttribute
     }
 }
 
-function toHtmlAttribute<E, C>(
+export function class_<E, C>(class_: Css.Class): Attribute<E, C> {
+    return { tag: 'cssStatement', statement: Css.class_(class_) }
+}
+
+type StyledAttribute<E> =
+    { attribute: Html.Attribute<E>, statement?: Css.Statement }
+
+function toStyledAttribute<E, C>(
     attribute: Attribute<E, C>,
     context: C,
     flexDirection: 'row' | 'column'
-): { htmlAttribute: Html.Attribute<E>, css: Array<Css> | null } {
-    if (attribute.tag === 'attributeUsingContext') {
+): StyledAttribute<E> {
+    if (attribute.tag === 'attributeWithContext') {
+        return { attribute: attribute.htmlAttribute(context) }
+    }
+    if (attribute.tag === 'attributeWithFlexDirection') {
+        return { attribute: attribute.htmlAttribute(flexDirection) }
+    }
+    if (attribute.tag === 'cssStatement') {
         return {
-            htmlAttribute: attribute.htmlAttribute(context),
-            css: null
+            attribute: Html.class_(attribute.statement.class_.name),
+            statement: attribute.statement,
         }
     }
-    if (attribute.tag === 'attributeUsingFlexDirection') {
-        return {
-            htmlAttribute: attribute.htmlAttribute(flexDirection),
-            css: null
-        }
-    }
-    if (attribute.tag === 'css') {
-        return {
-            htmlAttribute: Html.class_(attribute.css[0]?.class || ''),
-            css: attribute.css,
-        }
-    }
-    return {
-        htmlAttribute: attribute,
-        css: null
-    }
+    return { attribute: attribute }
 }
 
-function toHtmlAttributes<E, C>(
+type StyledAttributes<E> =
+    { attributes: Array<Html.Attribute<E>>, css: Array<Css.Statement> }
+
+function toStyledAttributes<E, C>(
     attributes: Array<Attribute<E, C>>,
     context: C,
     flexDirection: 'row' | 'column'
-): { htmlAttributes: Array<Html.Attribute<E>>, css: Array<Css> } {
+): StyledAttributes<E> {
     const collectedHtmlAttributes = attributes
-        .map(attr => toHtmlAttribute(attr, context, flexDirection))
+        .map(attr => toStyledAttribute(attr, context, flexDirection))
         .reduce(
-            (collected, { htmlAttribute, css }) => {
-                collected.htmlAttributes.push(htmlAttribute)
+            (collected, { attribute, statement }) => {
+                collected.attributes.push(attribute)
 
-                if (css !== null) {
-                    collected.css.push(...css)
+                if (statement !== undefined) {
+                    collected.css.push(statement)
                 }
 
                 return collected
             },
-            Utils.id<{ htmlAttributes: Array<Html.Attribute<E>>, css: Array<Css> }>({ htmlAttributes: [], css: [] })
+            Utils.id<StyledAttributes<E>>({ attributes: [], css: [] })
         )
 
     return {
-        htmlAttributes: [
-            ...collectedHtmlAttributes.htmlAttributes,
+        attributes: [
+            ...collectedHtmlAttributes.attributes,
             Html.style('display', 'flex'),
             Html.style('flex-direction', flexDirection),
         ],
@@ -517,7 +362,7 @@ export function paddingXY<A>(x: number, y: number): Html.Attribute<A> {
 }
 
 export function centerX<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.style('align-items', 'center')
             : Html.style('justify-content', 'center')
@@ -525,7 +370,7 @@ export function centerX<E, C>(): Attribute<E, C> {
 }
 
 export function centerY<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.style('justify-content', 'center')
             : Html.style('align-items', 'center')
@@ -533,7 +378,7 @@ export function centerY<E, C>(): Attribute<E, C> {
 }
 
 export function endX<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.style('align-items', 'end')
             : Html.style('justify-content', 'flex-end')
@@ -541,7 +386,7 @@ export function endX<E, C>(): Attribute<E, C> {
 }
 
 export function endY<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.style('justify-content', 'flex-end')
             : Html.style('align-items', 'end')
@@ -549,7 +394,7 @@ export function endY<E, C>(): Attribute<E, C> {
 }
 
 export function startX<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.style('align-items', 'start')
             : Html.style('justify-content', 'flex-start')
@@ -557,7 +402,7 @@ export function startX<E, C>(): Attribute<E, C> {
 }
 
 export function startY<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.style('justify-content', 'flex-start')
             : Html.style('align-items', 'start')
@@ -565,7 +410,7 @@ export function startY<E, C>(): Attribute<E, C> {
 }
 
 export function baselineY<E, C>(): Attribute<E, C> {
-    return attributeUsingFlexDirection(flexDirection =>
+    return attributeWithFlexDirection(flexDirection =>
         flexDirection === 'column'
             ? Html.class_('')
             : Html.style('align-items', 'baseline')

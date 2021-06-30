@@ -67,10 +67,10 @@ function getInitialState(
 ): Maybe.Maybe<State> {
     return Result.toMaybe(
         Utils.jsonParse(localStorage)
-            .mapError(error => Utils.debugException('Json parse error', error, null))
+            .mapError(error => Utils.debugException('Json parse error', error))
             .andThen(json =>
                 Decoder.decode(json, codec.decoder)
-                    .mapError(error => Utils.debugException('Json decode error', error, null))
+                    .mapError(error => Utils.debugException('Json decode error', error))
             )
             .map(state => updateTime(state, now))
     )
@@ -283,32 +283,37 @@ body {
 export function view(state: State): Html.Html<Event.Event> {
     return Layout.toHtml(
         { today: state.today, now: state.now },
-        'column',
         'div',
         [
-            Layout.centerX(),
+            Html.style('width', '100%'),
         ],
-        [
-            Html.node('style', [], [ Html.text(staticCss) ]),
-            Layout.column(
-                'div',
-                [
-                    Layout.spacing(50),
-                    Layout.paddingXY(12, 20),
-                    Layout.fullWidth(),
-                    Html.style('max-width', `${1024 + 40}px`),
-                ],
-                [
-                    Layout.space(0),
-                    Create.view(state.create, createConfig),
-                    Records.view(
-                        state.records.toArray,
-                        state.dateGroupState,
-                        recordsConfig
-                    ),
-                    Layout.space(0),
-                ]
-            )
-        ]
+        Layout.column(
+            'div',
+            [
+                Layout.centerX(),
+            ],
+            [
+                Layout.column(
+                    'div',
+                    [
+                        Layout.spacing(50),
+                        Layout.paddingXY(12, 20),
+                        Layout.fullWidth(),
+                        Html.style('max-width', `${1024 + 40}px`),
+                    ],
+                    [
+                        Html.node('style', [], [ Html.text(staticCss) ]),
+                        Layout.space(0),
+                        Create.view(state.create, createConfig),
+                        Records.view(
+                            state.records.toArray,
+                            state.dateGroupState,
+                            recordsConfig
+                        ),
+                        Layout.space(0),
+                    ]
+                ),
+            ]
+        )
     )
 }

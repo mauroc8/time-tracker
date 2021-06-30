@@ -35,7 +35,7 @@ export function diff<T>(
 function isKeyedChildren<T>(
     children: Array<[string, Html.Html<T>]> | Array<Html.Html<T>>
 ): children is Array<[string, Html.Html<T>]> {
-    return children.length == 0 || children[0] instanceof Array
+    return children[0] instanceof Array
 }
 
 function unkeyChildren<T>(children: Array<[string, Html.Html<T>]> | Array<Html.Html<T>>): Array<Html.Html<T>> {
@@ -87,32 +87,33 @@ export function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void):
 }
 
 function toDomAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {
-    switch (attribute.tag) {
-        case 'attribute':
-            $element.setAttribute(attribute.name, attribute.value)
-            return
-
-        case 'property':
-            ($element as any)[attribute.name] = attribute.value
-            return
-
-        case 'eventHandler':
-            ($element as any)[`on${attribute.eventName}`] = (event: Event) =>
-                dispatch(attribute.handler(event))
-
-            return
-
-        case 'style':
-            ($element as any).style[attribute.property] = attribute.value
-            return
-
-        case 'class':
-            try {
-                $element.classList.add(attribute.value)
-            } catch (e) {
-                // ¯\_(ツ)_/¯
-            }
-            return
+    try {
+        switch (attribute.tag) {
+            case 'attribute':
+                $element.setAttribute(attribute.name, attribute.value)
+                return
+    
+            case 'property':
+                ($element as any)[attribute.name] = attribute.value
+                return
+    
+            case 'eventHandler':
+                ($element as any)[`on${attribute.eventName}`] = (event: Event) =>
+                    dispatch(attribute.handler(event))
+    
+                return
+    
+            case 'style':
+                ($element as any).style[attribute.property] = attribute.value
+                return
+    
+            case 'class':
+                if (attribute.value !== '') {
+                    $element.classList.add(attribute.value)
+                }
+        }
+    } catch (e) {
+        Utils.debugException('toDomAttribute', e)
     }
 }
 
@@ -394,7 +395,7 @@ function keyedNodesRemove<E>(
             try {
                 keyed.node.remove()
             } catch (e) {
-                Utils.debugException('keyed.node.remove()', e, null)
+                Utils.debugException('keyed.node.remove()', e)
             }
 
             // Delete from array
@@ -429,7 +430,7 @@ function keyedNodesDiff<E>(
             try {
                 keyed.node = diff(keyed.html, newHtml, dispatch)(keyed.node)
             } catch (e) {
-                Utils.debugException('keyed.node diff()', e, null)
+                Utils.debugException('keyed.node diff()', e)
             }
 
             // Update the Html
@@ -463,7 +464,7 @@ function keyedNodesCreate<E>(
                 keyedNodes.asArray.push(keyed)
                 keyedNodes.asDictionary[key] = keyed
             } catch (e) {
-                Utils.debugException('insertBefore(render())', e, null)
+                Utils.debugException('insertBefore(render())', e)
             }
         }
     }
@@ -513,7 +514,7 @@ function keyedNodesMove<E>(
                 null
             )
         } catch (e) {
-            Utils.debugException('insertBefore() case 1', e, null)
+            Utils.debugException('insertBefore() case 1', e)
         }
 
         keyedNodes.asArray.push(
@@ -530,7 +531,7 @@ function keyedNodesMove<E>(
                 desiredNextSibling
             )
         } catch (e) {
-            Utils.debugException('insertBefore() case 2', e, null)
+            Utils.debugException('insertBefore() case 2', e)
         }
 
         const currentPosition = keyedNodes.asArray.findIndex((x) => x === keyed)

@@ -136,13 +136,16 @@ export function debug<A>(tag: string, value: A): A {
     return value
 }
 
-export function debugException<A>(message: string, error: unknown, value: A): A {
+export function debugException<A>(
+    message: string,
+    error: unknown
+): undefined {
     if (process.env.NODE_ENV === 'development') {
         console.info(`[Runtime exception] ${message}:`)
         console.error(error)
     }
 
-    return value
+    return undefined
 }
 
 export function hasOwnProperty<Property extends string>(

@@ -140,7 +140,7 @@ export function view<E, Context extends { today: Date.Date }>(
         onDelete: (id: Record.Id) => E,
     },
 ): Layout.Layout<E, Context> {
-    return Layout.usingContext(({ today }) =>
+    return Layout.withContext(({ today }) =>
         Layout.column(
             'div',
             [

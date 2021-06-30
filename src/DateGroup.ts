@@ -2,6 +2,7 @@ import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
 import * as Decoder from './utils/Decoder'
 import * as Layout from './layout/Layout'
+import * as Css from './layout/Css'
 import * as Html from './vdom/Html'
 import * as Date from './utils/Date'
 import * as TimeGroup from './TimeGroup'
@@ -482,22 +483,22 @@ export function view<E, Context extends { today: Date.Date }>(
                     Layout.spacing(10),
                     Layout.fullWidth(),
                     Layout.baselineY(),
-                    Layout.css({
-                        className: 'date-group-collapse-button',
+                    Layout.class_({
+                        name: 'date-group-collapse-button',
                         normal: [
-                            Layout.cssProperty('font-size', '12px'),
-                            Layout.cssProperty('transition', 'opacity 0.2s ease-out'),
-                            Layout.cssProperty('opacity', '0.5'),
-                            Layout.cssProperty('padding', '5px'),
-                            Layout.cssProperty('margin', '-5px'),
-                            Layout.cssProperty("letter-spacing", "0.15em"),
+                            Css.property('font-size', '12px'),
+                            Css.property('transition', 'opacity 0.2s ease-out'),
+                            Css.property('opacity', '0.5'),
+                            Css.property('padding', '5px'),
+                            Css.property('margin', '-5px'),
+                            Css.property("letter-spacing", "0.15em"),
                         ],
                         hover: [
-                            Layout.cssProperty('opacity', '0.75'),
+                            Css.property('opacity', '0.75'),
                         ],
                         focus: [
-                            Layout.cssProperty('opacity', '1'),
-                            Layout.cssProperty('outline', '0'),
+                            Css.property('opacity', '1'),
+                            Css.property('outline', '0'),
                         ]
                     }),
                     Html.on('click', () => config.onGroupEvent(clickedCollapseButton(id))),
@@ -525,7 +526,7 @@ export function view<E, Context extends { today: Date.Date }>(
                     ),
                 ]
             ),
-            Layout.usingContext(({ today }) =>
+            Layout.withContext(({ today }) =>
                 Layout.column(
                     'div',
                     [
