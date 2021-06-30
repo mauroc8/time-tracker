@@ -1,5 +1,3 @@
-import './index.css'
-
 import * as Main from './Main'
 import { startRuntime } from './runtime'
 

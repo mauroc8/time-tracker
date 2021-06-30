@@ -266,19 +266,34 @@ const recordsConfig = {
     onDelete: Event.onRecordDelete
 }
 
-const staticCss = `
-body {
-    background-color: ${Color.toCssString(Color.background)};
-    border-top: 6px solid ${Color.toCssString(Color.accent)};
-    color: ${Color.toCssString(Color.text)};
-}
-
-::selection,
-::-moz-selection {
-    background-color: ${Color.toCssString(Color.accent50)};
-    color: ${Color.toCssString(Color.rgba(1, 1, 1, 0.85))};
-}
+const bodyCss = `
+background-color: ${Color.toCssString(Color.background)};
+border-top: 6px solid ${Color.toCssString(Color.accent)};
+color: ${Color.toCssString(Color.text)};
+font-family: Lato, -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
+    "Helvetica Neue", Helvetica, Ubuntu, Roboto, Noto, "Segoe UI", Arial, sans-serif;
 `
+
+const selectionCss = `
+background-color: ${Color.toCssString(Color.accent50)};
+color: ${Color.toCssString(Color.rgba(1, 1, 1, 0.85))};
+`
+
+const resetCss = `
+margin: 0;
+padding: 0;
+font: inherit;
+box-sizing: inherit;
+text-decoration: inherit;
+font-weight: inherit;
+font-size: inherit;
+background: transparent;
+border: 0;
+color: inherit;
+text-align: inherit;
+outline-color: transparent;
+`
+
 
 export function view(state: State): Html.Html<Event.Event> {
     return Layout.toHtml(
@@ -291,6 +306,12 @@ export function view(state: State): Html.Html<Event.Event> {
             'div',
             [
                 Layout.centerX(),
+                Layout.rawCss('*', resetCss),
+                Layout.rawCss('html', 'box-sizing:border-box;line-height:1'),
+                Layout.rawCss('body', bodyCss),
+                Layout.rawCss('::selection,::-moz-selection', selectionCss),
+                Layout.rawCss('*:focus', `outline: 1px solid ${Color.toCssString(Color.accent)}`),
+                Layout.rawCss('button,summary', 'cursor: pointer'),
             ],
             [
                 Layout.column(
@@ -302,7 +323,6 @@ export function view(state: State): Html.Html<Event.Event> {
                         Html.style('max-width', `${1024 + 40}px`),
                     ],
                     [
-                        Html.node('style', [], [ Html.text(staticCss) ]),
                         Layout.space(0),
                         Create.view(state.create, createConfig),
                         Records.view(

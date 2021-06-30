@@ -12,8 +12,6 @@ import * as Codec from './utils/Codec'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
 
-import './Record.css'
-
 export type Id = {
     tag: 'recordId',
     id: number,
@@ -172,6 +170,10 @@ export function view<E, C>(
         'div',
         [
             Layout.spacing(17),
+            Layout.rawCss(
+                'details.record-menu[open]>summary',
+                `background-color:black;`
+            )
         ],
         [
             Input.text(

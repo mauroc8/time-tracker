@@ -4,8 +4,6 @@ import * as Utils from '../utils/Utils'
 import * as Pair from '../utils/Pair'
 import * as Css from './Css'
 
-import './Layout.css'
-
 // --- Styled Html
 
 
@@ -291,6 +289,10 @@ export function class_<E, C>(class_: Css.Class): Attribute<E, C> {
     return { tag: 'cssStatement', statement: Css.class_(class_) }
 }
 
+export function rawCss<E, C>(selector: string, content: string): Attribute<E, C> {
+    return { tag: 'cssStatement', statement: Css.raw(selector, content) }
+}
+
 type StyledAttribute<E> =
     { attribute: Html.Attribute<E>, statement?: Css.Statement }
 
@@ -307,7 +309,9 @@ function toStyledAttribute<E, C>(
     }
     if (attribute.tag === 'cssStatement') {
         return {
-            attribute: Html.class_(attribute.statement.class_.name),
+            attribute: attribute.statement.tag === 'class'
+                ? Html.class_(attribute.statement.class_.name)
+                : Html.class_(''),
             statement: attribute.statement,
         }
     }
@@ -438,7 +442,7 @@ export function shrink<A>(shrink: number): Html.Attribute<A> {
 }
 
 export function fullWidth<A>(): Html.Attribute<A> {
-    return Html.class_('w-full')
+    return Html.style('width', '100%')
 }
 
 export function inlineText<A>(text: string): Html.Html<A> {

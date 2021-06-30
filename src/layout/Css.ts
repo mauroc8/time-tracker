@@ -5,6 +5,7 @@ import * as Html from '../vdom/Html'
 // https://www.w3.org/TR/CSS22/syndata.html#statements
 export type Statement =
     | { tag: 'class', class_: Class }
+    | { tag: 'raw', selector: string, content: string }
 
 export type Class = {
     name: string,
@@ -27,6 +28,14 @@ export function class_(class_: Class): Statement {
     }
 }
 
+export function raw(selector: string, content: string): Statement {
+    return {
+        tag: 'raw',
+        selector,
+        content
+    }
+}
+
 export function toHtml<E>(statements: Array<Statement>): Html.Html<E> {
     return Html.keyed<E>(
         'div',
@@ -34,18 +43,30 @@ export function toHtml<E>(statements: Array<Statement>): Html.Html<E> {
         removeDuplicates(statements)
             .map(statement =>
                 Pair.pair(
-                    statement.class_.name,
+                    statementKey(statement),
                     Html.node(
                         'style',
                         [],
-                        [Html.text(toCssString(statement.class_))]
+                        [Html.text(statementToString(statement))]
                     )
                 )
             )
     )
 }
 
-export function toCssString(class_: Class): string {
+function statementKey(statement: Statement): string {
+    return statement.tag === 'class'
+        ? statement.class_.name
+        : `raw:${statement.selector}`
+}
+
+function statementToString(statement: Statement): string {
+    return statement.tag === 'class'
+        ? classToString(statement.class_)
+        : `${statement.selector}{${statement.content}}`
+}
+
+function classToString(class_: Class): string {
     let cssString = ''
 
     if (class_.normal) {
@@ -77,7 +98,7 @@ function removeDuplicates(statements: Array<Statement>): Array<Statement> {
     const dict: { [key: string]: Statement } = {}
 
     for (const statement of statements) {
-        dict[statement.class_.name] = statement
+        dict[statementKey(statement)] = statement
     }
 
     return Object.values(dict)
