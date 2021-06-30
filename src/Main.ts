@@ -223,7 +223,28 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
                 .andThen(saveToLocalStorage)
 
         case 'onCreateStop':
-            return Update.pure(state)
+            return Update.of(
+                state,
+                [Task.waitMilliseconds(Event.onCreateStopTime, 0)]
+            )
+
+        case 'onCreateStopTime':
+            return Update.pure(
+                state.create.map<State>(create => ({
+                    ...state,
+                    create: Maybe.nothing(),
+                    records: Records.add(
+                        Create.toRecord(
+                            create,
+                            Record.id(Number(event.dateTime)),
+                            state.today,
+                            state.now
+                        ),
+                        state.records
+                    ),
+                }))
+                    .withDefault(state)
+            )
     }
 }
 

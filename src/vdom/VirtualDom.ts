@@ -11,6 +11,20 @@ export function diff<T>(
     dispatch: (event: T) => void,
 ): Patch {
     if (
+        oldVDom.nodeType === 'lazy'
+            || newVDom.nodeType === 'lazy'
+    ) {
+        if (
+            oldVDom.nodeType === 'lazy'
+                && newVDom.nodeType === 'lazy'
+        ) {
+            return diffLazy(oldVDom.lazy, newVDom.lazy, dispatch)
+        }
+
+        return diff(unLazyHtml(oldVDom), unLazyHtml(newVDom), dispatch)
+    }
+
+    if (
         oldVDom.nodeType === 'text'
             || newVDom.nodeType === 'text'
             || oldVDom.tagName !== newVDom.tagName
@@ -44,6 +58,14 @@ function unkeyChildren<T>(children: Array<[string, Html.Html<T>]> | Array<Html.H
     }
 
     return children
+}
+
+function unLazyHtml<E>(html: Html.Html<E>): Html.Html<E> {
+    if (html.nodeType === 'lazy') {
+        return Html.lazyToHtml(html.lazy)
+    }
+
+    return html
 }
 
 function replace<T>(
@@ -83,6 +105,9 @@ export function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void):
                 ),
                 dispatch
             )
+
+        case 'lazy':
+            return render(Html.lazyToHtml(html.lazy), dispatch)
     }
 }
 
@@ -539,4 +564,57 @@ function keyedNodesMove<E>(
         keyedNodes.asArray.splice(desiredPosition, 0, keyed)
     }
 
+}
+
+// --- LAZY
+
+function performEqualityCheck(a: Html.EqualityCheck, b: Html.EqualityCheck): boolean {
+    if (a.tag === 'referential' && b.tag === 'referential') {
+        return a.value === b.value
+    }
+    if (a.tag === 'structural' && b.tag === 'structural') {
+        return Utils.equals(a, b)
+    }
+    return false
+}
+
+function diffLazy<E>(
+    oldLazy: Html.Lazy<E>,
+    newLazy: Html.Lazy<E>,
+    dispatch: (event: E) => void
+): Patch {
+    if (oldLazy[0] === newLazy[0]) {
+        if (oldLazy.length === 1 && newLazy.length === 1) {
+            return Utils.id
+        }
+
+        if (
+            oldLazy.length === 2
+                && newLazy.length === 2
+                && performEqualityCheck(oldLazy[1], newLazy[1])
+        ) {
+            return Utils.id
+        }
+
+        if (
+            oldLazy.length === 3
+                && newLazy.length === 3
+                && performEqualityCheck(oldLazy[1], newLazy[1])
+                && performEqualityCheck(oldLazy[2], newLazy[2])
+        ) {
+            return Utils.id
+        }
+
+        if (
+            oldLazy.length === 4
+                && newLazy.length === 4
+                && performEqualityCheck(oldLazy[1], newLazy[1])
+                && performEqualityCheck(oldLazy[2], newLazy[2])
+                && performEqualityCheck(oldLazy[3], newLazy[3])
+        ) {
+            return Utils.id
+        }
+    }
+
+    return diff(Html.lazyToHtml(oldLazy), Html.lazyToHtml(newLazy), dispatch)
 }

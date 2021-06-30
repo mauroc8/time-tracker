@@ -73,6 +73,13 @@ export function findById(
     )
 }
 
+export function add(
+    record: Record.Record,
+    records: Records,
+): Records {
+    return SortedArray.add(records, record, Record.compare)
+}
+
 export function mockRecords(today: Date.Date): Records {
     return SortedArray.fromArray(
         [

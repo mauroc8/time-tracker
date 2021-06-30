@@ -20,13 +20,14 @@ export type Create = {
     durationInput: string,
 }
 
-export const codec: Codec.Codec<Create> = Codec.struct({
-    description: Codec.string,
-    task: Codec.string,
-    startTime: Time.codec,
-    durationInput: Codec.string,
-})
-    /** Don't save the `start input` prevent some invalid states. */
+export const codec: Codec.Codec<Create> = Codec
+    .struct({
+        description: Codec.string,
+        task: Codec.string,
+        startTime: Time.codec,
+        durationInput: Codec.string,
+    })
+    // I don't save the `start input` to avoid some invalid states.
     .map(
         (create) => ({ ...create, startInput: Time.toString(create.startTime) }),
         Utils.id

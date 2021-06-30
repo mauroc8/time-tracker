@@ -21,6 +21,7 @@ export type Event =
     | { name: 'onCreateInput', input: Create.InputName, value: string }
     | { name: 'onCreateChange', input: Create.InputName, value: string }
     | { name: 'onCreateStop' }
+    | { name: 'onCreateStopTime', dateTime: Date.Javascript }
 
 export const none: Event = { name: 'none' }
 
@@ -56,6 +57,10 @@ export function onCreateInput(input: Create.InputName, value: string): Event {
 
 export function onCreateChange(input: Create.InputName, value: string): Event {
     return { name: 'onCreateChange', input, value }
+}
+
+export function onCreateStopTime(dateTime: Date.Javascript): Event {
+    return { name: 'onCreateStopTime', dateTime }
 }
 
 export const onCreateStop: Event = { name: 'onCreateStop' }
