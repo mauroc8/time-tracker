@@ -65,8 +65,7 @@ function styledHtml<E, C>(
 /** Helpers to create flexbox layouts with css styles.
 */
 export type Layout<Event, Context> =
-    | { type: 'Layout', tag: 'node', build: (context: Context) => StyledHtml<Event> }
-    | { type: 'Layout', tag: 'lazy', lazy: Lazy<Event, Context> }
+    | { type: 'Layout', build: (context: Context) => StyledHtml<Event> }
     | Html.Html<Event>
 
 export function toStyledHtml<Event, Context>(
@@ -77,12 +76,7 @@ export function toStyledHtml<Event, Context>(
         return { html: layout, css: [] }
     }
 
-    switch (layout.tag) {
-        case 'node':
-            return layout.build(context)
-        case 'lazy':
-            return lazyToStyledHtml(layout.lazy)
-    }
+    return layout.build(context)
 }
 
 export function toHtml<E, C>(
@@ -115,7 +109,6 @@ export function node<E, C>(
 ): Layout<E, C> {
     return {
         type: 'Layout',
-        tag: 'node',
         build: (context: C) => styledHtml(
             context,
             flexDirection,
@@ -138,7 +131,6 @@ export function keyed<E, C>(
 ): Layout<E, C> {
     return {
         type: 'Layout',
-        tag: 'node',
         build: (context: C) => styledHtml(
             context,
             flexDirection,
@@ -234,7 +226,6 @@ export function below<E, C>(
 export function withContext<E, Context>(useContext: (context: Context) => Layout<E, Context>): Layout<E, Context> {
     return {
         type: 'Layout',
-        tag: 'node',
         build: context => {
             return toStyledHtml(context, useContext(context))
         }
@@ -244,7 +235,6 @@ export function withContext<E, Context>(useContext: (context: Context) => Layout
 export function map<A, B, C>(layout: Layout<A, C>, f: (a: A) => B): Layout<B, C> {
     return {
         type: 'Layout',
-        tag: 'node',
         build: context => mapStyledHtml(toStyledHtml(context, layout), f)
     }
 }
@@ -480,52 +470,4 @@ export function horizontalGradient<A>(from: Color.Color, to: Color.Color): Html.
         'background-image',
         `linear-gradient(to right, ${Color.toCssString(from)}, ${Color.toCssString(to)})`
     )
-}
-
-// --- LAZY
-
-type Lazy<E, C> =
-    | [() => Layout<E, C>]
-    | [(a: unknown) => Layout<E, C>, EqualityCheckU]
-
-function lazyToHtml<E, C>(f: () => Layout<E, C>, context: C): Html.Html<E> {
-    // TODO incluír CSS local en el html de cada lazy
-    return toStyledHtml(context, f()).html
-}
-
-function lazy1ToHtml<E, C>(f: (a: unknown) => Layout<E, C>, a: unknown, context: C): Html.Html<E> {
-    // TODO incluír CSS local en el html de cada lazy
-    return toStyledHtml(context, f(a)).html
-}
-
-function lazyToHtmlLazy<E, C>(context: C, lazy: Lazy<E, C>): Html.Lazy<E> {
-    if (lazy.length === 1) {
-        return [
-            lazyToHtml as any,
-            Html.referentialEquality(lazy[0]),
-            Html.structuralEquality(context)
-        ]
-    }
-    if (lazy.length === 2) {
-        return [
-            lazy1ToHtml as any,
-            Html.referentialEquality(lazy[0]),
-            lazy[1],
-            Html.structuralEquality(context),
-        ]
-    }
-
-    return [() => Html.text<E>('')]
-}
-
-export type EqualityCheck<A> =
-    Html.EqualityCheck<A>
-
-type EqualityCheckU =
-    EqualityCheck<unknown>
-
-function lazyToStyledHtml<E, C>(lazy: Lazy<E, C>): StyledHtml<E> {
-    return {
-        html: toHtml
-    }
 }
