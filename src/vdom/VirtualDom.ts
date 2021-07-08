@@ -98,7 +98,7 @@ function toDomAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt
                 return
     
             case 'eventHandler':
-                ($element as any)[`on${attribute.eventName}`] = (event: Event) =>
+                ($element as any)[`on${attribute.eventName}`] = (event: Utils.Json) =>
                     dispatch(attribute.handler(event))
     
                 return

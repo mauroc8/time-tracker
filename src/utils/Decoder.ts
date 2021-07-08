@@ -2,7 +2,6 @@ import * as Result from './Result'
 import * as Utils from './Utils'
 import * as Maybe from './Maybe'
 import * as Array_ from './Array'
-import * as Pair from './Pair'
 
 // https://package.elm-lang.org/packages/elm/json/latest/Json-Decode
 
@@ -213,7 +212,7 @@ export function map3<A, B, C, D>(
         map2(
             decoderB,
             decoderC,
-            Pair.pair
+            Utils.pair
         ),
         (a, [b, c]) => mapFunction(a, b, c)
     )
@@ -232,7 +231,7 @@ export function map4<A, B, C, D, E>(
         map2(
             decoderC,
             decoderD,
-            Pair.pair
+            Utils.pair
         ),
         (a, b, [c, d]) => mapFunction(a, b, c, d)
     )
@@ -253,7 +252,7 @@ export function map5<A, B, C, D, E, F>(
         map2(
             decoderD,
             decoderE,
-            Pair.pair
+            Utils.pair
         ),
         (a, b, c, [d, e]) => mapFunction(a, b, c, d, e)
     )
@@ -276,7 +275,7 @@ export function map6<A, B, C, D, E, F, G>(
         map2(
             decoderE,
             decoderF,
-            Pair.pair
+            Utils.pair
         ),
         (a, b, c, d, [e, f]) => mapFunction(a, b, c, d, e, f)
     )
@@ -301,7 +300,7 @@ export function map7<A, B, C, D, E, F, G, H>(
         map2(
             decoderF,
             decoderG,
-            Pair.pair
+            Utils.pair
         ),
         (a, b, c, d, e, [f, g]) => mapFunction(a, b, c, d, e, f, g)
     )
@@ -328,7 +327,7 @@ export function map8<A, B, C, D, E, F, G, H, I>(
         map2(
             decoderG,
             decoderH,
-            Pair.pair
+            Utils.pair
         ),
         (a, b, c, d, e, f, [g, h]) => mapFunction(a, b, c, d, e, f, g, h)
     )
@@ -357,7 +356,7 @@ export function map9<A, B, C, D, E, F, G, H, I, J>(
         map2(
             decoderH,
             decoderI,
-            Pair.pair
+            Utils.pair
         ),
         (a, b, c, d, e, f, g, [h, i]) => mapFunction(a, b, c, d, e, f, g, h, i)
     )

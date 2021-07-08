@@ -1,5 +1,4 @@
 import * as Utils from '../utils/Utils'
-import * as Pair from '../utils/Pair'
 import * as Html from '../vdom/Html'
 
 // https://www.w3.org/TR/CSS22/syndata.html#statements
@@ -42,7 +41,7 @@ export function toHtml<E>(statements: Array<Statement>): Html.Html<E> {
         [],
         removeDuplicates(statements)
             .map(statement =>
-                Pair.pair(
+                Utils.pair(
                     statementKey(statement),
                     Html.node(
                         'style',

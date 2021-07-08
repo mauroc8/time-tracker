@@ -3,6 +3,7 @@ import * as Color from './Color'
 import * as Html from '../vdom/Html'
 
 import * as Layout from '../layout/Layout'
+import * as Decoder from '../utils/Decoder'
 
 function roundIconAttributes<A, C>(): Array<Layout.Attribute<A, C>> {
     return [

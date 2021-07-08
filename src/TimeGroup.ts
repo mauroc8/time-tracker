@@ -6,7 +6,6 @@ import * as Utils from './utils/Utils'
 import * as Layout from './layout/Layout'
 import * as Html from './vdom/Html'
 import * as Color from './style/Color'
-import { pair } from './utils/Pair'
 
 // --- TIME GROUP
 
@@ -152,7 +151,7 @@ export function view<E, C>(
                     Layout.spacing(Record.spacing),
                 ],
                 records.map(record =>
-                    pair(
+                    Utils.pair(
                         String(record.id.id),
                         Record.view(
                             record,

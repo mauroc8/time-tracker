@@ -1,18 +1,19 @@
 import { Update } from "./Update"
 import { Html } from "./vdom/Html"
 import { diff, render } from "./vdom/VirtualDom"
+import * as Date from './utils/Date'
 
 export function startRuntime<State, Event>(
     $root: Element,
     init: Update<State, Event>,
     view: (state: State) => Html<Event>,
-    update: (state: State, event: Event) => Update<State, Event>,
+    update: (state: State, event: Event, timestamp: Date.Javascript) => Update<State, Event>,
 ) {
     let currentState = init.state
     let $rootElement: Element | Text = $root
 
     if (process.env.NODE_ENV === 'development') {
-        (window as any).currentState = currentState;
+        (window as any).currentState = currentState
     }
 
     requestAnimationFrame(() => {
@@ -24,7 +25,7 @@ export function startRuntime<State, Event>(
     let currentView = view(currentState)
 
     const dispatch = (event: Event) => {
-        const updateResult = update(currentState, event)
+        const updateResult = update(currentState, event, new window.Date())
 
         const updatedView = view(updateResult.state)
         const patch = diff(currentView, updatedView, dispatch)
@@ -35,7 +36,7 @@ export function startRuntime<State, Event>(
             currentView = updatedView
 
             if (process.env.NODE_ENV === 'development') {
-                (window as any).currentState = currentState;
+                (window as any).currentState = currentState
             }
 
             for (const cmd of updateResult.cmds) {

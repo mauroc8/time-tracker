@@ -1,7 +1,7 @@
 import * as Html from '../vdom/Html'
 import * as Color from '../style/Color'
 import * as Utils from '../utils/Utils'
-import * as Pair from '../utils/Pair'
+import * as Decoder from '../utils/Decoder'
 import * as Css from './Css'
 
 // --- Styled Html
@@ -469,5 +469,19 @@ export function horizontalGradient<A>(from: Color.Color, to: Color.Color): Html.
     return Html.style(
         'background-image',
         `linear-gradient(to right, ${Color.toCssString(from)}, ${Color.toCssString(to)})`
+    )
+}
+
+export function on<E, A>(
+    eventName: string,
+    decoder: Decoder.Decoder<A>,
+    handler: (event: A) => E,
+    decodeError: (error: Decoder.Error) => E,
+): Html.Attribute<E> {
+    return Html.on(
+        eventName,
+        (event: Utils.Json) =>
+            Decoder.decode(event, decoder)
+                .caseOf(handler, decodeError)
     )
 }

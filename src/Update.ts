@@ -29,7 +29,7 @@ export function of<A, B>(state: A, cmds: Array<Task.Task<B>>): Update<A, B> {
     }
 }
 
-export function pure<A, B>(state: A): Update<A, B> {
+export function pure<A>(state: A): Update<A, any> {
     return of(state, [])
 }
 

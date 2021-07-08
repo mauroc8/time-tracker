@@ -10,7 +10,6 @@ import * as Record from './Record'
 import * as Array_ from './utils/Array'
 import * as Update from './Update'
 import * as Task from './utils/Task'
-import * as Pair from './utils/Pair'
 import * as Codec from './utils/Codec'
 import * as Color from './style/Color'
 

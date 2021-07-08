@@ -27,7 +27,6 @@ export const codec: Codec.Codec<Create> = Codec
         startTime: Time.codec,
         durationInput: Codec.string,
     })
-    // I don't save the `start input` to avoid some invalid states.
     .map(
         (create) => ({ ...create, startInput: Time.toString(create.startTime) }),
         Utils.id
@@ -60,18 +59,19 @@ export function toRecord(create: Create, id: Record.Id, today: Date.Date, now: T
         create.task,
         create.startTime,
         now,
-        today
+        today,
     )
 }
 
-export function updateDuration(
+export function updateTime(
     create: Create,
-    oldTime: Time.Time,
+    lastTime: Time.Time,
     now: Time.Time,
 ): Create {
-    // (!) This should be true iff the user's editing the duration input
-    if (create.durationInput !== durationString(oldTime, create.startTime)) {
-        // I avoid changing the value of an input that's being edited by the user!
+    if (create.durationInput !== durationString(lastTime, create.startTime)) {
+        /** The user is editing the duration input in this exact moment.
+         * When the input loses focus, the `change` event will force an update anyway.
+        */
         return create
     }
 

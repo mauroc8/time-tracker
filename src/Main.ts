@@ -96,9 +96,29 @@ function newInitialState(dateTime: Date.Javascript): State {
 
 // --- UPDATE
 
-function updateTime(state: State, dateTime: Date.Javascript): State {    
-    const today = Date.fromJavascript(dateTime)
-    const now = Time.fromJavascript(dateTime)
+/** Gets called when `today` or `now` needs updating. */
+function updateTime(state: State, dateTime: Date.Javascript): State {
+    return Maybe.caseOf(
+        state.create,
+        create => updateCreateTime(state, create, dateTime),
+        () => ({ ...state, ...getTodayAndNow(dateTime) }),
+    )
+}
+
+function getTodayAndNow(dateTime: Date.Javascript): { today: Date.Date, now: Time.Time } {
+    return {
+        today: Date.fromJavascript(dateTime),
+        now: Time.fromJavascript(dateTime)
+    }
+}
+
+/** Gets called when `today` or `now` changed while creating a record. */
+function updateCreateTime(
+    state: State,
+    create: Create.Create,
+    dateTime: Date.Javascript,
+): State {
+    const { today, now } = getTodayAndNow(dateTime);
 
     /** If we're in a different day to the one saved in the model,
      * the information in `Create` is transformed to a `Record` because
@@ -108,34 +128,15 @@ function updateTime(state: State, dateTime: Date.Javascript): State {
     */
     if (!Utils.equals(state.today, today)) {
         return {
-            ...state,
-            records: SortedArray.fromArray(
-                [
-                    ...state.records.toArray,
-                    ...state.create.map(create =>
-                            [Create.toRecord(
-                                create,
-                                Record.id(Number(dateTime)),
-                                state.today,
-                                Time.time(23, 59),
-                            )]
-                        )
-                        .withDefault([]),
-                ],
-                Record.compare
-            ),
-            create: state.create.map(create =>
-                Create.changeInput(create, 'start', Time.toString(now), now)
-            ),
-            today,
-            now
+            ...saveCreateRecord(state, dateTime),
+            create: Maybe.just(Create.changeInput(create, 'start', Time.toString(now), now)),
         }
     }
 
     return {
         ...state,
         create: state.create.map(create =>
-            Create.updateDuration(
+            Create.updateTime(
                 create,
                 state.now,
                 now
@@ -146,7 +147,7 @@ function updateTime(state: State, dateTime: Date.Javascript): State {
     }
 }
 
-export function update(state: State, event: Event.Event): Update.Update<State, Event.Event> {
+export function update(state: State, event: Event.Event, timestamp: Date.Javascript): Update.Update<State, Event.Event> {
     switch (event.name) {
         case 'none':
             return Update.pure(state)
@@ -169,9 +170,9 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
         case 'onRecordPlay': {
             const record = Records.findById(state.records, event.id)
 
-            return Update.pure<State, Event.Event>(
+            return Update.pure(
                 createRecordPlay(
-                    state,
+                    saveCreateRecord(state, timestamp),
                     record?.description || '',
                     record?.task || '',
                 ),
@@ -180,21 +181,21 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
         }
 
         case 'onRecordDelete':
-            return Update.pure<State, Event.Event>({
+            return Update.pure({
                 ...state,
                 records: Records.delete_(state.records, event.id)
             })
             .andThen(saveToLocalStorage)
 
         case 'onRecordInput':
-            return Update.pure<State, Event.Event>({
+            return Update.pure({
                 ...state,
                 records: Records.updateInput(state.records, event.id, event.input, event.value),
             })
             .andThen(saveToLocalStorage)
 
         case 'onRecordChange':
-            return Update.pure<State, Event.Event>({
+            return Update.pure({
                 ...state,
                 records: Records.changeInput(state.records, event.id, event.input, event.value),
             })
@@ -202,18 +203,18 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
 
         case 'onCreateStart':
             return Update
-                .pure<State, Event.Event>(createRecordPlay(state, '', ''))
+                .pure(createRecordPlay(state, '', ''))
                 .andThen(saveToLocalStorage)
 
         case 'onCreateInput':
-            return Update.pure<State, Event.Event>({
+            return Update.pure({
                 ...state,
                 create: state.create.map(create => Create.updateInput(create, event.input, event.value))
             })
                 .andThen(saveToLocalStorage)
 
         case 'onCreateChange':
-            return Update.pure<State, Event.Event>({
+            return Update.pure({
                 ...state,
                 create: state.create
                     .map(create =>
@@ -223,28 +224,8 @@ export function update(state: State, event: Event.Event): Update.Update<State, E
                 .andThen(saveToLocalStorage)
 
         case 'onCreateStop':
-            return Update.of(
-                state,
-                [Task.waitMilliseconds(Event.onCreateStopTime, 0)]
-            )
-
-        case 'onCreateStopTime':
-            return Update.pure(
-                state.create.map<State>(create => ({
-                    ...state,
-                    create: Maybe.nothing(),
-                    records: Records.add(
-                        Create.toRecord(
-                            create,
-                            Record.id(Number(event.dateTime)),
-                            state.today,
-                            state.now
-                        ),
-                        state.records
-                    ),
-                }))
-                    .withDefault(state)
-            )
+            return Update.pure(saveCreateRecord(state, timestamp))
+                .andThen(saveToLocalStorage)
     }
 }
 
@@ -270,6 +251,25 @@ function saveToLocalStorage(state: State): Update.Update<State, Event.Event> {
     )
 }
 
+/** Create a new record from model.create. */
+function saveCreateRecord(state: State, datestamp: Date.Javascript): State {
+    return state.create.map(create => ({
+        ...state,
+        create: Maybe.nothing<Create.Create>(),
+        records: Records.add(
+            Create.toRecord(
+                create,
+                Record.id(Number(datestamp)),
+                state.today,
+                state.now
+            ),
+            state.records
+        ),
+        ...getTodayAndNow(datestamp),
+    }))
+        .withDefault(state)
+}
+
 // --- VIEW
 
 const createConfig = {
@@ -293,6 +293,8 @@ border-top: 6px solid ${Color.toCssString(Color.accent)};
 color: ${Color.toCssString(Color.text)};
 font-family: Lato, -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
     "Helvetica Neue", Helvetica, Ubuntu, Roboto, Noto, "Segoe UI", Arial, sans-serif;
+box-sizing: border-box;
+line-height: 1;
 `
 
 const selectionCss = `
@@ -328,7 +330,6 @@ export function view(state: State): Html.Html<Event.Event> {
             [
                 Layout.centerX(),
                 Layout.rawCss('*', resetCss),
-                Layout.rawCss('html', 'box-sizing:border-box;line-height:1'),
                 Layout.rawCss('body', bodyCss),
                 Layout.rawCss('::selection,::-moz-selection', selectionCss),
                 Layout.rawCss('*:focus', `outline: 1px solid ${Color.toCssString(Color.accent)}`),
