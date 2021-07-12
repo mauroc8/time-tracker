@@ -1,35 +1,45 @@
 import * as Html from '../vdom/Html'
 import * as Layout from './Layout'
+import * as Css from './Css'
 
 export function onInput<A>(handler: (value: string) => A): Html.Attribute<A> {
-    return Html.on('input', event => handler((event.target as any).value));
+    return Html.on('input', event => handler((event as any).target.value));
 }
 
 export function onChange<A>(handler: (value: string) => A): Html.Attribute<A> {
-    return Html.on('change', event => handler((event.target as any).value));
+    return Html.on('change', event => handler((event as any).target.value));
 }
 
-const inputCss = `
-background-color: hsl(0, 0%, 5%);
-color: hsl(0, 0%, 100%);
-font-size: 14px;
-letter-spacing: 0.04em;
-font-weight: 300;
-line-height: 38px;
-padding-left: 8px;
-padding-right: 8px;
-`
-
-const inputFocusCss = `
-background-color: hsl(0, 0%, 0%);
-outline: 0;
-`
-
-const labelCss = `
-font-size: 14px;
-letter-spacing: 0.08em;
-font-weight: 500;
-`
+export const css: Css.Css<never> = Css.css(
+    {
+        selector: Css.Selectors.tag('input'),
+        properties: [
+            ['background-color', 'hsl(0, 0%, 0%)'],
+            ['color', 'hsl(0, 0%, 100%)'],
+            ['font-size', '14px'],
+            ['letter-spacing', '0.04em'],
+            ['font-weight', '300'],
+            ['line-height', '38px'],
+            ['padding-left', '8px'],
+            ['padding-right', '8px'],
+        ]
+    },
+    {
+        selector: Css.Selectors.tag('input', 'focus'),
+        properties: [
+            ['background-color', 'hsl(0, 0%, 0%)'],
+            ['outline', '0'],
+        ],
+    },
+    {
+        selector: Css.Selectors.tag('label'),
+        properties: [
+            ['font-size', '14px'],
+            ['letter-spacing', '0.08em'],
+            ['font-weight', '500'],
+        ],
+    },
+)
 
 export function text<A, C>(
     flexDirection: 'row' | 'column',
@@ -46,9 +56,6 @@ export function text<A, C>(
         'label',
         [
             Html.attribute('for', options.id),
-            Layout.rawCss('label', labelCss),
-            Layout.rawCss('input', inputCss),
-            Layout.rawCss('input:focus', inputFocusCss),
             ...attributes,
         ],
         [

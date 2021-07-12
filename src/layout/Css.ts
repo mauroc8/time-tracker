@@ -1,119 +1,131 @@
-import * as Utils from '../utils/Utils'
-import * as Html from '../vdom/Html'
+import * as Html from "../vdom/Html"
 
-// https://www.w3.org/TR/CSS22/syndata.html#statements
-export type Statement =
-    | { tag: 'class', class_: Class }
-    | { tag: 'raw', selector: string, content: string }
-
-export type Class = {
-    name: string,
-    normal?: Array<Property>,
-    hover?: Array<Property>,
-    focus?: Array<Property>,
-    parentHover?: Array<Property>,
-    parentFocus?: Array<Property>,
-    group?: {
-        name: string,
-        hover?: Array<Property>,
-        focus?: Array<Property>,
-    },
+export type Css<Classes extends string> = {
+    type: 'Css',
+    statements: Array<{
+        selector: Selector<Classes>,
+        properties: Array<[string, string]>,
+    }>
 }
 
-export function class_(class_: Class): Statement {
+export function css<Classes extends string>(
+    ...statements: Array<{
+        selector: Selector<Classes>,
+        properties: Array<[string, string]>,
+    }>
+): Css<Classes> {
     return {
-        tag: 'class',
-        class_,
+        type: 'Css',
+        statements,
     }
 }
 
-export function raw(selector: string, content: string): Statement {
-    return {
-        tag: 'raw',
+export function statement<Classes extends string>(
+    selector: Selector<Classes>,
+    properties: Array<[string, string]>,
+): Css<Classes> {
+    return css({
         selector,
-        content
-    }
+        properties,
+    })
 }
 
-export function toHtml<E>(statements: Array<Statement>): Html.Html<E> {
-    return Html.keyed<E>(
-        'div',
-        [],
-        removeDuplicates(statements)
-            .map(statement =>
-                Utils.pair(
-                    statementKey(statement),
-                    Html.node(
-                        'style',
-                        [],
-                        [Html.text(statementToString(statement))]
-                    )
-                )
-            )
+export function toHtml<Classes extends string>(
+    css_: Css<Classes>,
+): Html.Html<never> {
+    return Html.node("style", [], [Html.text(toString(css_))])
+}
+
+export function toString<Classes extends string>(
+    css_: Css<Classes>,
+): string {
+    return css_.statements.reduce(
+        (stringCss, { selector, properties }) =>
+            `${stringCss}\n${selectorToString(selector)}{${propertiesToString(properties)}}`,
+        ''
     )
 }
 
-function statementKey(statement: Statement): string {
-    return statement.tag === 'class'
-        ? statement.class_.name
-        : `raw:${statement.selector}`
+function propertiesToString(properties: Array<[string, string]>): string {
+    return properties.map(([name_, value]) => `${name_}:${value};`).join('')
 }
 
-function statementToString(statement: Statement): string {
-    return statement.tag === 'class'
-        ? classToString(statement.class_)
-        : `${statement.selector}{${statement.content}}`
+// --- SELECTOR
+
+export type Selector<Classes extends string> =
+    | { tag: 'class', className: Classes, pseudoClass: null | 'hover' | 'focus' | 'active' }
+    | { tag: 'tag', tagName: string, pseudoClass: null | string }
+    | { tag: 'or', selector0: Selector<Classes>, selector1: Selector<Classes> }
+    | { tag: 'directChild', selector0: Selector<Classes>, selector1: Selector<Classes> }
+    | { tag: 'child', selector0: Selector<Classes>, selector1: Selector<Classes> }
+
+function selectorToString<Classes extends string>(
+    selector: Selector<Classes>,
+): string {
+    switch (selector.tag) {
+        case 'class':
+            return `${selector.className}${selector.pseudoClass ? `:${selector.pseudoClass}` : ''}`
+        case 'tag':
+            return `${selector.tagName}${selector.pseudoClass ? `:${selector.pseudoClass}` : ''}`
+        case 'or':
+            return `${selectorToString(selector.selector0)},${selectorToString(selector.selector1)}`
+        case 'directChild':
+            return `${selectorToString(selector.selector0)}>${selectorToString(selector.selector1)}`
+        case 'child':
+            return `${selectorToString(selector.selector0)} ${selectorToString(selector.selector1)}`
+    }
 }
 
-function classToString(class_: Class): string {
-    let cssString = ''
-
-    if (class_.normal) {
-        cssString += `.${class_.name}{${propertiesToString(class_.normal)}}\n`
-    }
-    if (class_.hover) {
-        cssString += `.${class_.name}:hover{${propertiesToString(class_.hover)}}\n`
-    }
-    if (class_.focus) {
-        cssString += `.${class_.name}:focus{${propertiesToString(class_.focus)}}\n`
-    }
-    if (class_.parentHover) {
-        cssString += `*:hover>.${class_.name}{${propertiesToString(class_.parentHover)}}\n`
-    }
-    if (class_.parentFocus) {
-        cssString += `*:focus>.${class_.name}{${propertiesToString(class_.parentFocus)}}\n`
-    }
-    if (class_.group?.hover) {
-        cssString += `.${class_.group.name}:hover .${class_.name}{${propertiesToString(class_.group.hover)}}\n`
-    }
-    if (class_.group?.focus) {
-        cssString += `.${class_.group.name}:focus .${class_.name}{${propertiesToString(class_.group.focus)}}\n`
-    }
-
-    return cssString
-}
-
-function removeDuplicates(statements: Array<Statement>): Array<Statement> {
-    const dict: { [key: string]: Statement } = {}
-
-    for (const statement of statements) {
-        dict[statementKey(statement)] = statement
-    }
-
-    return Object.values(dict)
-}
-
-export type Property =
-    | { name: string, value: string }
-
-export function property(name: string, value: string): Property {
-    return { name, value }
-}
-
-function propertiesToString(properties: Array<Property>): string {
-    return properties.map(propertyToString).join(';')
-}
-
-function propertyToString(property: Property): string {
-    return `${property.name}:${property.value}`
+export const Selectors = {
+    class_<Classes extends string>(
+        className: Classes,
+        pseudoClass: null | 'hover' | 'focus' | 'active' = null,
+    ): Selector<Classes> {
+        return {
+            tag: 'class',
+            className,
+            pseudoClass,
+        }
+    },
+    /** TODO This is actually used as an escape hatch for raw css. */
+    tag<Classes extends string>(
+        tagName: string,
+        pseudoClass: null | string = null,
+    ): Selector<Classes> {
+        return {
+            tag: 'tag',
+            tagName,
+            pseudoClass,
+        }
+    },
+    or<Classes extends string>(
+        selector0: Selector<Classes>,
+        selector1: Selector<Classes>,
+    ): Selector<Classes> {
+        return {
+            tag: 'or',
+            selector0,
+            selector1,
+        }
+    },
+    directChild<Classes extends string>(
+        selector0: Selector<Classes>,
+        selector1: Selector<Classes>,
+    ): Selector<Classes> {
+        return {
+            tag: 'directChild',
+            selector0,
+            selector1,
+        }
+    },
+    child<Classes extends string>(
+        selector0: Selector<Classes>,
+        selector1: Selector<Classes>,
+    ): Selector<Classes> {
+        return {
+            tag: 'child',
+            selector0,
+            selector1,
+        }
+    },
 }

@@ -1,11 +1,13 @@
 
-import * as Update from './Update'
+import * as Update from './utils/Update'
 import * as Record from './Record'
 import * as Records from './Records'
 
 import * as Html from './vdom/Html'
 
 import * as Layout from './layout/Layout'
+import * as Input from './layout/Input'
+import * as Css from './layout/Css'
 
 import * as Color from './style/Color'
 
@@ -287,55 +289,68 @@ const recordsConfig = {
     onDelete: Event.onRecordDelete
 }
 
-const bodyCss = `
-background-color: ${Color.toCssString(Color.background)};
-border-top: 6px solid ${Color.toCssString(Color.accent)};
-color: ${Color.toCssString(Color.text)};
-font-family: Lato, -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir,
-    "Helvetica Neue", Helvetica, Ubuntu, Roboto, Noto, "Segoe UI", Arial, sans-serif;
-box-sizing: border-box;
-line-height: 1;
-`
-
-const selectionCss = `
-background-color: ${Color.toCssString(Color.accent50)};
-color: ${Color.toCssString(Color.rgba(1, 1, 1, 0.85))};
-`
-
-const resetCss = `
-margin: 0;
-padding: 0;
-font: inherit;
-box-sizing: inherit;
-text-decoration: inherit;
-font-weight: inherit;
-font-size: inherit;
-background: transparent;
-border: 0;
-color: inherit;
-text-align: inherit;
-outline-color: transparent;
-`
-
+const css: Css.Css<never> = Css.css(
+    {
+        selector: Css.Selectors.tag('body'),
+        properties: [
+            ['background-color', Color.toCssString(Color.background)],
+            ['border-top', `6x solid ${Color.toCssString(Color.accent)}`],
+            ['color', Color.toCssString(Color.text)],
+            ['font-family', 'Lato, -apple-system, BlinkMacSystemFont, "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Ubuntu, Roboto, Noto, "Segoe UI", Arial, sans-serif'],
+            ['box-sizing', 'border-box'],
+            ['line-height', '1'],
+        ]
+    },
+    {
+        selector: Css.Selectors.or(Css.Selectors.tag('::selection'), Css.Selectors.tag('::-moz-selection')),
+        properties: [
+            ['background-color', Color.toCssString(Color.accent50)],
+            ['color', Color.toCssString(Color.rgba(1, 1, 1, 0.85))],
+        ]
+    },
+    {
+        selector: Css.Selectors.tag('*'),
+        properties: [
+            ['margin', '0'],
+            ['padding', '0'],
+            ['font', 'inherit'],
+            ['box-sizing', 'inherit'],
+            ['text-decoration', 'inherit'],
+            ['font-weight', 'inherit'],
+            ['font-size', 'inherit'],
+            ['background', 'transparent'],
+            ['border', '0'],
+            ['color', 'inherit'],
+            ['text-align', 'inherit'],
+            ['outline-color', 'transparent'],
+        ],
+    },
+    {
+        selector: Css.Selectors.tag('*', 'focus'),
+        properties: [
+            ['outline', `1px solid ${Color.toCssString(Color.accent)}`]
+        ]
+    },
+    {
+        selector: Css.Selectors.or(Css.Selectors.tag('button'), Css.Selectors.tag('summary')),
+        properties: [
+            ['cursor', 'pointer'],
+        ]
+    }
+)
 
 export function view(state: State): Html.Html<Event.Event> {
     return Layout.toHtml(
         { today: state.today, now: state.now },
-        'div',
-        [
-            Html.style('width', '100%'),
-        ],
         Layout.column(
             'div',
             [
                 Layout.centerX(),
-                Layout.rawCss('*', resetCss),
-                Layout.rawCss('body', bodyCss),
-                Layout.rawCss('::selection,::-moz-selection', selectionCss),
-                Layout.rawCss('*:focus', `outline: 1px solid ${Color.toCssString(Color.accent)}`),
-                Layout.rawCss('button,summary', 'cursor: pointer'),
             ],
             [
+                Css.toHtml(css),
+                Css.toHtml(Input.css),
+                Css.toHtml(Record.css),
                 Layout.column(
                     'div',
                     [

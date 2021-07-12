@@ -1,16 +1,21 @@
 
 import * as Maybe from './utils/Maybe'
 import * as Utils from './utils/Utils'
-import * as Update from './Update'
-import * as Levenshtein from './utils/Levenshtein'
-import * as Layout from './layout/Layout'
-import * as Input from './layout/Input'
-import * as Html from './vdom/Html'
-import * as Icon from './style/Icon'
-import * as Color from './style/Color'
 import * as Codec from './utils/Codec'
 import * as Time from './utils/Time'
 import * as Date from './utils/Date'
+import * as Levenshtein from './utils/Levenshtein'
+
+import * as Layout from './layout/Layout'
+import * as Css from './layout/Css'
+import * as Input from './layout/Input'
+
+import * as Html from './vdom/Html'
+
+import * as Icon from './style/Icon'
+import * as Color from './style/Color'
+
+import * as Update from './utils/Update'
 
 export type Id = {
     tag: 'recordId',
@@ -157,6 +162,15 @@ export function cleanInputs(record: Record): Record {
 
 export const spacing: 50 = 50
 
+export const css: Css.Css<'record-menu'> = Css.css(
+    {
+        selector: Css.Selectors.tag('details.record-menu[open]>summary'),
+        properties: [
+            ['background-color', 'black'],
+        ]
+    }
+)
+
 export function view<E, C>(
     record: Record,
     config: {
@@ -170,10 +184,6 @@ export function view<E, C>(
         'div',
         [
             Layout.spacing(17),
-            Layout.rawCss(
-                'details.record-menu[open]>summary',
-                `background-color:black;`
-            )
         ],
         [
             Input.text(

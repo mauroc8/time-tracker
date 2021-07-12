@@ -1,7 +1,9 @@
-import { Update } from "./Update"
 import { Html } from "./vdom/Html"
-import { diff, render } from "./vdom/VirtualDom"
+import { VirtualDom, patch, replace } from "./vdom/VirtualDom"
+
 import * as Date from './utils/Date'
+import * as Task from "./utils/Task"
+import { Update } from "./utils/Update"
 
 export function startRuntime<State, Event>(
     $root: Element,
@@ -9,51 +11,49 @@ export function startRuntime<State, Event>(
     view: (state: State) => Html<Event>,
     update: (state: State, event: Event, timestamp: Date.Javascript) => Update<State, Event>,
 ) {
-    let currentState = init.state
-    let $rootElement: Element | Text = $root
-
-    if (process.env.NODE_ENV === 'development') {
-        (window as any).currentState = currentState
-    }
-
     requestAnimationFrame(() => {
-        for (const cmd of init.cmds) {
-            cmd.execute(deferedDispatch)
-        }
+        executeTasks(init.tasks)
     })
 
-    let currentView = view(currentState)
+    let currentState = debugCurrentState(init.state)
+    let virtualDom: VirtualDom<Event> = replace($root, view(currentState), dispatchSync)
 
-    const dispatch = (event: Event) => {
-        const updateResult = update(currentState, event, new window.Date())
+    function debugCurrentState(state: State): State {
+        if (process.env.NODE_ENV === 'development') {
+            (window as any).currentState = state
+        }
 
-        const updatedView = view(updateResult.state)
-        const patch = diff(currentView, updatedView, dispatch)
+        return state
+    }
 
+    function executeTasks(
+        tasks: Array<Task.Task<Event>>,
+    ): void {
+        for (const task of tasks) {
+            task.execute(dispatchAsync)
+        }
+    }
+
+    function dispatchSync(event: Event): void {
         try {
-            patch($rootElement)
-            currentState = updateResult.state
-            currentView = updatedView
+            const { state, tasks } = update(currentState, event, new window.Date())
 
-            if (process.env.NODE_ENV === 'development') {
-                (window as any).currentState = currentState
+            /* Update state */
+            currentState = debugCurrentState(state)
+
+            /* Patch virtual Dom */
+            if (currentState !== state) {
+                virtualDom = patch(virtualDom, view(currentState), dispatchSync)
             }
 
-            for (const cmd of updateResult.cmds) {
-                cmd.execute(deferedDispatch)
-            }
+            /* Execute side effects */
+            executeTasks(tasks)
         } catch (e) {
             console.error(e)
         }
     }
 
-    /** All commands are executed sinchronously, but their events are dispatched in the next frame.
-    */
-    function deferedDispatch(event: Event) {
-        requestAnimationFrame(() => dispatch(event))
+    function dispatchAsync(event: Event) {
+        requestAnimationFrame(() => dispatchSync(event))
     }
-
-    const $initialRender = render(currentView, dispatch)
-    $rootElement.replaceWith($initialRender)
-    $rootElement = $initialRender
 }

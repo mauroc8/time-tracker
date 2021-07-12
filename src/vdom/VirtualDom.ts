@@ -3,68 +3,112 @@ import * as Html from './Html'
 import * as Utils from '../utils/Utils'
 import * as Array_ from '../utils/Array'
 
-export type Patch = ($node: Element | Text) => Element | Text
+/** Note: references a mutable domNode. */
+export type VirtualDom<E> = {
+    vNode: Html.Html<E>,
+    domNode: Element | Text,
+}
 
-export function diff<T>(
-    oldVDom: Html.Html<T>,
-    newVDom: Html.Html<T>,
-    dispatch: (event: T) => void,
-): Patch {
-    if (
-        oldVDom.nodeType === 'text'
-            || newVDom.nodeType === 'text'
-            || oldVDom.tagName !== newVDom.tagName
-    ) {
-        return replace(newVDom, dispatch)
-    } else {
-        const patchAttributes = diffAttributes(oldVDom.attributes, newVDom.attributes, dispatch)
-
-        const patchChildren = oldVDom.nodeType === 'keyed' && newVDom.nodeType === 'keyed'
-            ? diffKeyedChildren(oldVDom.children, newVDom.children, dispatch)
-            : diffChildren(unkeyChildren(oldVDom.children), unkeyChildren(newVDom.children), dispatch)
-
-        return $node => {
-            patchAttributes($node)
-            patchChildren($node)
-
-            return $node
-        }
+export function patch<E>(
+    virtualDom: VirtualDom<E>,
+    vNode: Html.Html<E>,
+    dispatch: (event: E) => void
+): VirtualDom<E> {
+    switch (virtualDom.vNode.nodeType) {
+        case 'text':
+            return replace(virtualDom.domNode, vNode, dispatch)
+        case 'node':
+            switch (vNode.nodeType) {
+                case 'text':
+                    return replace(virtualDom.domNode, vNode, dispatch)
+                default:
+                    if (virtualDom.vNode.tagName === vNode.tagName && virtualDom.domNode instanceof Element) {
+                        patchAttributes(
+                            virtualDom.domNode,
+                            virtualDom.vNode.attributes,
+                            vNode.attributes,
+                            dispatch
+                        )
+                        patchChildren(
+                            virtualDom.domNode,
+                            virtualDom.vNode.children,
+                            unkeyChildren(vNode.children),
+                            dispatch
+                        )
+                        return { vNode, domNode: virtualDom.domNode }
+                    } else {
+                        return replace(virtualDom.domNode, vNode, dispatch)
+                    }
+            }
+        case 'keyed':
+            switch (vNode.nodeType) {
+                    case 'text':
+                        return replace(virtualDom.domNode, vNode, dispatch)
+                    case 'keyed':
+                        if (virtualDom.vNode.tagName === vNode.tagName && virtualDom.domNode instanceof Element) {
+                            patchAttributes(
+                                virtualDom.domNode,
+                                virtualDom.vNode.attributes,
+                                vNode.attributes,
+                                dispatch
+                            )
+                            patchKeyedChildren(
+                                virtualDom.domNode,
+                                virtualDom.vNode.children,
+                                vNode.children,
+                                dispatch
+                            )
+                            return { vNode, domNode: virtualDom.domNode }
+                        } else {
+                            return replace(virtualDom.domNode, vNode, dispatch)
+                        }
+                    case 'node':
+                        if (virtualDom.vNode.tagName === vNode.tagName && virtualDom.domNode instanceof Element) {
+                            patchAttributes(
+                                virtualDom.domNode,
+                                virtualDom.vNode.attributes,
+                                vNode.attributes,
+                                dispatch
+                            )
+                            patchChildren(
+                                virtualDom.domNode,
+                                unkeyChildren(virtualDom.vNode.children),
+                                vNode.children,
+                                dispatch
+                            )
+                            return { vNode, domNode: virtualDom.domNode }
+                        } else {
+                            return replace(virtualDom.domNode, vNode, dispatch)
+                        }
+            }
     }
 }
 
-function isKeyedChildren<T>(
-    children: Array<[string, Html.Html<T>]> | Array<Html.Html<T>>
-): children is Array<[string, Html.Html<T>]> {
-    return children[0] instanceof Array
+export function replace<E>(domNode: Element | Text, vNode: Html.Html<E>, dispatch: (event: E) => void): VirtualDom<E> {
+    const newDomNode = render(vNode, dispatch)
+    domNode.replaceWith(newDomNode)
+    return { domNode: newDomNode, vNode }
 }
 
 function unkeyChildren<T>(children: Array<[string, Html.Html<T>]> | Array<Html.Html<T>>): Array<Html.Html<T>> {
-    if (isKeyedChildren(children)) {
-        return children.map((child: [string, Html.Html<T>]) => child[1])
+    if (children.length > 0 && children[0] instanceof Array) {
+        return unkeyChildrenHelp(children as any)
     }
 
-    return children
+    return children as any
 }
 
-function replace<T>(
-    newVDom: Html.Html<T>,
-    dispatch: (event: T) => void,
-): Patch {
-    return ($node: Element | Text) => {
-        const $newNode = render(newVDom, dispatch)
-        $node.replaceWith($newNode)
-
-        return $newNode
-    }
+function unkeyChildrenHelp<T>(children: Array<[string, Html.Html<T>]>): Array<Html.Html<T>> {
+    return children.map((child: [string, Html.Html<T>]) => child[1])
 }
 
-export function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void): Element | Text {
+function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void): Element | Text {
     switch (html.nodeType) {
         case 'node':
             const element = document.createElement(html.tagName)
 
             for (let attribute of html.attributes)
-                toDomAttribute(attribute, dispatch, element)
+                applyAttribute(attribute, dispatch, element)
 
             for (let child of html.children)
                 element.appendChild(render(child, dispatch))
@@ -86,7 +130,7 @@ export function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void):
     }
 }
 
-function toDomAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {
+function applyAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt) => void, $element: Element): void {
     try {
         switch (attribute.tag) {
             case 'attribute':
@@ -119,7 +163,7 @@ function toDomAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt
 
 /** A list's indexed map2 but without dropping elements.
  */
-function map2Extra<A, B>(
+function weirdZipLikeThing<A, B>(
     xs: Array<A>,
     ys: Array<A>,
     bothPresent: (x: A, y: A, index: number) => B,
@@ -143,34 +187,29 @@ function map2Extra<A, B>(
     return array
 }
 
-// diffAttributes
+// --- Attributes
 
-function diffAttributes<T>(
-    oldAttributes: Array<Html.Attribute<T>>,
+function patchAttributes<T>(
+    domNode: Element,
+    currentAttributes: Array<Html.Attribute<T>>,
     newAttributes: Array<Html.Attribute<T>>,
     dispatch: (event: T) => void,
-): ($node: Element | Text) => void {
-
-    const patches = map2Extra(
-        oldAttributes,
+): void {
+    weirdZipLikeThing(
+        currentAttributes,
         newAttributes,
-        (oldAttr, newAttr, i) => ($node: Element) => {
+        (oldAttr, newAttr, i) => {
             if (!attributeEquality(oldAttr, newAttr)) {
-                replaceAttribute(oldAttr, newAttr, dispatch, $node)
+                replaceAttribute(oldAttr, newAttr, dispatch, domNode)
             }
         },
-        (oldAttr, i) => $node => {
-            removeAttribute(oldAttr, $node)
+        (oldAttr, i) => {
+            removeAttribute(oldAttr, domNode)
         },
-        (newAttr, i) => $node => {
-            toDomAttribute(newAttr, dispatch, $node)
+        (newAttr, i) => {
+            applyAttribute(newAttr, dispatch, domNode)
         }
     )
-
-    return $node => {
-        if ($node instanceof Element)
-            patches.forEach(patch => patch($node))
-    }
 }
 
 function replaceAttribute<A>(
@@ -190,7 +229,7 @@ function replaceAttribute<A>(
     }
 
     removeAttribute(oldAttr, $node)
-    toDomAttribute(newAttr, dispatch, $node)
+    applyAttribute(newAttr, dispatch, $node)
 }
 
 function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boolean {
@@ -200,7 +239,7 @@ function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boole
         return a.name === b.name && Utils.equals(a.value, b.value)
     } else if (a.tag === 'eventHandler' && b.tag === 'eventHandler') {
         // The function comparison will most likely always return false
-        // a smarter implementation could optimize this case somehow.
+        // a smarter implementation could optimize this case somehow ?
         return a.eventName === b.eventName && a.handler === b.handler
     } else if (a.tag === 'style' && b.tag === 'style') {
         return a.property === b.property && a.value === b.value
@@ -242,301 +281,396 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
 }
 
 
-// diffChildren
+// --- CHILDREN
 
-function diffChildren<T>(
-    oldChildren: Array<Html.Html<T>>,
+function patchChildren<T>(
+    domNode: Element,
+    currentChildren: Array<Html.Html<T>>,
     newChildren: Array<Html.Html<T>>,
     dispatch: (event: T) => void,
-): Patch {
-    return $parent => {
-        if ($parent instanceof Element) {
-            /** We need to calculate all the patches and then apply them because we could alter the indexes
-             * when applying some patch.
-             */
-            const patches = getChildrenPatches(oldChildren, newChildren, dispatch, $parent)
-            patches.forEach(patch => patch())
-        }
-
-        return $parent
-    }
-}
-
-function getChildrenPatches<T>(
-    oldChildren: Array<Html.Html<T>>,
-    newChildren: Array<Html.Html<T>>,
-    dispatch: (event: T) => void,
-    $parent: Element,
-): Array<() => void> {
-    return map2Extra(
-        oldChildren,
+): void {
+    /** We need to calculate all the patches and then apply them because we could alter the indexes
+     * when applying some patch.
+     */
+    const patches = weirdZipLikeThing(
+        currentChildren,
         newChildren,
-        (oldChild, newChild, i) => {
-            const $child = $parent.childNodes[i]
+        (currentChild, newChild, i) => {
+            const $child = domNode.childNodes[i]
 
             return () => {
                 if ($child instanceof Element || $child instanceof Text)
-                    diff(oldChild, newChild, dispatch)($child)
+                    patch({ domNode: $child, vNode: currentChild }, newChild, dispatch)
                 else
-                    throw { $parent, oldChild, newChild, $child }
+                    throw { domNode, currentChild, newChild, $child }
             }
         },
         (_, i) => {
-            const $child = $parent.childNodes[i]
+            const $child = domNode.childNodes[i]
 
             return () => {
                 $child.remove()
             }
         },
         (newChild, _) => () => {
-            $parent.appendChild(render(newChild, dispatch))
+            domNode.appendChild(render(newChild, dispatch))
         }
+    )
+
+    patches.forEach(patch => patch())
+}
+
+// -- KEYED
+
+function patchKeyedChildren<T>(
+    domNode: Element,
+    currentChildren: Array<[string, Html.Html<T>]>,
+    newChildren: Array<[string, Html.Html<T>]>,
+    dispatch: (event: T) => void,
+): void {
+    patchKeyedNodes(
+        toKeyedNodes(currentChildren, domNode),
+        newChildren,
+        domNode,
+        dispatch
     )
 }
 
-function diffKeyedChildren<T>(
-    oldChildren: Array<[string, Html.Html<T>]>,
-    newChildren: Array<[string, Html.Html<T>]>,
-    dispatch: (event: T) => void,
-): Patch {
-    return ($node: Element | Text) => {
-        if ($node instanceof Element) {
-            // We use this auxiliary data structure that performs DOM
-            // mutations while also mutating the VDOM children.
-            const children = keyedNodes(oldChildren, $node)
-            const newChildrenDict = Array_.toDictionary(newChildren, Utils.id)
+type KeyedNodes<E> =
+    | {
+        tag: 'keyedNodes',
+        array: Array<KeyedNode<E>>,
+        dictionary: { [key: string]: KeyedNode<E> },
+        indices: { [key: string]: number | undefined },
+    }
+    | { tag: 'delete', index: number, key: string, keyedNodes: KeyedNodes<E> }
+    | { tag: 'append', keyedNode: KeyedNode<E>, keyedNodes: KeyedNodes<E> }
+    | { tag: 'move', from: number, to: number, keyedNodes: KeyedNodes<E> }
 
-            // Remove children.
-
-            keyedNodesRemove(
-                children,
-                newChildrenDict,
-            )
-
-            // Diff remaining children.
-
-            keyedNodesDiff(
-                children,
-                newChildrenDict,
-                dispatch
-            )
-
-            // Create children.
-
-            keyedNodesCreate(
-                children,
-                newChildren,
-                $node,
-                dispatch
-            )
-
-            // Reorder.
-
-            keyedNodesReorder(
-                children,
-                newChildren,
-                $node
-            )
-        }
-
-        return $node
+function getKeyedNodesLength<E>(keyedNodes: KeyedNodes<E>): number {
+    switch (keyedNodes.tag) {
+        case 'keyedNodes':
+            return keyedNodes.array.length
+        case 'delete':
+            return getKeyedNodesLength(keyedNodes.keyedNodes) - 1
+        case 'append':
+            return getKeyedNodesLength(keyedNodes.keyedNodes) + 1
+        case 'move':
+            return getKeyedNodesLength(keyedNodes.keyedNodes)
     }
 }
 
-type KeyedNodes<E> = {
-    asArray: Array<KeyedNode<E>>,
-    asDictionary: { [key: string]: KeyedNode<E> | undefined },
+function getKeyedNodeFromIndex<E>(keyedNodes: KeyedNodes<E>, index: number): KeyedNode<E> | undefined {
+    switch (keyedNodes.tag) {
+        case 'keyedNodes':
+            return keyedNodes.array[index]
+
+        case 'delete':
+            if (keyedNodes.index <= index) {
+                return getKeyedNodeFromIndex(keyedNodes.keyedNodes, index + 1)
+            }
+            return getKeyedNodeFromIndex(keyedNodes.keyedNodes, index)
+
+        case 'append':
+            if (getKeyedNodesLength(keyedNodes.keyedNodes) === index) {
+                return keyedNodes.keyedNode
+            }
+
+            return getKeyedNodeFromIndex(keyedNodes.keyedNodes, index)
+
+        case 'move':
+            return getKeyedNodeFromIndex(keyedNodes.keyedNodes, reorderedIndex(index, keyedNodes.to, keyedNodes.from))
+    }
+}
+
+function getKeyedNodeFromKey<E>(keyedNodes: KeyedNodes<E>, key: string): KeyedNode<E> | undefined {
+    switch (keyedNodes.tag) {
+        case 'keyedNodes':
+            return keyedNodes.dictionary[key]
+
+        case 'delete':
+            if (keyedNodes.key === key) {
+                return undefined
+            }
+            return getKeyedNodeFromKey(keyedNodes.keyedNodes, key)
+
+        case 'append':
+            if (keyedNodes.keyedNode.key === key) {
+                return keyedNodes.keyedNode
+            }
+            return getKeyedNodeFromKey(keyedNodes.keyedNodes, key)
+
+        case 'move':
+            return getKeyedNodeFromKey(keyedNodes.keyedNodes, key)
+
+    }
+}
+
+function indexOfKeyedNode<E>(keyedNodes: KeyedNodes<E>, key: string): number | undefined {
+    switch (keyedNodes.tag) {
+        case 'keyedNodes':
+            return keyedNodes.indices[key]
+
+        case 'delete':
+            const originalIndexOf = indexOfKeyedNode(keyedNodes.keyedNodes, key)
+
+            if (originalIndexOf === undefined) {
+                return undefined
+            } else {
+                if (originalIndexOf == keyedNodes.index) {
+                    return undefined
+                }
+        
+                if (originalIndexOf > keyedNodes.index) {
+                    return originalIndexOf - 1
+                }
+        
+                return originalIndexOf
+            }
+        
+        case 'append':
+            if (keyedNodes.keyedNode.key === key) {
+                return getKeyedNodesLength(keyedNodes.keyedNodes)
+            }
+            return indexOfKeyedNode(keyedNodes.keyedNodes, key)
+
+        case 'move':
+            const index = indexOfKeyedNode(keyedNodes.keyedNodes, key)
+
+            if (index === undefined) {
+                return undefined
+            } else {
+                return reorderedIndex(index, keyedNodes.from, keyedNodes.to)
+            }
+    }
 }
 
 type KeyedNode<E> = {
     key: string,
-    html: Html.Html<E>,
-    node: Element | Text,
+    virtualDom: VirtualDom<E>,
 }
 
-function keyedNodes<E>(
+function toKeyedNodes<E>(
     vdom: Array<[string, Html.Html<E>]>,
     $parent: Element,
 ): KeyedNodes<E> {
-    const asArray = vdom.map(([key, html], i) => ({
+    const indices: { [key: string]: number | undefined } = vdom.reduce(
+        (prev, [key, _], i) => {
+            prev[key] = i
+            return prev
+        },
+        {} as any
+    )
+
+    const array: Array<KeyedNode<E>> = vdom.map(([key, html], i) => ({
         key,
-        html,
-        node: $parent.childNodes[i] as Element | Text
+        virtualDom: {
+            domNode: $parent.childNodes[i] as Element | Text,
+            vNode: html,
+        },
     }))
 
+    const dictionary: { [key: string]: KeyedNode<E> } = array.reduce(
+        (prev, curr, i) => {
+            prev[curr.key] = curr
+            return prev
+        },
+        {} as any
+    )
+
     return {
-        asArray,
-        asDictionary: asArray.reduce(
-            (prev, curr, i) => {
-                prev[curr.key] = curr
-                return prev
-            },
-            Utils.id<{ [key: string]: KeyedNode<E> }>({})
-        )
+        tag: 'keyedNodes',
+        indices, array, dictionary,
     }
 }
 
-/** Remove nodes that are not present in newChildrenDict. Mutates in place */
-function keyedNodesRemove<E>(
+function deleteFromKeyedNodes<E>(
     keyedNodes: KeyedNodes<E>,
-    newChildrenDict: { [key: string]: Html.Html<E> | undefined },
-): void {
-    for (
-        let i = 0,
-            length = keyedNodes.asArray.length,
-            removed = 0;
-        i < length;
-        i = i + 1
-    ) {
-        const keyed = keyedNodes.asArray[i - removed]
+    deletedIndex: number,
+    deletedKey: string
+): KeyedNodes<E> {
+    return {
+        tag: 'delete',
+        index: deletedIndex,
+        key: deletedKey,
+        keyedNodes
+    }
+}
 
-        if (newChildrenDict[keyed.key] === undefined) {
-            // Delete from DOM
+function appendToKeyedNodes<E>(
+    keyedNodes: KeyedNodes<E>,
+    keyedNode: KeyedNode<E>,
+): KeyedNodes<E> {
+    return {
+        tag: 'append',
+        keyedNode,
+        keyedNodes
+    }
+}
+
+function patchKeyedNodes<E>(
+    initialKeyedNodes: KeyedNodes<E>,
+    newChildren: Array<[string, Html.Html<E>]>,
+    domElement: Element,
+    dispatch: (event: E) => void,
+): KeyedNodes<E> {
+    const newChildrenDict = Array_.toDictionary(newChildren, Utils.id)
+    let keyedNodes = initialKeyedNodes
+
+    /** Traverse the current `keyedNodes_` in the DOM, removing or patching nodes. */
+    for (
+        let i = 0, removed = 0, keyedNode = getKeyedNodeFromIndex(keyedNodes, i - removed);
+        keyedNode !== undefined;
+        i = i + 1, keyedNode = getKeyedNodeFromIndex(keyedNodes, i - removed)
+    ) {
+        const newVNode = newChildrenDict[keyedNode.key]
+
+        if (newVNode === undefined) {
+            /** REMOVE */
             try {
-                keyed.node.remove()
+                keyedNode.virtualDom.domNode.remove()
             } catch (e) {
                 Utils.debugException('keyed.node.remove()', e)
             }
 
-            // Delete from array
-            keyedNodes.asArray.splice(i, 1)
-
-            // Delete from Dictionary
-            delete (keyedNodes.asDictionary)[keyed.key]            
+            keyedNodes = deleteFromKeyedNodes(keyedNodes, i, keyedNode.key)
 
             removed = removed + 1
-        }
-    }
-}
-
-/** Diff elements already existing. Mutates in place. */
-function keyedNodesDiff<E>(
-    keyedNodes: KeyedNodes<E>,
-    newHtmls: { [key: string]: Html.Html<E> | undefined },
-    dispatch: (event: E) => void,
-): void {
-    for (
-        let i = 0,
-            length = keyedNodes.asArray.length;
-        i < length;
-        i = i + 1
-    ) {
-        const keyed = keyedNodes.asArray[i]
-
-        const newHtml = newHtmls[keyed.key]
-
-        if (newHtml) {
-            // Update the DOM
+        } else {
+            /** APPLY MUTATIONS IN PLACE, IGNORING THE FACT THAT THE ELEMENT MAY BE OUT OF ORDER */
             try {
-                keyed.node = diff(keyed.html, newHtml, dispatch)(keyed.node)
+                keyedNode.virtualDom = patch(keyedNode.virtualDom, newVNode, dispatch)
             } catch (e) {
                 Utils.debugException('keyed.node diff()', e)
             }
-
-            // Update the Html
-            keyed.html = newHtml
         }
     }
-}
 
-function keyedNodesCreate<E>(
-    keyedNodes: KeyedNodes<E>,
-    newChildren: Array<[string, Html.Html<E>]>,
-    $parent: Element | Text,
-    dispatch: (event: E) => void,
-): void {
+    /** Traverse the `newChildren` into the `keyedNodes_`, creating or reordering nodes. */
+
+    /** CREATE */
     for (
         let i = 0,
-            length = newChildren.length;
+        length = newChildren.length;
         i < length;
         i = i + 1
     ) {
         const [key, html] = newChildren[i]
 
-        if (keyedNodes.asDictionary[key] === undefined) {
+        const expectedNode = getKeyedNodeFromKey(keyedNodes, key)
+        const currentNode = getKeyedNodeFromIndex(keyedNodes, i)
+        const expectedNodeIndex = indexOfKeyedNode(keyedNodes, key)
+
+        if (expectedNode === undefined) {
             try {
                 const keyed: KeyedNode<E> = {
                     key,
-                    html,
-                    node: $parent.insertBefore(render(html, dispatch), null)
+                    virtualDom: {
+                        vNode: html,
+                        domNode: domElement.insertBefore(render(html, dispatch), null),
+                    },
                 }
     
-                keyedNodes.asArray.push(keyed)
-                keyedNodes.asDictionary[key] = keyed
+                keyedNodes = appendToKeyedNodes(keyedNodes, keyed)
             } catch (e) {
                 Utils.debugException('insertBefore(render())', e)
             }
+        } else if (
+            currentNode !== undefined
+                && expectedNodeIndex !== undefined
+                && expectedNode.key !== currentNode.key
+        ) {
+            // Reorder nodes using O(n) DOM mutations in the worst case, but close to O(1) in common scenarios.
+            keyedNodes = keyedNodesMove(
+                keyedNodes,
+                expectedNode,
+                expectedNodeIndex,
+                i,
+                domElement
+            )
+        
         }
     }
+
+    return keyedNodes
 }
 
-// Warn: This is O(n^2) in the worst case.
-// But when reordering one element it's O(n).
-// The worst case is when the order is reversed, or when two
-// consecutive elements are reordered.
-function keyedNodesReorder<E>(
-    keyedNodes: KeyedNodes<E>,
-    newChildren: Array<[string, Html.Html<E>]>,
-    $parent: Element,
-): void {
-    for (
-        let i = 0,
-            length = newChildren.length;
-        i < length;
-        i = i + 1
-    ) {
-        const [key] = newChildren[i]
-
-        const newNode = keyedNodes.asDictionary[key]
-        const oldNode = keyedNodes.asArray[i]
-
-        if (newNode && newNode !== oldNode) {
-            keyedNodesMove(keyedNodes, newNode, i, $parent)
-        }
-    }
-}
-
-// O(n)
 function keyedNodesMove<E>(
     keyedNodes: KeyedNodes<E>,
     keyed: KeyedNode<E>,
-    desiredPosition: number,
+    from: number,
+    to: number,
     $parent: Element,
-): void {
-    const desiredNextSibling = keyedNodes.asArray[desiredPosition + 1]?.node || null
+): KeyedNodes<E> {
+    const desiredNextSibling = getKeyedNodeFromIndex(keyedNodes, to + 1)?.virtualDom?.domNode || null
 
-    if (desiredNextSibling === keyed.node) {
+    if (desiredNextSibling === keyed.virtualDom.domNode) {
         // If we're right next to where we want to be, we can move the previous element
         // to the end so that we can take its place.
+        //
+        // This helps the simple reorder "move one element to the end of the list"
+        // to be very fast.
         try {
             $parent.insertBefore(
-                keyedNodes.asArray[desiredPosition].node,
+                getKeyedNodeFromIndex(keyedNodes, to)?.virtualDom?.domNode || null as any,
                 null
             )
         } catch (e) {
             Utils.debugException('insertBefore() case 1', e)
         }
 
-        keyedNodes.asArray.push(
-            ...keyedNodes.asArray.splice(desiredPosition, 1)
-        )
-
-        // This helps the simple reorder "move one element to the end of the list"
-        // to be very fast.
+        return movedKeyNode(keyedNodes, to, getKeyedNodesLength(keyedNodes) - 1)
     } else {
         // Otherwise just move the element from its current position to the desired position.
         try {
             $parent.insertBefore(
-                keyed.node,
+                keyed.virtualDom.domNode,
                 desiredNextSibling
             )
         } catch (e) {
             Utils.debugException('insertBefore() case 2', e)
         }
 
-        const currentPosition = keyedNodes.asArray.findIndex((x) => x === keyed)
-        keyedNodes.asArray.splice(currentPosition, 1)
-        keyedNodes.asArray.splice(desiredPosition, 0, keyed)
+        return movedKeyNode(keyedNodes, from, to)
     }
 
+}
+
+function movedKeyNode<E>(
+    keyedNodes: KeyedNodes<E>,
+    from: number,
+    to: number,
+): KeyedNodes<E> {
+    return {
+        tag: 'move',
+        from,
+        to,
+        keyedNodes
+    }
+}
+
+function reorderedIndex(
+    originalIndex: number,
+    from: number,
+    to: number
+): number {
+    if (from < to) {
+        if (originalIndex === from) {
+            return to
+        } else if (from < originalIndex && originalIndex <= to) {
+            return originalIndex - 1
+        } else {
+            return originalIndex
+        }
+    } else if (from > to) {
+        if (originalIndex === from) {
+            return to
+        } else if (to <= originalIndex && originalIndex < from) {
+            return originalIndex + 1
+        } else {
+            return originalIndex
+        }
+    } else {
+        return originalIndex
+    }
 }

@@ -1,5 +1,5 @@
 import * as Record from './Record'
-import * as Update from './Update'
+import * as Update from './utils/Update'
 
 import * as Date from './utils/Date'
 import * as Time from './utils/Time'

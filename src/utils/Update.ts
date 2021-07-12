@@ -1,10 +1,10 @@
-import * as Task from './utils/Task'
+import * as Task from './Task'
 
 export type Update<A, E> =
     {
         tag: 'Update',
         state: A,
-        cmds: Array<Task.Task<E>>
+        tasks: Array<Task.Task<E>>
     }
         & UpdatePrototype<A, E>
 
@@ -20,7 +20,7 @@ export function of<A, B>(state: A, cmds: Array<Task.Task<B>>): Update<A, B> {
     return {
         tag: 'Update',
         state,
-        cmds,
+        tasks: cmds,
         map: function (f) { return map(this, f) },
         andThen: function (f) { return andThen(this, f) },
         mapTasks: function(f) { return mapTasks(this, f) },
@@ -34,19 +34,19 @@ export function pure<A>(state: A): Update<A, any> {
 }
 
 export function map<A, B, C>(update: Update<A, C>, f: (a: A) => B): Update<B, C> {
-    return of(f(update.state), update.cmds)
+    return of(f(update.state), update.tasks)
 }
 
 export function andThen<A, B, C>(update: Update<A, C>, f: (a: A) => Update<B, C>): Update<B, C> {
-    const { state, cmds } = update
+    const { state, tasks: cmds } = update
 
-    const { state: newState, cmds: cmds0 } = f(state)
+    const { state: newState, tasks: cmds0 } = f(state)
 
     return of(newState, [...cmds, ...cmds0])
 }
 
 export function mapTasks<A, C, D>(update: Update<A, C>, f: (c: C) => D): Update<A, D> {
-    return of(update.state, update.cmds.map(cmd => Task.map(cmd, f)))
+    return of(update.state, update.tasks.map(cmd => Task.map(cmd, f)))
 }
 
 export function mapBoth<A, B, C, D>(
@@ -58,5 +58,5 @@ export function mapBoth<A, B, C, D>(
 }
 
 export function addTask<A, B>(update: Update<A, B>, cmd: Task.Task<B>): Update<A, B> {
-    return of(update.state, [...update.cmds, cmd])
+    return of(update.state, [...update.tasks, cmd])
 }
