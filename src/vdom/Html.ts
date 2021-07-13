@@ -4,6 +4,22 @@ export type Html<Event> =
     | { type: 'Html', nodeType: 'node', tagName: string, attributes: Array<Attribute<Event>>, children: Array<Html<Event>> }
     | { type: 'Html', nodeType: 'keyed', tagName: string, attributes: Array<Attribute<Event>>, children: Array<[string, Html<Event>]> }
     | { type: 'Html', nodeType: 'text', text: string }
+    | Lazy<Event, any>
+
+type Lazy<E, A> = {
+        type: 'Html',
+        nodeType: 'lazy',
+        argument: EqualityRecord<A>,
+        getValue: (argument: A) => Html<E>,
+        value?: Html<E>,
+    }
+
+type EqualityRecord<A> =
+    { [Key in keyof A]: Equality<A[Key]> }
+
+type Equality<A> =
+    | { tag: 'structural', value: A }
+    | { tag: 'referential', value: A }
 
 export function node<E>(
     tagName: string,
@@ -25,6 +41,13 @@ export function text<Evt>(text: string): Html<Evt> {
     return { type: 'Html', nodeType: 'text', text }
 }
 
+export function lazy<E, A>(
+    getValue: (argument: A) => Html<E>,
+    argument: EqualityRecord<A>,
+): Html<E> {
+    return { type: 'Html', nodeType: 'lazy', getValue, argument }
+}
+
 export function map<A, B>(html: Html<A>, f: (a: A) => B): Html<B> {
     switch (html.nodeType) {
         case 'node':
@@ -42,6 +65,12 @@ export function map<A, B>(html: Html<A>, f: (a: A) => B): Html<B> {
                 html.tagName,
                 html.attributes.map(attr => mapAttribute(attr, f)),
                 html.children.map(([key, child]) => [key, map(child, f)])
+            )
+
+        case 'lazy':
+            return lazy(
+                argument => map(html.getValue(argument), f),
+                html.argument
             )
     }
 }

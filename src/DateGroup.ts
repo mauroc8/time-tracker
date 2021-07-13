@@ -223,7 +223,7 @@ export function fromRecords(
  * in a human-comprehensible way:
  * 'This week', 'Last week', '2 weeks ago', 'Last month', and so on.
  * 
- * It is an "ID" because the DateGroup is just the array of records that have that particular ID.
+ * It is an 'ID' because the DateGroup is just the array of records that have that particular ID.
  */
  export type Id =
     | { tag: 'year', year: number }
@@ -455,6 +455,33 @@ function toOpacity(viewCollapseTransitionState: ViewStatus): number {
 
 export const collapseTransitionDuration: number = 0.24
 
+export const css: Css.Css<'date-group-collapse-button'> = Css.css(
+    {
+        selector: Css.Selectors.class_('date-group-collapse-button'),
+        properties: [
+            ['font-size', '12px'],
+            ['transition', 'opacity 0.2s ease-out'],
+            ['opacity', '0.5'],
+            ['padding', '5px'],
+            ['margin', '-5px'],
+            ['letter-spacing', '0.15em'],
+        ],
+    },
+    {
+        selector: Css.Selectors.class_('date-group-collapse-button', 'hover'),
+        properties: [
+            ['opacity', '0.75'],
+        ],
+    },
+    {
+        selector: Css.Selectors.class_('date-group-collapse-button', 'focus'),
+        properties: [
+            ['opacity', '1'],
+            ['outline', '0'],
+        ],
+    },
+)
+
 export function view<E, Context extends { today: Date.Date }>(
     id: Id,
     records: Array<Record.Record>,
@@ -482,24 +509,7 @@ export function view<E, Context extends { today: Date.Date }>(
                     Layout.spacing(10),
                     Layout.fullWidth(),
                     Layout.baselineY(),
-                    Layout.class_({
-                        name: 'date-group-collapse-button',
-                        normal: [
-                            Css.property('font-size', '12px'),
-                            Css.property('transition', 'opacity 0.2s ease-out'),
-                            Css.property('opacity', '0.5'),
-                            Css.property('padding', '5px'),
-                            Css.property('margin', '-5px'),
-                            Css.property("letter-spacing", "0.15em"),
-                        ],
-                        hover: [
-                            Css.property('opacity', '0.75'),
-                        ],
-                        focus: [
-                            Css.property('opacity', '1'),
-                            Css.property('outline', '0'),
-                        ]
-                    }),
+                    Html.class_('date-group-collapse-button'),
                     Html.on('click', () => config.onGroupEvent(clickedCollapseButton(id))),
                     Html.attribute('aria-controls', idToString(id)),
                 ],

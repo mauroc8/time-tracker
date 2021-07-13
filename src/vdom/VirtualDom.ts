@@ -14,13 +14,20 @@ export function patch<E>(
     vNode: Html.Html<E>,
     dispatch: (event: E) => void
 ): VirtualDom<E> {
+    if (virtualDom.vNode === vNode) {
+        return virtualDom
+    }
+
     switch (virtualDom.vNode.nodeType) {
         case 'text':
             return replace(virtualDom.domNode, vNode, dispatch)
+
         case 'node':
             switch (vNode.nodeType) {
                 case 'text':
                     return replace(virtualDom.domNode, vNode, dispatch)
+                case 'lazy':
+                    return patch(virtualDom, getLazyValue(vNode), dispatch)
                 default:
                     if (virtualDom.vNode.tagName === vNode.tagName && virtualDom.domNode instanceof Element) {
                         patchAttributes(
@@ -40,6 +47,7 @@ export function patch<E>(
                         return replace(virtualDom.domNode, vNode, dispatch)
                     }
             }
+
         case 'keyed':
             switch (vNode.nodeType) {
                     case 'text':
@@ -80,6 +88,23 @@ export function patch<E>(
                         } else {
                             return replace(virtualDom.domNode, vNode, dispatch)
                         }
+                    case 'lazy':
+                        return patch(virtualDom, getLazyValue(vNode), dispatch)
+            }
+
+        case 'lazy':
+            switch (vNode.nodeType) {
+                case 'lazy':
+                    return patch(virtualDom, lazyToHtml(virtualDom.vNode, vNode), dispatch)
+                default:
+                    return patch(
+                        {
+                            vNode: getLazyValue(virtualDom.vNode),
+                            domNode: virtualDom.domNode
+                        },
+                        vNode,
+                        dispatch
+                    )
             }
     }
 }
@@ -127,6 +152,9 @@ function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void): Elemen
                 ),
                 dispatch
             )
+
+        case 'lazy':
+            return render(getLazyValue(html), dispatch)
     }
 }
 
@@ -673,4 +701,80 @@ function reorderedIndex(
     } else {
         return originalIndex
     }
+}
+
+
+// --- LAZY
+
+type Lazy<E, A> = {
+    type: 'Html',
+    nodeType: 'lazy',
+    argument: EqualityRecord<A>,
+    getValue: (argument: A) => Html.Html<E>,
+    value?: Html.Html<E>,
+}
+
+type EqualityRecord<A> =
+    { [Key in keyof A]: Equality<A[Key]> }
+
+type Equality<A> =
+    | { tag: 'structural', value: A }
+    | { tag: 'referential', value: A }
+
+function equality<A>(a: Equality<A>, b: Equality<A>): boolean {
+    if (a.tag === 'referential' && b.tag === 'referential') {
+        return a.value === b.value
+    }
+
+    return Utils.equals(a.value, b.value)
+}
+
+function equalityWithUndefined<A>(a: Equality<A>, b: Equality<A> | undefined): boolean {
+    if (b === undefined) {
+        return false
+    }
+
+    return equality(a, b)
+}
+
+function equalityRecordsMatch<A>(
+    a: EqualityRecord<A>,
+    b: EqualityRecord<A>,
+): boolean {
+    for (const key in a) if (Utils.hasOwnProperty(a, key)) {
+        if (!equalityWithUndefined(a[key], b[key])) {
+            return false
+        }
+    }
+
+    return true
+}
+
+function unwrapEqualityRecord<A>(record: EqualityRecord<A>): A {
+    const x = {} as A
+
+    for (const key in record) if (Utils.hasOwnProperty(record, key)) {
+        x[key] = record[key].value
+    }
+
+    return x
+}
+
+function getLazyValue<E, A>(lazy: Lazy<E, A>): Html.Html<E> {
+    if (lazy.value !== undefined) {
+        return lazy.value
+    }
+
+    return lazy.value = lazy.getValue(unwrapEqualityRecord(lazy.argument))
+}
+
+function lazyToHtml<E, A>(
+    currentLazy: Lazy<E, A>,
+    lazy: Lazy<E, A>,
+): Html.Html<E> {
+    if (equalityRecordsMatch(currentLazy.argument, lazy.argument)) {
+        return getLazyValue(currentLazy)
+    }
+
+    return getLazyValue(lazy)
 }

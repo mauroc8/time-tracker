@@ -348,9 +348,10 @@ export function view(state: State): Html.Html<Event.Event> {
                 Layout.centerX(),
             ],
             [
-                Css.toHtml(css),
-                Css.toHtml(Input.css),
-                Css.toHtml(Record.css),
+                Html.lazy(_ => Css.toHtml(css), {}),
+                Html.lazy(_ => Css.toHtml(Input.css), {}),
+                Html.lazy(_ => Css.toHtml(Record.css), {}),
+                Html.lazy(_ => Css.toHtml(DateGroup.css), {}),
                 Layout.column(
                     'div',
                     [
@@ -365,7 +366,7 @@ export function view(state: State): Html.Html<Event.Event> {
                         Records.view(
                             state.records.toArray,
                             state.dateGroupState,
-                            recordsConfig
+                            recordsConfig,
                         ),
                         Layout.space(0),
                     ]
