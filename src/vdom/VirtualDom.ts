@@ -124,7 +124,7 @@ function unkeyChildren<T>(children: Array<[string, Html.Html<T>]> | Array<Html.H
 }
 
 function unkeyChildrenHelp<T>(children: Array<[string, Html.Html<T>]>): Array<Html.Html<T>> {
-    return children.map((child: [string, Html.Html<T>]) => child[1])
+    return children.map(([_, html]) => html)
 }
 
 function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void): Element | Text {
@@ -142,7 +142,7 @@ function render<Evt>(html: Html.Html<Evt>, dispatch: (evt: Evt) => void): Elemen
 
         case 'text':
             return document.createTextNode(html.text)
-        
+
         case 'keyed':
             return render(
                 Html.node(
@@ -185,7 +185,7 @@ function applyAttribute<Evt>(attribute: Html.Attribute<Evt>, dispatch: (evt: Evt
                 }
         }
     } catch (e) {
-        Utils.debugException('toDomAttribute', e)
+        Utils.debugException('applyAttribute', e)
     }
 }
 
@@ -226,15 +226,15 @@ function patchAttributes<T>(
     weirdZipLikeThing(
         currentAttributes,
         newAttributes,
-        (oldAttr, newAttr, i) => {
+        (oldAttr, newAttr, _) => {
             if (!attributeEquality(oldAttr, newAttr)) {
                 replaceAttribute(oldAttr, newAttr, dispatch, domNode)
             }
         },
-        (oldAttr, i) => {
+        (oldAttr, _) => {
             removeAttribute(oldAttr, domNode)
         },
-        (newAttr, i) => {
+        (newAttr, _) => {
             applyAttribute(newAttr, dispatch, domNode)
         }
     )
@@ -279,11 +279,6 @@ function attributeEquality<T>(a: Html.Attribute<T>, b: Html.Attribute<T>): boole
 }
 
 function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
-    if ($node instanceof Text) {
-        // Text nodes don't have attributes
-        return
-    }
-
     try {
         switch (attr.tag) {
             case 'attribute':
@@ -303,8 +298,7 @@ function removeAttribute<T>(attr: Html.Attribute<T>, $node: Element): void {
                 return
         }
     } catch (e) {
-        // ¯\_(ツ)_/¯
-        return
+        Utils.debugException('removeAttribute', e)
     }
 }
 
@@ -722,27 +716,19 @@ type Equality<A> =
     | { tag: 'referential', value: A }
 
 function equality<A>(a: Equality<A>, b: Equality<A>): boolean {
-    if (a.tag === 'referential' && b.tag === 'referential') {
+    if (b.tag === 'referential') {
         return a.value === b.value
     }
 
     return Utils.equals(a.value, b.value)
 }
 
-function equalityWithUndefined<A>(a: Equality<A>, b: Equality<A> | undefined): boolean {
-    if (b === undefined) {
-        return false
-    }
-
-    return equality(a, b)
-}
-
 function equalityRecordsMatch<A>(
     a: EqualityRecord<A>,
     b: EqualityRecord<A>,
 ): boolean {
-    for (const key in a) if (Utils.hasOwnProperty(a, key)) {
-        if (!equalityWithUndefined(a[key], b[key])) {
+    for (const key in a) if (Utils.hasOwnProperty(a, key) && Utils.hasOwnProperty(b, key)) {
+        if (!equality(a[key], b[key])) {
             return false
         }
     }
